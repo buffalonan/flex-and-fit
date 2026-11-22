@@ -1,0 +1,37 @@
+{
+  "name": "flex-and-fit",
+  "private": true,
+  "description": "Gym workouts and flexibility sessions: a web app served from the Mac and an Android app",
+  "scripts": {
+    "serve": "node server/server.js",
+    "test": "node --test server/*.test.js && playwright test",
+    "test:server": "node --test server/*.test.js",
+    "app:web": "node scripts/build-app-web.js",
+    "app:sync": "node scripts/build-app-web.js && cap sync android"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
+    "eslint": "10.13.0",
+    "eslint-plugin-html": "8.2.1",
+    "eslint-plugin-no-unsanitized": "4.1.5",
+    "eslint-plugin-security": "4.2.0",
+    "globals": "17.13.0"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "^11.1.1"
+    },
+    "minimatch": "^11.0.1",
+    "glob": "^14.0.2"
+  }
+}

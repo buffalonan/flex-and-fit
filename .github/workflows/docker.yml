@@ -1,0 +1,58 @@
+name: Mac server image
+
+# Builds the image the Mac runs (web app + sync API) for Apple Silicon and Intel.
+# Pull requests only build it; each merge to main publishes ghcr.io/buffalonan/flex-and-fit:latest,
+# which the Mac picks up within the hour (scripts/mac/update.sh).
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  image:
+    name: Build and publish the image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PUBLISH: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: env.PUBLISH == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64,linux/amd64
+          push: ${{ env.PUBLISH == 'true' }}
+          build-args: APP_VERSION=1.${{ github.run_number }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:1.${{ github.run_number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Check the image answers
+        if: env.PUBLISH != 'true'
+        run: |
+          docker build -t flexfit:check --build-arg APP_VERSION=check .
+          docker run -d --name check -p 3334:3334 flexfit:check
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3334/api/salud && exit 0; sleep 1; done
+          docker logs check; exit 1

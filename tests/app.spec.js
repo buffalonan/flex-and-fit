@@ -1,0 +1,152 @@
+const { test, expect } = require("@playwright/test");
+
+const unique = () => `nota-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const pendingCount = (page) => page.evaluate(async () => (await (await import("./store.js")).pending()).length);
+
+async function logSession(page, { tipo = "flexibilidad", min = "15", notas }) {
+  await page.getByRole("button", { name: "Hoy" }).click();
+  await page.locator(`#nueva label:has(input[value="${tipo}"])`).click();
+  await page.fill('#nueva input[name="duracionMin"]', min);
+  await page.fill('#nueva textarea[name="notas"]', notas);
+  await page.click('#nueva button[type="submit"]');
+  await expect(page.locator("#nuevaOk")).toBeVisible();
+}
+
+test("a session logged on one device reaches another through the Mac", async ({ page, browser }) => {
+  await page.goto("/");
+  const notas = unique();
+  await logSession(page, { tipo: "gimnasio", notas });
+  // The pill can still show the previous state for a moment, so wait for the record itself to leave.
+  await expect.poll(() => pendingCount(page)).toBe(0);
+  await expect(page.locator("#syncPill")).toHaveText("Sincronizado");
+
+  await page.getByRole("button", { name: "Historial" }).click();
+  await expect(page.locator("#lista")).toContainText(notas);
+  await expect(page.locator("#lista")).toContainText("Gimnasio");
+
+  // A second device: a fresh browser with empty storage.
+  const other = await browser.newContext();
+  const phone = await other.newPage();
+  await phone.goto("/");
+  await phone.getByRole("button", { name: "Historial" }).click();
+  await expect(phone.locator("#lista")).toContainText(notas);
+
+  // Deleting on the second device removes it on the first after its next sync.
+  await phone.locator("li", { hasText: notas }).getByRole("button", { name: /Borrar/ }).click();
+  await expect(phone.locator("#lista")).not.toContainText(notas);
+  await expect.poll(() => pendingCount(phone)).toBe(0);
+  await other.close();
+
+  await page.click("#syncPill");
+  await page.getByRole("button", { name: "Historial" }).click();
+  await expect(page.locator("#lista")).not.toContainText(notas);
+});
+
+test("with the Mac out of reach, sessions wait on the device and go up later", async ({ page }) => {
+  await page.route("**/api/sync", (r) => r.abort("connectionrefused"));
+  await page.goto("/");
+  const notas = unique();
+  await logSession(page, { notas });
+  await expect(page.locator("#syncPill")).toHaveText("1 sin subir");
+  await page.getByRole("button", { name: "Historial" }).click();
+  await expect(page.locator("#lista")).toContainText(notas);
+
+  // Still there after closing and reopening the app.
+  await page.reload();
+  await page.getByRole("button", { name: "Historial" }).click();
+  await expect(page.locator("#lista")).toContainText(notas);
+
+  await page.unroute("**/api/sync");
+  await page.click("#syncPill");
+  await expect(page.locator("#syncPill")).toHaveText("Sincronizado");
+  await expect(page.locator("#syncEstado")).toContainText("Última sincronización");
+});
+
+test("a wrong key is reported", async ({ page }) => {
+  await page.route("**/api/sync", (r) => r.fulfill({ status: 401, contentType: "application/json", body: '{"error":"clave incorrecta"}' }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await page.fill("#token", "mala");
+  await page.getByRole("button", { name: "Guardar y sincronizar" }).click();
+  await expect(page.locator("#syncEstado")).toHaveText("La clave no coincide con la del Mac.");
+});
+
+test("imports the JSON from the 6-month flexibility plan", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  const plan = {
+    plan: "flexibilidad-6m-v1", inicio: "2026-11-23",
+    sesiones: [{ fecha: "2026-11-24", semana: 1, fase: 1, rutina: "F1", ejercicios: [{ id: "gato", dosis: "2 × 8 lentas", hecho: true }] }],
+    tests: [{ fase: 1, dedosSueloCm: 22, sentadillaSeg: 5 }],
+  };
+  await page.setInputFiles("#importar", { name: "plan.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(plan)) });
+  await expect(page.locator("#copiaEstado")).toHaveText("Importados 2 registros.");
+  await page.getByRole("button", { name: "Historial" }).click();
+  await expect(page.locator("#lista")).toContainText("Flexibilidad · F1");
+  await expect(page.locator("#lista")).toContainText("martes, 24 de noviembre");
+
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await page.setInputFiles("#importar", { name: "x.json", mimeType: "application/json", buffer: Buffer.from("{nope") });
+  await expect(page.locator("#copiaEstado")).toHaveText("El archivo no es un JSON válido.");
+});
+
+test("exports every record as JSON, and the export imports back", async ({ page, browser }) => {
+  await page.goto("/");
+  const notas = unique();
+  await logSession(page, { notas });
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  const [download] = await Promise.all([page.waitForEvent("download"), page.click("#exportar")]);
+  expect(download.suggestedFilename()).toMatch(/^flex-and-fit-\d{4}-\d{2}-\d{2}\.json$/);
+  const data = JSON.parse(await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString()));
+  expect(data.app).toBe("flex-and-fit");
+  expect(data.registros.some((r) => r.data.notas === notas)).toBe(true);
+
+  // Into a device with no server, so only the import can bring it.
+  const other = await browser.newContext();
+  const p2 = await other.newPage();
+  await p2.addInitScript(() => localStorage.setItem("flexfit.ajustes", JSON.stringify({ servidor: "" })));
+  await p2.goto("/");
+  await expect(p2.locator("#syncPill")).toHaveText("Solo en este dispositivo");
+  await p2.getByRole("button", { name: "Ajustes" }).click();
+  await p2.setInputFiles("#importar", { name: "copia.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(data)) });
+  await expect(p2.locator("#copiaEstado")).toContainText("Importados");
+  await p2.getByRole("button", { name: "Historial" }).click();
+  await expect(p2.locator("#lista")).toContainText(notas);
+  await other.close();
+});
+
+test("notes are shown as text, never as markup", async ({ page }) => {
+  await page.route("**/api/sync", (r) => r.abort());
+  await page.goto("/");
+  const notas = `<img src=x onerror="window.pwned=1">${unique()}`;
+  await logSession(page, { notas });
+  await page.getByRole("button", { name: "Historial" }).click();
+  await expect(page.locator("#lista")).toContainText(notas);
+  expect(await page.locator("#lista img").count()).toBe(0);
+  expect(await page.evaluate(() => window.pwned)).toBeUndefined();
+});
+
+test("week summary counts this week's sessions by kind", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("flexfit.ajustes", JSON.stringify({ servidor: "" })));
+  await page.goto("/");
+  await logSession(page, { tipo: "gimnasio", notas: unique() });
+  await logSession(page, { tipo: "flexibilidad", notas: unique() });
+  await expect(page.locator("#semana .stat").nth(0)).toContainText("2");
+  await expect(page.locator("#semana .stat").nth(1)).toContainText("1");
+  await expect(page.locator("#semana .stat").nth(2)).toContainText("1");
+});
+
+test("remembers the tab and the theme, and fits the screen", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await page.locator('label:has(input[name="tema"][value="dark"])').click();
+  await page.reload();
+  await expect(page.locator("#ajustes")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  for (const tab of ["Hoy", "Historial", "Ajustes"]) {
+    await page.getByRole("button", { name: tab, exact: true }).click();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  }
+});

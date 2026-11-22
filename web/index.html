@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flex &amp; Fit</title>
+<meta name="theme-color" content="#23725f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<script>
+  // Apply a saved light/dark choice before the page paints.
+  try { const t = JSON.parse(localStorage.getItem("flexfit.ajustes") || "null")?.tema; if (t) document.documentElement.dataset.theme = t; } catch (e) { /* no storage */ }
+</script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <img src="icon.svg" alt="" width="36" height="36">
+    <h1>Flex &amp; Fit</h1>
+  </div>
+  <button type="button" id="syncPill" class="pill" data-estado="local" aria-live="polite">Solo en este dispositivo</button>
+</header>
+
+<main>
+  <section id="hoy" class="screen" aria-labelledby="hoyTitle">
+    <h2 id="hoyTitle">Hoy</h2>
+    <p class="lede" id="hoyFecha"></p>
+    <div class="stats" id="semana"></div>
+
+    <form class="card" id="nueva" autocomplete="off">
+      <h3>Apuntar una sesión</h3>
+      <div class="seg" role="radiogroup" aria-label="Tipo de sesión">
+        <label><input type="radio" name="tipo" value="flexibilidad" checked><span>Flexibilidad</span></label>
+        <label><input type="radio" name="tipo" value="gimnasio"><span>Gimnasio</span></label>
+      </div>
+      <div class="row">
+        <label class="f">Fecha <input type="date" name="fecha" required></label>
+        <label class="f">Minutos <input type="number" name="duracionMin" min="1" max="600" inputmode="numeric"></label>
+      </div>
+      <label class="f">Notas <textarea name="notas" rows="2" maxlength="2000"></textarea></label>
+      <button type="submit" class="btn-main">Guardar sesión</button>
+      <p class="toast" id="nuevaOk" hidden>Guardada</p>
+    </form>
+    <p class="hint">Pronto: el plan de flexibilidad de 6 meses con sus animaciones, y el registro de series y pesos del gimnasio.</p>
+  </section>
+
+  <section id="historial" class="screen" aria-labelledby="histTitle" hidden>
+    <h2 id="histTitle">Historial</h2>
+    <ul class="list" id="lista"></ul>
+    <p class="empty" id="vacio">Todavía no hay sesiones.</p>
+  </section>
+
+  <section id="ajustes" class="screen" aria-labelledby="ajTitle" hidden>
+    <h2 id="ajTitle">Ajustes</h2>
+    <form class="card" id="servidorForm" autocomplete="off">
+      <h3>Base de datos en el Mac</h3>
+      <p class="hint">Los datos se guardan primero en este dispositivo y se copian al Mac cuando lo encuentra (en casa o por Tailscale).</p>
+      <label class="f">Dirección del servidor <input type="url" name="servidor" id="servidor" placeholder="http://ferrans-macbook-air:3334" spellcheck="false"></label>
+      <label class="f">Clave (si la pusiste en el Mac) <input type="password" name="token" id="token" autocomplete="off"></label>
+      <div class="row">
+        <button type="submit" class="btn-main">Guardar y sincronizar</button>
+      </div>
+      <p class="status" id="syncEstado"></p>
+    </form>
+
+    <div class="card">
+      <h3>Copia de seguridad</h3>
+      <p class="hint">Descarga todos tus datos en un archivo JSON, o importa una copia. También acepta el JSON copiado del plan de flexibilidad de 6 meses.</p>
+      <div class="row">
+        <button type="button" class="btn" id="exportar">Exportar JSON</button>
+        <label class="btn" for="importar">Importar JSON</label>
+        <input type="file" id="importar" accept="application/json,.json" hidden>
+      </div>
+      <p class="status" id="copiaEstado"></p>
+    </div>
+
+    <div class="card">
+      <h3>Apariencia</h3>
+      <div class="seg" role="radiogroup" aria-label="Tema">
+        <label><input type="radio" name="tema" value=""><span>Automático</span></label>
+        <label><input type="radio" name="tema" value="light"><span>Claro</span></label>
+        <label><input type="radio" name="tema" value="dark"><span>Oscuro</span></label>
+      </div>
+    </div>
+    <p class="hint" id="version"></p>
+  </section>
+</main>
+
+<nav class="tabs" aria-label="Secciones">
+  <button type="button" data-tab="hoy" aria-current="page">Hoy</button>
+  <button type="button" data-tab="historial">Historial</button>
+  <button type="button" data-tab="ajustes">Ajustes</button>
+</nav>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

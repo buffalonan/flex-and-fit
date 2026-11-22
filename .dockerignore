@@ -1,0 +1,6 @@
+*
+!web/
+!server/db.js
+!server/backup.js
+!server/server.js
+!scripts/build-app-web.js

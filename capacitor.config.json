@@ -1,0 +1,8 @@
+{
+  "appId": "io.github.buffalonan.flexandfit",
+  "appName": "Flex & Fit",
+  "webDir": "www",
+  "plugins": {
+    "CapacitorHttp": { "enabled": true }
+  }
+}
