@@ -173,6 +173,56 @@ export const GYM = [
       { n: "Plancha lateral", series: 1, seg: 45, kg: null, desc: 30, bloque: "core", lado: "izq", p: ["oblicuos"], s: ["hombros", "gluteos"] },
       { n: "Plancha lateral", series: 1, seg: 45, kg: null, desc: 90, bloque: "core", lado: "der", p: ["oblicuos"], s: ["hombros", "gluteos"] },
     ], bloques: { core: { rondas: 3 } } },
+
+  // Professional templates: only the structure (exercises, sets, reps, rest, progression), with the source.
+  { id: "sl-a", n: "StrongLifts 5×5 · A", sub: "Sentadilla, banca y remo", maquinas: "Barra olímpica, discos, banco y rack",
+    fuente: { n: "StrongLifts 5×5 (stronglifts.com)", url: "https://stronglifts.com/5x5/" },
+    notas: [
+      "Alterna A y B tres días por semana, con un día de descanso entre sesiones (A-B-A, luego B-A-B)",
+      "Progresión: si completas las 5 series de 5, añade 2,5 kg la próxima vez (5 kg en peso muerto)",
+      "Si fallas el mismo peso tres sesiones seguidas, baja un 10 % y vuelve a subir",
+      "Descanso: 1:30 si la última serie fue fácil, 3 min si costó, 5 min si fallaste una repetición",
+      "Pesos de inicio del programa: barra vacía (20 kg), remo 30 kg. Si ya entrenas, empieza con la mitad de tu peso para 5 repeticiones",
+    ],
+    ej: [
+      { n: "Sentadilla", series: 5, reps: 5, kg: 20, desc: 180, p: ["cuadriceps", "gluteos"], s: ["aductores", "isquios", "lumbar"] },
+      { n: "Press de banca", series: 5, reps: 5, kg: 20, desc: 180, p: ["pecho"], s: ["hombros", "triceps"] },
+      { n: "Remo con barra", series: 5, reps: 5, kg: 30, desc: 180, p: ["dorsales", "trapecio"], s: ["biceps", "lumbar", "antebrazo"] },
+    ] },
+  { id: "sl-b", n: "StrongLifts 5×5 · B", sub: "Sentadilla, press militar y peso muerto", maquinas: "Barra olímpica, discos y rack",
+    fuente: { n: "StrongLifts 5×5 (stronglifts.com)", url: "https://stronglifts.com/5x5/" },
+    notas: [
+      "Alterna A y B tres días por semana, con un día de descanso entre sesiones",
+      "Progresión: si completas todas las series, añade 2,5 kg la próxima vez (5 kg en peso muerto)",
+      "Si fallas el mismo peso tres sesiones seguidas, baja un 10 % y vuelve a subir",
+      "Peso muerto: una sola serie de 5, porque ya cargas la espalda en la sentadilla. Empieza con 40 kg",
+    ],
+    ej: [
+      { n: "Sentadilla", series: 5, reps: 5, kg: 20, desc: 180, p: ["cuadriceps", "gluteos"], s: ["aductores", "isquios", "lumbar"] },
+      { n: "Press militar", series: 5, reps: 5, kg: 20, desc: 180, p: ["hombros"], s: ["triceps", "trapecio"] },
+      { n: "Peso muerto", series: 1, reps: 5, kg: 40, desc: 180, p: ["isquios", "gluteos", "lumbar"], s: ["trapecio", "antebrazo", "cuadriceps"] },
+    ] },
+  { id: "acsm", n: "Cuerpo completo · principiante (ACSM)", sub: "Los grandes grupos musculares, en máquinas", maquinas: "Máquinas, polea, mancuernas y suelo",
+    fuente: { n: "ACSM: Progression Models in Resistance Training for Healthy Adults (2009)", url: "https://pubmed.ncbi.nlm.nih.gov/19204579/" },
+    notas: [
+      "Pauta del American College of Sports Medicine para principiantes: 2–3 días por semana, cuerpo completo, 1–3 series de 8–12 repeticiones",
+      "Elige un peso con el que las últimas repeticiones cuesten pero salgan con buena técnica",
+      "Progresión: cuando hagas 1–2 repeticiones más de las indicadas en dos sesiones seguidas, sube el peso entre un 2 y un 10 %",
+      "Descanso: 2–3 min en los ejercicios grandes (prensa, pecho, espalda), 1–2 min en el resto",
+      "La pauta es del ACSM; la elección de ejercicios para cubrir cada grupo muscular es nuestra",
+    ],
+    ej: [
+      { n: "Prensa de piernas", series: 2, reps: 10, kg: null, elige: true, desc: 120, p: ["cuadriceps", "gluteos"], s: ["isquios", "aductores"] },
+      { n: "Press de pecho en máquina", series: 2, reps: 10, kg: null, elige: true, desc: 120, p: ["pecho"], s: ["hombros", "triceps"] },
+      { n: "Jalón al pecho", series: 2, reps: 10, kg: null, elige: true, desc: 120, p: ["dorsales"], s: ["biceps", "antebrazo"] },
+      { n: "Press de hombro con mancuernas", series: 2, reps: 10, kg: null, elige: true, desc: 90, p: ["hombros"], s: ["triceps", "trapecio"] },
+      { n: "Remo sentado en polea", series: 2, reps: 10, kg: null, elige: true, desc: 120, p: ["dorsales", "trapecio"], s: ["biceps", "lumbar"] },
+      { n: "Curl femoral", series: 2, reps: 10, kg: null, elige: true, desc: 90, p: ["isquios"], s: ["gemelos"] },
+      { n: "Extensión de cuádriceps", series: 2, reps: 10, kg: null, elige: true, desc: 90, p: ["cuadriceps"], s: [] },
+      { n: "Elevación de talones", series: 2, reps: 12, kg: null, elige: true, desc: 60, p: ["gemelos"], s: [] },
+      { n: "Extensión lumbar", series: 2, reps: 12, kg: null, desc: 60, p: ["lumbar"], s: ["gluteos", "isquios"] },
+      { n: "Plancha", series: 2, seg: 30, kg: null, desc: 60, p: ["abdominales"], s: ["oblicuos", "hombros"] },
+    ] },
 ];
 
 /** Total sets of a gym workout (a circuit counts once per round), and sets per muscle. */
