@@ -6,12 +6,17 @@ test("the app opens, has no server set until you type one, and saves a session o
   const [device] = await _android.devices();
   expect(device, "no emulator found by adb").toBeTruthy();
   try {
+    // A freshly booted emulator can still have its screen off or locked; then the WebView has no size and
+    // nothing in it counts as visible. Wake and unlock it first.
+    await device.shell("input keyevent KEYCODE_WAKEUP");
+    await device.shell("wm dismiss-keyguard");
     await device.shell(`am start -W -n ${PKG}/.MainActivity`);
     // Debug builds let Playwright drive the app's WebView like a browser tab.
     const page = await (await device.webView({ pkg: PKG }, { timeout: 60_000 })).page();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
 
+    await expect.poll(() => page.evaluate(() => window.innerWidth), { message: "the WebView has no size (screen off?)", timeout: 30_000 }).toBeGreaterThan(0);
     await expect(page.locator("#hoy")).toBeVisible({ timeout: 30_000 });
     expect(await page.evaluate(() => window.Capacitor.isNativePlatform())).toBe(true);
     // Native HTTP lets the app reach the Mac's plain-http server from the app's https origin.
