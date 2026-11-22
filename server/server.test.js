@@ -9,8 +9,8 @@ const { createServer } = require("./server");
 
 let dir, db, server, base;
 
-async function start(token = "") {
-  server = createServer({ db, webDir: path.join(__dirname, "..", "web"), token, version: "test" });
+async function start(token = "", direcciones = []) {
+  server = createServer({ db, webDir: path.join(__dirname, "..", "web"), token, version: "test", direcciones });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${server.address().port}`;
 }
@@ -75,6 +75,13 @@ test("a token, when set, is required", async () => {
   assert.equal((await sync({ cambios: [] }, { Authorization: "Bearer secreto" })).status, 200);
   const salud = await (await fetch(`${base}/api/salud`)).json();
   assert.equal(salud.token, true);
+});
+
+test("/api/salud tells the app the Mac's other addresses, only well-formed ones", async () => {
+  // Documentation addresses (RFC 5737), never the owner's.
+  await start("", ["http://192.0.2.10:3334/", " http://198.51.100.7:3334", "ftp://192.0.2.1", "no es una url", "http://192.0.2.10:3334"]);
+  const salud = await (await fetch(`${base}/api/salud`)).json();
+  assert.deepEqual(salud.direcciones, ["http://192.0.2.10:3334", "http://198.51.100.7:3334"]);
 });
 
 test("serves the web app and nothing outside it", async () => {

@@ -2,6 +2,7 @@
 // history, profile, sync with the Mac and JSON backups.
 import * as store from "./store.js";
 import { syncNow } from "./sync.js";
+import { elegir, salud, buscarEnWifi, unir } from "./direccion.js";
 import { html } from "./html.js";
 import { EX, RUTINAS_FLEX, GYM, TESTS, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
 import { maniqui, NOMBRES } from "./maniqui.js";
@@ -18,7 +19,7 @@ const demo = location.hostname === "buffalonan.github.io";
 const defaultServer = () => (native || demo || location.protocol === "file:" ? "" : location.origin);
 
 const KEY = "flexfit.ajustes";
-let ajustes = { servidor: null, token: "", tab: "entrenos", filtro: "todos" };
+let ajustes = { servidor: null, servidores: [], token: "", tab: "entrenos", filtro: "todos" };
 try { ajustes = { ...ajustes, ...JSON.parse(localStorage.getItem(KEY) || "null") }; } catch (e) { /* no storage */ }
 const saveAjustes = () => { try { localStorage.setItem(KEY, JSON.stringify(ajustes)); } catch (e) { /* no storage */ } };
 const servidor = () => (ajustes.servidor ?? defaultServer()).trim();
@@ -61,6 +62,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
 const capApp = native ? window.Capacitor.registerPlugin("App") : null;
 capApp?.addListener("backButton", () => {
   if (!$("salirPanel").hidden) cerrarSalir();
+  else if (!$("ficha").hidden) cerrarFicha();
   else if (sesion) pedirSalir();
   else if (!$("resumen").hidden) cerrarResumen();
   else if (pantalla === "entrenos") capApp.exitApp();
@@ -127,12 +129,12 @@ function abrir(id) {
     $("detMan").innerHTML = html`${maniqui(musc, "x", { etiquetas: etiquetasTop(musc, 6, fmtMin) })}
       <div class="leyenda"><span><i style="background:var(--flex1)"></i>&lt; 1 min</span><span><i style="background:var(--flex2)"></i>1–3 min</span><span><i style="background:var(--flex3)"></i>3+ min</span></div>`;
     $("detStats").innerHTML = html`${stat(r.items.length, "Ejercicios")}${stat(Math.round(seg / 60), "Estirando", "min")}${stat(r.int.replace(" / 10", ""), "Intensidad", "/10")}`;
-    $("detLista").innerHTML = html`${r.items.map(([ex, dosis, extra], i) => html`<li class="ej">
+    $("detLista").innerHTML = html`${r.items.map(([ex, dosis, extra], i) => html`<li class="ej" data-i="${i}">
       <span class="th">${figura(ex)}</span>
       <div class="meta"><span class="sub">${String(i + 1).padStart(2, "0")}</span><span class="name">${EX[ex].n}</span><span class="dosis">${dosis}</span>
         <span class="zona">Lo notas en: ${EX[ex].z}</span>
-        <details><summary>Cómo hacerlo</summary><ul>${EX[ex].c.map((c) => html`<li>${c}</li>`)}</ul></details>
-        ${extra ? html`<span class="extra">${extra}</span>` : ""}</div></li>`)}`;
+        ${extra ? html`<span class="extra">${extra}</span>` : ""}</div>
+      <button type="button" class="ver" aria-label="${`Ver ${EX[ex].n}`}">›</button></li>`)}`;
     $("detMaquinas").textContent = "Tensión, nunca dolor. Entra despacio, sin rebotes, y respira lento.";
     $("detAvance").innerHTML = html`${r.adv ? html`<b>Pasa a la siguiente fase cuando:</b><ul>${r.adv.map((a) => html`<li>${a}</li>`)}</ul>` : ""}`;
   } else {
@@ -143,9 +145,10 @@ function abrir(id) {
       <div class="leyenda"><span><i style="background:var(--prim)"></i>Músculos principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
     const vol = w.ej.reduce((a, e) => a + (e.kg && e.reps ? e.kg * e.reps * e.series : 0), 0);
     $("detStats").innerHTML = html`${stat(g.series, "Series")}${stat(w.ej.length, "Ejercicios")}${stat(vol.toLocaleString("es-ES"), "Volumen", "kg")}`;
-    const fila = (e, i) => html`<li class="ej g"><div class="meta"><span class="name">${i + 1} ${e.n}${e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : ""}</span>
+    const fila = (e, i) => html`<li class="ej g" data-i="${i}"><div class="meta"><span class="name">${i + 1} ${e.n}${e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : ""}</span>
       <span class="dosis">${e.series} ${e.series === 1 ? "serie" : "series"} · ${e.seg ? mmss(e.seg) : `${e.reps} reps`}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : ""} · Descanso ${mmss(e.desc)}</span>
-      <span class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</span></div></li>`;
+      <span class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</span></div>
+      <button type="button" class="ver" aria-label="${`Ver ${e.n}`}">›</button></li>`;
     const out = [];
     for (const [i, e] of w.ej.entries()) {
       if (!e.bloque) { out.push(fila(e, i)); continue; }
@@ -164,6 +167,56 @@ function abrir(id) {
   animar($("detalle"));
 }
 $("detVolver").addEventListener("click", () => show("entrenos"));
+
+/* ---------- Exercise sheet: one exercise of the open workout, before starting (tap a row in the detail) ---------- */
+let ficha = null; // index of the exercise shown
+const lado = (e) => (e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : "");
+function verFicha(i) {
+  const r = rutinaFlex(abierto), w = gym(abierto);
+  const total = r ? r.items.length : w.ej.length;
+  if (i < 0 || i >= total) return;
+  ficha = i;
+  $("ficha").classList.toggle("gym", !r);
+  $("fichaCuenta").textContent = `Ejercicio ${i + 1} de ${total}`;
+  $("fichaAnt").disabled = i === 0;
+  $("fichaSig").disabled = i === total - 1;
+  if (r) {
+    const [ex, dosis, extra] = r.items[i];
+    const e = EX[ex];
+    $("fichaTitulo").textContent = e.n;
+    $("fichaFig").innerHTML = html`${figura(ex, { clase: "grande" })}`;
+    $("fichaDosis").textContent = dosis;
+    $("fichaCuerpo").innerHTML = html`<p class="zona">Lo notas en: <b>${e.z}</b></p>
+      ${extra ? html`<p class="extra">${extra}</p>` : ""}
+      <h3>Cómo hacerlo</h3><ol class="pasos">${e.c.map((c) => html`<li>${c}</li>`)}</ol>
+      <p class="sub">Tensión, nunca dolor. Entra despacio, sin rebotes, y respira lento.</p>`;
+  } else {
+    const e = w.ej[i];
+    const p = Object.fromEntries(e.p.map((m) => [m, e.series])), sec = Object.fromEntries(e.s.map((m) => [m, e.series]));
+    $("fichaTitulo").textContent = `${e.n}${lado(e)}`;
+    $("fichaFig").innerHTML = html`${maniqui({ p, s: sec }, "f", { titulo: `Músculos de ${e.n}` })}
+      <div class="leyenda"><span><i style="background:var(--prim)"></i>Principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
+    $("fichaDosis").textContent = `${e.series} ${e.series === 1 ? "serie" : "series"} · ${e.seg ? mmss(e.seg) : `${e.reps} reps`}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : " · peso corporal"}`;
+    // Same-named exercises (a side plank per side) are told apart by their order.
+    const n = w.ej.slice(0, i).filter((x) => x.n === e.n).length;
+    const ult = (ultima(abierto)?.ejercicios || []).filter((x) => x.n === e.n)[n]?.series?.filter((x) => x.hecho) || [];
+    $("fichaCuerpo").innerHTML = html`<p class="zona">Descanso entre series: <b>${mmss(e.desc)}</b>${e.bloque ? html` · en circuito, ${w.bloques[e.bloque].rondas} rondas` : ""}</p>
+      <h3>Músculos</h3><p class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</p>
+      ${ult.length ? html`<h3>La última vez</h3><p class="sub">${ult.map((x) => `${x.kg ? `${String(x.kg).replace(".", ",")} kg × ` : ""}${x.seg ? mmss(x.seg) : x.reps}`).join(" · ")}</p>` : ""}`;
+  }
+  $("ficha").hidden = false;
+  $("ficha").scrollTo?.(0, 0);
+  animar($("ficha"));
+}
+function cerrarFicha() { $("ficha").hidden = true; $("fichaFig").innerHTML = ""; ficha = null; }
+$("detLista").addEventListener("click", (e) => {
+  const li = e.target.closest?.("li.ej[data-i]");
+  if (li) verFicha(Number(li.dataset.i));
+});
+$("fichaSalir").addEventListener("click", cerrarFicha);
+$("fichaAnt").addEventListener("click", () => verFicha(ficha - 1));
+$("fichaSig").addEventListener("click", () => verFicha(ficha + 1));
+$("fichaEmpezar").addEventListener("click", () => { cerrarFicha(); $("detEmpezar").click(); });
 $("detEmpezar").addEventListener("click", () => (rutinaFlex(abierto) ? empezarFlex(abierto) : empezarGym(abierto)));
 
 /* ---------- Sessions (shared by the player and the logger) ---------- */
@@ -566,8 +619,39 @@ $("planCard").addEventListener("submit", (e) => e.preventDefault());
 /* ---------- Sync ---------- */
 const ERRORES = { "sin-conexion": "No encuentro el Mac. Se sincronizará cuando esté encendido y a tu alcance.", clave: "La clave no coincide con la del Mac.", "sin-servidor": "Sin servidor: los datos se quedan solo en este dispositivo." };
 let timer = null;
+// The Android app finds the Mac on its own: if the address in use doesn't answer, it tries the others it knows,
+// and with none it looks for the Mac's Bonjour announcement on the Wi-Fi (at most once a minute).
+const descubrir = native ? window.Capacitor.registerPlugin("Descubrir") : null;
+let ultimaBusqueda = 0;
+let aprendidas = false;
+function usar(h) {
+  ajustes.servidor = h.servidor;
+  ajustes.servidores = unir([[h.servidor], h.direcciones, ajustes.servidores || []]);
+  saveAjustes();
+  $("servidor").value = h.servidor;
+  renderDirecciones();
+}
+async function buscarMac(forzar = false) {
+  const otras = unir([ajustes.servidores || []], 20).filter((u) => u !== servidor());
+  let h = await elegir(otras);
+  if (!h && descubrir && (forzar || Date.now() - ultimaBusqueda > 60000)) {
+    ultimaBusqueda = Date.now();
+    h = await elegir(await buscarEnWifi(descubrir));
+  }
+  if (h) usar(h);
+  return h;
+}
 async function sync() {
-  const r = await syncNow({ servidor: servidor(), token: ajustes.token });
+  let r = await syncNow({ servidor: servidor(), token: ajustes.token });
+  if (native && (r.error === "sin-conexion" || r.error === "sin-servidor") && (await buscarMac())) {
+    r = await syncNow({ servidor: servidor(), token: ajustes.token });
+  }
+  if (native && r.ok && !aprendidas) {
+    // Once per start, learn the Mac's other addresses (Wi-Fi at home, Tailscale away).
+    aprendidas = true;
+    const h = await salud(servidor());
+    if (h) usar(h);
+  }
   await renderSync(r);
   return r;
 }
@@ -601,11 +685,28 @@ $("servidorCard").hidden = demo;
 $("demoNota").hidden = !demo;
 $("servidor").value = servidor();
 $("token").value = ajustes.token || "";
+function renderDirecciones() {
+  const otras = unir([ajustes.servidores || []]).filter((u) => u !== servidor());
+  $("direcciones").textContent = otras.length ? `También la conozco en: ${otras.join(", ")}` : "";
+}
+renderDirecciones();
+$("buscarMac").hidden = !descubrir;
+$("buscarMac").addEventListener("click", async () => {
+  const st = $("syncEstado");
+  st.classList.remove("error");
+  st.textContent = "Buscando el Mac en esta wifi…";
+  const h = await buscarMac(true);
+  if (!h) { st.classList.add("error"); st.textContent = "No encuentro el Mac en esta wifi. ¿Está encendido y en la misma red?"; return; }
+  const r = await sync();
+  if (r.ok) st.textContent = `Encontrado en ${h.servidor}. ${r.enviados} enviados, ${r.recibidos} recibidos.`;
+});
 $("servidorCard").addEventListener("submit", async (e) => {
   e.preventDefault();
   ajustes.servidor = $("servidor").value.trim().replace(/\/+$/, "");
   ajustes.token = $("token").value;
+  if (ajustes.servidor) ajustes.servidores = unir([[ajustes.servidor], ajustes.servidores || []]);
   saveAjustes();
+  renderDirecciones();
   $("syncEstado").textContent = "Sincronizando…";
   const r = await sync();
   if (r.ok) $("syncEstado").textContent = `Listo: ${r.enviados} enviados, ${r.recibidos} recibidos.`;

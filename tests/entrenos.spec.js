@@ -65,12 +65,11 @@ test("a flexibility routine shows each stretch animated, with its dose and cues"
   await expect(page.locator("#detLista .ej")).toHaveCount(9);
   await expect(page.locator("#detLista .ej svg.fig[data-fig]")).toHaveCount(9);
   await expect(page.locator("#detLista .ej").nth(3).locator(".dosis")).toHaveText("2 × 20–30 s /lado");
-  await page.locator("#detLista .ej").nth(3).getByText("Cómo hacerlo").click();
-  await expect(page.locator("#detLista .ej").nth(3)).toContainText("Boca arriba, toalla o cinturón");
   expect(await fill(page, '#detMan [data-m="isquios"] >> nth=0')).toMatch(/var\(--flex[123]\)/);
   await expect(page.locator("#detMan")).toContainText("min");
   await expect(page.locator("#detAvance")).toContainText("Pasa a la siguiente fase");
-  // The figure moves: its trunk is drawn somewhere else a few seconds later.
+  // The figure moves: its trunk is drawn somewhere else a few seconds later (only figures on screen are animated).
+  await page.locator("#detLista .ej").nth(1).scrollIntoViewIfNeeded();
   const trunk = () => page.locator('#detLista .ej >> nth=1 >> [data-k="tr"]').getAttribute("d");
   const before = await trunk();
   await page.clock.runFor(3000);
@@ -208,4 +207,38 @@ test("the monthly test is saved and charted, and the calendar marks the days tra
   await expect(page.locator('#testForm input[name="dedosSueloCm"]')).toHaveValue("");
   await page.selectOption("#testFase", "1");
   await expect(page.locator('#testForm input[name="sentadillaSeg"]')).toHaveValue("5");
+});
+
+test("each exercise can be looked at before starting: animation, dose and cues", async ({ page }) => {
+  await abrirApp(page);
+  await page.click('#hoyCard [data-abrir="F1"]');
+  await page.locator("#detLista .ej").nth(3).click();
+  const f = page.locator("#ficha");
+  await expect(f).toBeVisible();
+  await expect(page.locator("#fichaCuenta")).toHaveText("Ejercicio 4 de 9");
+  await expect(page.locator("#fichaDosis")).toHaveText("2 × 20–30 s /lado");
+  await expect(f).toContainText("Boca arriba, toalla o cinturón");
+  await expect(f.locator("svg.fig.grande")).toHaveCount(1);
+  // The big figure moves too.
+  const trunk = () => f.locator('[data-k="tr"]').first().getAttribute("d");
+  const before = await trunk();
+  await page.clock.runFor(3000);
+  expect(await trunk()).not.toBe(before);
+  await page.click("#fichaSig");
+  await expect(page.locator("#fichaCuenta")).toHaveText("Ejercicio 5 de 9");
+  await page.click("#fichaSalir");
+  await expect(f).toBeHidden();
+  await expect(page.locator("#detalle")).toBeVisible();
+
+  // A gym exercise shows its muscles on the mannequin, and EMPEZAR starts the workout from there.
+  await page.click("#detVolver");
+  await page.click('#listaFuerza [data-abrir="g1"]');
+  await page.getByRole("button", { name: "Ver Press de banca" }).click();
+  await expect(page.locator("#fichaTitulo")).toHaveText("Press de banca");
+  await expect(page.locator("#fichaDosis")).toHaveText("5 series · 8 reps · 40 kg");
+  await expect(page.locator("#fichaAnt")).toBeDisabled();
+  expect(await fill(page, '#fichaFig [data-m="pecho"] >> nth=0')).toBe("var(--prim)");
+  await page.click("#fichaEmpezar");
+  await expect(f).toBeHidden();
+  await expect(page.locator("#registro")).toBeVisible();
 });
