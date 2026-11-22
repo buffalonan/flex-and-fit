@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installs Flex & Fit on the Mac, next to Ghostfolio in Docker (colima), in ~/flex-and-fit:
+# Installs Flex & Fit on the Mac in Docker (colima), in ~/flex-and-fit:
 #   curl -fsSL https://raw.githubusercontent.com/buffalonan/flex-and-fit/main/scripts/mac/install.sh | sh
 # Safe to run again: it keeps an existing .env and only refreshes the compose file and the update job.
 set -eu

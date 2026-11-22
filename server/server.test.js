@@ -100,3 +100,14 @@ test("weekly backups: one per week per folder, newest twelve kept", () => {
   assert.equal(copy.count(), 1);
   copy.close();
 });
+
+test("the public web app holds no default server address", () => {
+  // The repo and the Pages demo are public: the phone's server address is typed by the owner, never shipped.
+  const web = path.join(__dirname, "..", "web");
+  for (const f of fs.readdirSync(web)) {
+    const text = fs.readFileSync(path.join(web, f), "utf8");
+    const hosts = (text.match(/https?:\/\/[\w.-]+:\d+/g) || []).filter((u) => !/^https?:\/\/(nombre-del-mac|localhost):/.test(u));
+    assert.deepEqual(hosts, [], `${f} has a host:port address`);
+    assert.doesNotMatch(text, /\b100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+\b/, `${f} has a Tailscale IP`);
+  }
+});

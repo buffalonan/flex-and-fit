@@ -2,7 +2,7 @@ const { test, expect, _android } = require("@playwright/test");
 
 const PKG = "io.github.buffalonan.flexandfit";
 
-test("the app opens, saves a session with no Mac in reach and keeps it", async () => {
+test("the app opens, has no server set until you type one, and saves a session on the phone", async () => {
   const [device] = await _android.devices();
   expect(device, "no emulator found by adb").toBeTruthy();
   try {
@@ -21,8 +21,9 @@ test("the app opens, saves a session with no Mac in reach and keeps it", async (
     await page.fill('#nueva textarea[name="notas"]', notas);
     await page.click('#nueva button[type="submit"]');
     await expect(page.locator("#nuevaOk")).toBeVisible();
-    // The emulator can't reach the Mac, so the session waits on the phone.
-    await expect(page.locator("#syncPill")).toHaveText(/sin subir/, { timeout: 30_000 });
+    // A fresh install has no server address (it's typed in Ajustes), so the session stays on the phone.
+    await expect(page.locator("#syncPill")).toHaveText("Solo en este dispositivo");
+    expect(await page.inputValue("#servidor")).toBe("");
     await page.click('.tabs button[data-tab="historial"]');
     await expect(page.locator("#lista")).toContainText(notas);
 
