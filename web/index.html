@@ -53,10 +53,11 @@
 
   <section id="ajustes" class="screen" aria-labelledby="ajTitle" hidden>
     <h2 id="ajTitle">Ajustes</h2>
-    <form class="card" id="servidorForm" autocomplete="off">
+    <p class="card hint" id="demoNota" hidden>Esto es una demo: lo que apuntes se queda solo en este navegador.</p>
+    <form class="card" id="servidorCard" autocomplete="off">
       <h3>Base de datos en el Mac</h3>
       <p class="hint">Los datos se guardan primero en este dispositivo y se copian al Mac cuando lo encuentra (en casa o por Tailscale).</p>
-      <label class="f">Dirección del servidor <input type="url" name="servidor" id="servidor" placeholder="http://ferrans-macbook-air:3334" spellcheck="false"></label>
+      <label class="f">Dirección del servidor <input type="url" name="servidor" id="servidor" placeholder="http://nombre-del-mac:3334" spellcheck="false"></label>
       <label class="f">Clave (si la pusiste en el Mac) <input type="password" name="token" id="token" autocomplete="off"></label>
       <div class="row">
         <button type="submit" class="btn-main">Guardar y sincronizar</button>

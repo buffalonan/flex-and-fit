@@ -150,3 +150,26 @@ test("remembers the tab and the theme, and fits the screen", async ({ page }) =>
     expect(overflow).toBeLessThanOrEqual(0);
   }
 });
+
+test("the Android app has no server address until one is typed in Ajustes", async ({ page }) => {
+  // Pretend to be the Capacitor app.
+  await page.addInitScript(() => {
+    window.Capacitor = { isNativePlatform: () => true, registerPlugin: () => ({ addListener() {}, exitApp() {} }) };
+  });
+  let calls = 0;
+  await page.route("**/api/sync", (r) => { calls++; return r.continue(); });
+  await page.goto("/");
+  await expect(page.locator("#syncPill")).toHaveText("Solo en este dispositivo");
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await expect(page.locator("#servidor")).toHaveValue("");
+  await expect(page.locator("#servidorCard")).toBeVisible();
+  expect(calls).toBe(0);
+
+  // Once typed, it's remembered on this device and used.
+  await page.fill("#servidor", new URL(page.url()).origin);
+  await page.getByRole("button", { name: "Guardar y sincronizar" }).click();
+  await expect(page.locator("#syncPill")).toHaveText("Sincronizado");
+  await page.reload();
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await expect(page.locator("#servidor")).toHaveValue(new URL(page.url()).origin);
+});

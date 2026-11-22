@@ -12,9 +12,11 @@ const asHTML = (v) => (v instanceof SafeHTML ? v.s : Array.isArray(v) ? v.map(as
 const html = (strings, ...vals) => new SafeHTML(strings.reduce((out, str, i) => out + str + (i < vals.length ? asHTML(vals[i]) : ""), ""));
 
 const native = !!window.Capacitor?.isNativePlatform?.();
-// Where the Mac's server is: the app reaches it over Tailscale; the web page is served by it, so it's the same origin.
-// The GitHub Pages demo has no server.
-const defaultServer = () => (native ? "http://ferrans-macbook-air:3334" : location.hostname === "buffalonan.github.io" || location.protocol === "file:" ? "" : location.origin);
+// Where the Mac's server is. The web page served by the Mac uses its own origin. The Android app has no default:
+// the address is typed once in Ajustes and kept only on the phone, so no host name or IP is ever in this public repo.
+// The GitHub Pages demo has no server at all.
+const demo = location.hostname === "buffalonan.github.io";
+const defaultServer = () => (native || demo || location.protocol === "file:" ? "" : location.origin);
 
 const KEY = "flexfit.ajustes";
 let ajustes = { servidor: null, token: "", tema: "", tab: "hoy" };
@@ -121,9 +123,12 @@ $("syncPill").addEventListener("click", () => { show("ajustes"); sync(); });
 window.addEventListener("online", () => sync());
 setInterval(() => sync(), 5 * 60 * 1000);
 
+// The public demo doesn't offer a server at all.
+$("servidorCard").hidden = demo;
+$("demoNota").hidden = !demo;
 $("servidor").value = servidor();
 $("token").value = ajustes.token || "";
-$("servidorForm").addEventListener("submit", async (e) => {
+$("servidorCard").addEventListener("submit", async (e) => {
   e.preventDefault();
   ajustes.servidor = $("servidor").value.trim().replace(/\/+$/, "");
   ajustes.token = $("token").value;

@@ -1,4 +1,4 @@
-// Weekly copies of the database, like the Ghostfolio backups: one file per week in each backup folder
+// Weekly copies of the database: one file per week in each backup folder
 // (on the Mac, ~/Documents/fitness-backups/weekly and Google Drive's Backups/Fitness), keeping the newest KEEP.
 /* eslint-disable security/detect-non-literal-fs-filename -- folders come from BACKUP_DIRS, set by the owner */
 const fs = require("node:fs");

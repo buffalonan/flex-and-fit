@@ -8,8 +8,8 @@ Agentes de IA y revisores: empezad por [AGENTS.md](AGENTS.md).
 
 - **El móvil guarda todo primero en local** (IndexedDB), así que en el gimnasio se puede apuntar sin red.
 - **El Mac es la base de datos central:** un contenedor Docker con SQLite y una pequeña API (`server/`), que además sirve la web en `http://<mac>:3334`.
-- **Sincronización:** la app envía lo pendiente y recibe lo nuevo cuando encuentra el Mac, en casa o por Tailscale (`http://ferrans-macbook-air:3334`). Si el Mac está dormido, lo reintenta más tarde.
-- **Copias semanales** de la base de datos en `~/Documents/fitness-backups/weekly/` y en Google Drive (`Backups/Fitness`), las 12 más recientes, igual que Ghostfolio. Además, Ajustes → Exportar JSON descarga una copia completa.
+- **Sincronización:** la app envía lo pendiente y recibe lo nuevo cuando encuentra el Mac, en casa o por Tailscale. Si el Mac está dormido, lo reintenta más tarde.
+- **Copias semanales** de la base de datos en `~/Documents/fitness-backups/weekly/` y en Google Drive (`Backups/Fitness`), las 12 más recientes. Además, Ajustes → Exportar JSON descarga una copia completa.
 
 ## Releases
 
@@ -31,7 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/buffalonan/flex-and-fit/main/script
 
 Crea `~/flex-and-fit` con `docker-compose.yml` y `.env` (carpetas de las copias y clave opcional), arranca el contenedor e instala un job de launchd que lo actualiza cada hora. Los datos viven en el volumen Docker `flexfit-data`.
 
-En la app del móvil, Ajustes → Dirección del servidor: `http://ferrans-macbook-air:3334`. Si pones `SYNC_TOKEN` en `.env`, escribe la misma clave en Ajustes.
+En la app del móvil, Ajustes → Dirección del servidor: la dirección que muestra `install.sh` al terminar. Se guarda solo en el móvil. Si pones `SYNC_TOKEN` en `.env`, escribe la misma clave en Ajustes.
 
 ## Puesta en marcha del repo (una vez)
 
