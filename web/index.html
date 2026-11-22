@@ -112,8 +112,10 @@
     <p class="card sub" id="demoNota" hidden>Esto es una demo: lo que apuntes se queda solo en este navegador.</p>
     <form class="card" id="servidorCard" autocomplete="off">
       <h3>Base de datos en el Mac</h3>
-      <p class="sub">Los datos se guardan primero en este dispositivo y se copian al Mac cuando lo encuentra (en casa o por Tailscale).</p>
+      <p class="sub">Los datos se guardan primero en este dispositivo y se copian al Mac cuando lo encuentra (en casa o por Tailscale). La app busca el Mac sola en la wifi de casa y aprende su dirección de Tailscale la primera vez que conecta.</p>
+      <button type="button" class="btn" id="buscarMac" hidden>Buscar el Mac en esta wifi</button>
       <label class="f">Dirección del servidor <input type="url" name="servidor" id="servidor" placeholder="http://nombre-del-mac:3334" spellcheck="false"></label>
+      <p class="sub" id="direcciones"></p>
       <label class="f">Clave (si la pusiste en el Mac) <input type="password" name="token" id="token" autocomplete="off"></label>
       <button type="submit" class="btn-main">Guardar y sincronizar</button>
       <p class="status" id="syncEstado"></p>
@@ -159,6 +161,17 @@
     <button type="button" class="mini" id="regMenos">−15 s</button><button type="button" class="mini" id="regMas">+15 s</button><button type="button" class="mini" id="regFinDesc">Saltar</button></div>
   <p class="sub" id="regNota"></p>
   <div class="full-btns"><button type="button" class="btn-sec" id="regAnt">ANTERIOR</button><button type="button" class="btn-go" id="regSig">SIGUIENTE</button></div>
+</section>
+
+<!-- One exercise of a workout, opened from its detail before starting. -->
+<section id="ficha" class="full" aria-labelledby="fichaTitulo" hidden>
+  <div class="full-top"><span class="sub" id="fichaCuenta"></span><button type="button" class="x" id="fichaSalir" aria-label="Cerrar">✕</button></div>
+  <h2 id="fichaTitulo"></h2>
+  <p class="dosis-grande" id="fichaDosis"></p>
+  <div class="ficha-fig" id="fichaFig"></div>
+  <div class="ficha-cuerpo" id="fichaCuerpo"></div>
+  <div class="full-btns"><button type="button" class="btn-sec" id="fichaAnt">‹ ANTERIOR</button><button type="button" class="btn-sec" id="fichaSig">SIGUIENTE ›</button></div>
+  <button type="button" class="btn-go" id="fichaEmpezar">EMPEZAR EL ENTRENO</button>
 </section>
 
 <!-- Leaving a session halfway. -->

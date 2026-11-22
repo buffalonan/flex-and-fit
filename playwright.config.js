@@ -24,7 +24,8 @@ module.exports = defineConfig({
   ],
   webServer: {
     command: "node server/server.js",
-    env: { PORT: "4173", DATA_DIR: dataDir },
+    // DIRECCIONES: the "other address" the app learns from /api/salud (the same server under another name).
+    env: { PORT: "4173", DATA_DIR: dataDir, DIRECCIONES: "http://localhost:4173" },
     url: "http://127.0.0.1:4173/api/salud",
     reuseExistingServer: false,
   },

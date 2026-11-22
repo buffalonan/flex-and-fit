@@ -34,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/buffalonan/flex-and-fit/main/script
 
 Crea `~/flex-and-fit` con `docker-compose.yml` y `.env` (carpetas de las copias y clave opcional), arranca el contenedor e instala un job de launchd que lo actualiza cada hora. Los datos viven en el volumen Docker `flexfit-data`.
 
-En la app del móvil, Perfil → Dirección del servidor: la dirección que muestra `install.sh` al terminar. Se guarda solo en el móvil. Si pones `SYNC_TOKEN` en `.env`, escribe la misma clave en Perfil.
+En casa, la app del móvil encuentra el Mac sola (el Mac se anuncia por Bonjour en la wifi) y aprende también su dirección de Tailscale para cuando estés fuera. Si hace falta, Perfil → Buscar el Mac en esta wifi, o escribe en Perfil → Dirección del servidor la que muestra `install.sh` al terminar. Las direcciones se guardan solo en el móvil. Si pones `SYNC_TOKEN` en `.env`, escribe la misma clave en Perfil.
 
 ## Puesta en marcha del repo (una vez)
 

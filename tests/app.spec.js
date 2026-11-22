@@ -183,3 +183,60 @@ test("the Android app has no server address until one is typed in Perfil", async
   await page.getByRole("button", { name: "Perfil" }).click();
   await expect(page.locator("#servidor")).toHaveValue(new URL(page.url()).origin);
 });
+
+// Pretend to be the Capacitor app; `wifi` is what the Bonjour search finds on this Wi-Fi.
+const comoApp = (page, wifi) => page.addInitScript((w) => {
+  window.__busquedas = 0;
+  window.Capacitor = {
+    isNativePlatform: () => true,
+    registerPlugin: (n) => (n === "Descubrir"
+      ? { buscar: async () => { window.__busquedas++; return { direcciones: w }; } }
+      : { addListener() {}, exitApp() {} }),
+  };
+}, wifi);
+
+test("the Android app finds the Mac on the Wi-Fi by itself and learns its other addresses", async ({ page }) => {
+  const origin = "http://127.0.0.1:4173";
+  await comoApp(page, [origin]);
+  await page.goto("/");
+  await expect(page.locator("#syncPill")).toHaveText("Sincronizado");
+  await page.getByRole("button", { name: "Perfil" }).click();
+  await expect(page.locator("#servidor")).toHaveValue(origin);
+  // The server's /api/salud told it the Mac's other address.
+  await expect(page.locator("#direcciones")).toHaveText("También la conozco en: http://localhost:4173");
+  const guardado = await page.evaluate(() => JSON.parse(localStorage.getItem("flexfit.ajustes")));
+  expect(guardado.servidores).toEqual([origin, "http://localhost:4173"]);
+});
+
+test("the Android app switches to another known address when the one in use doesn't answer", async ({ page }) => {
+  await comoApp(page, []);
+  // The app's native HTTP has no CORS; here the other address is another origin, so let it through.
+  await page.route("http://localhost:4173/api/**", async (r) => {
+    const res = await r.fetch();
+    await r.fulfill({ response: res, headers: { ...res.headers(), "access-control-allow-origin": "*", "access-control-allow-headers": "*" } });
+  });
+  // The address in use is dead (nothing listens on port 9); the Tailscale one, say, answers.
+  await page.addInitScript(() => localStorage.setItem("flexfit.ajustes",
+    JSON.stringify({ servidor: "http://127.0.0.1:9", servidores: ["http://127.0.0.1:9", "http://localhost:4173"] })));
+  await page.goto("/");
+  await expect(page.locator("#syncPill")).toHaveText("Sincronizado");
+  await page.getByRole("button", { name: "Perfil" }).click();
+  await expect(page.locator("#servidor")).toHaveValue("http://localhost:4173");
+  expect(await page.evaluate(() => window.__busquedas)).toBe(0);
+});
+
+test("Buscar el Mac says so when it isn't on this Wi-Fi, and the web version has no such button", async ({ page, browser }) => {
+  await comoApp(page, []);
+  await page.addInitScript(() => localStorage.setItem("flexfit.ajustes", JSON.stringify({ servidor: "" })));
+  await page.goto("/");
+  await expect(page.locator("#syncPill")).toHaveText("Solo en este dispositivo");
+  await page.getByRole("button", { name: "Perfil" }).click();
+  await page.getByRole("button", { name: "Buscar el Mac en esta wifi" }).click();
+  await expect(page.locator("#syncEstado")).toHaveText(/No encuentro el Mac en esta wifi/);
+
+  const web = await browser.newPage();
+  await web.goto(page.url());
+  await web.getByRole("button", { name: "Perfil" }).click();
+  await expect(web.locator("#buscarMac")).toBeHidden();
+  await web.close();
+});

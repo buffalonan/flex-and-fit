@@ -6,6 +6,7 @@
 //   WEB_DIR       the web app to serve (default ./web)
 //   BACKUP_DIRS   comma-separated folders for the weekly backups (none by default)
 //   SYNC_TOKEN    if set, /api/sync needs "Authorization: Bearer <token>"
+//   DIRECCIONES   comma-separated addresses of this Mac (http://<ip>:3334), sent to the app in /api/salud
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -62,12 +63,26 @@ function serveStatic(webDir, req, res) {
   });
 }
 
-function createServer({ db, webDir, token, version = "dev" }) {
+// The addresses the Mac can be reached at (home Wi-Fi, Tailscale), only well-formed http(s) origins.
+// update.sh writes them into the Mac's .env; the app learns them from /api/salud and keeps them on the phone.
+function origenes(lista) {
+  const out = [];
+  for (const d of lista || []) {
+    try {
+      const u = new URL(String(d).trim());
+      if ((u.protocol === "http:" || u.protocol === "https:") && !out.includes(u.origin)) out.push(u.origin);
+    } catch (e) { /* not a URL: skipped */ }
+  }
+  return out;
+}
+
+function createServer({ db, webDir, token, version = "dev", direcciones = [] }) {
+  direcciones = origenes(direcciones);
   return http.createServer(async (req, res) => {
     try {
       const { pathname } = new URL(req.url, "http://x");
       if (pathname === "/api/salud" && req.method === "GET") {
-        return send(res, 200, { ok: true, version, registros: db.count(), token: !!token });
+        return send(res, 200, { ok: true, version, registros: db.count(), token: !!token, direcciones });
       }
       if (pathname === "/api/sync") {
         if (req.method !== "POST") return send(res, 405, { error: "usa POST" });
@@ -104,7 +119,8 @@ if (require.main === module) {
   const dirs = (process.env.BACKUP_DIRS || "").split(",").map((d) => d.trim()).filter(Boolean);
   const db = store.open(path.join(dataDir, "flexfit.db"));
   const version = process.env.APP_VERSION || "dev";
-  const server = createServer({ db, webDir, token: process.env.SYNC_TOKEN || "", version });
+  const direcciones = (process.env.DIRECCIONES || "").split(",").filter((d) => d.trim());
+  const server = createServer({ db, webDir, token: process.env.SYNC_TOKEN || "", version, direcciones });
 
   const backupNow = () => {
     try {

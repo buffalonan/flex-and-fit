@@ -93,9 +93,8 @@ button:active, .btn:active { transform: scale(.97); }
 .ej .dosis { font-family: var(--display); font-size: 1.05rem; color: var(--flex3); font-weight: 600; }
 .ej.g .dosis { color: var(--app-muted); font-family: var(--text); font-size: .9rem; font-weight: 500; }
 .ej .zona { font-size: .82rem; color: var(--app-muted); }
-.ej details { font-size: .88rem; }
-.ej summary { cursor: pointer; color: var(--app-muted); min-height: 32px; display: flex; align-items: center; }
-.ej ul { margin: 4px 0 0; padding-left: 18px; }
+.ej[data-i] { cursor: pointer; }
+.ej .ver { flex: none; align-self: center; min-width: 44px; min-height: 44px; padding: 0; background: transparent; border: 0; color: var(--app-muted); font-size: 1.6rem; }
 .ej .extra { font-size: .85rem; color: var(--amber); }
 .bloque { border: 1px solid var(--app-line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .bloque > b { font-family: var(--display); font-size: 1.1rem; }
@@ -180,3 +179,15 @@ details > summary { cursor: pointer; font-weight: 600; min-height: 24px; }
 .tabs button[aria-current="page"] i { background: var(--heat3); border-color: var(--heat3); }
 body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; }
 @media (prefers-reduced-motion: reduce) { button:active, .btn:active { transform: none; } #repArco { transition: none; } }
+
+/* Exercise sheet (#ficha) */
+#ficha { display: flex; flex-direction: column; gap: 10px; }
+.dosis-grande { margin: 0; font-family: var(--display); font-size: 1.3rem; font-weight: 600; color: var(--flex3); }
+#ficha.gym .dosis-grande { color: var(--prim); }
+.ficha-fig { background: var(--card); border-radius: 14px; padding: 8px; }
+.ficha-fig .maniqui { max-width: 320px; margin: 0 auto; display: block; }
+.ficha-cuerpo h3 { margin: 12px 0 4px; font-size: 1rem; }
+.ficha-cuerpo .pasos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.ficha-cuerpo .zona { margin: 0; color: var(--app-muted); }
+.ficha-cuerpo .extra { margin: 6px 0 0; color: var(--amber); }
+.full-btns button:disabled { opacity: .4; }
