@@ -104,7 +104,9 @@ test("weekly backups: one per week per folder, newest twelve kept", () => {
 test("the public web app holds no default server address", () => {
   // The repo and the Pages demo are public: the phone's server address is typed by the owner, never shipped.
   const web = path.join(__dirname, "..", "web");
-  for (const f of fs.readdirSync(web)) {
+  const texts = fs.readdirSync(web, { recursive: true }).filter((f) => /\.(html|js|css|json|webmanifest|svg)$/.test(f));
+  assert.ok(texts.includes("app.js"));
+  for (const f of texts) {
     const text = fs.readFileSync(path.join(web, f), "utf8");
     const hosts = (text.match(/https?:\/\/[\w.-]+:\d+/g) || []).filter((u) => !/^https?:\/\/(nombre-del-mac|localhost):/.test(u));
     assert.deepEqual(hosts, [], `${f} has a host:port address`);

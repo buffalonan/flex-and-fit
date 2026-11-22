@@ -17,20 +17,29 @@ test("the app opens, has no server set until you type one, and saves a session o
     page.on("pageerror", (e) => errors.push(e.message));
 
     await expect.poll(() => page.evaluate(() => window.innerWidth), { message: "the WebView has no size (screen off?)", timeout: 30_000 }).toBeGreaterThan(0);
-    await expect(page.locator("#hoy")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("#entrenos")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("#listaFuerza .wcard")).toHaveCount(4);
     expect(await page.evaluate(() => window.Capacitor.isNativePlatform())).toBe(true);
     // Native HTTP lets the app reach the Mac's plain-http server from the app's https origin.
     expect(await page.evaluate(() => window.Capacitor.isPluginAvailable("CapacitorHttp"))).toBe(true);
 
     const notas = `emulador-${Date.now()}`;
+    await page.click('.tabs button[data-tab="historial"]');
+    await page.click("#nuevaBox summary");
     await page.fill('#nueva textarea[name="notas"]', notas);
     await page.click('#nueva button[type="submit"]');
     await expect(page.locator("#nuevaOk")).toBeVisible();
-    // A fresh install has no server address (it's typed in Ajustes), so the session stays on the phone.
+    // A fresh install has no server address (it's typed in Perfil), so the session stays on the phone.
     await expect(page.locator("#syncPill")).toHaveText("Solo en este dispositivo");
     expect(await page.inputValue("#servidor")).toBe("");
-    await page.click('.tabs button[data-tab="historial"]');
     await expect(page.locator("#lista")).toContainText(notas);
+    // The stretching player opens on the phone.
+    await page.click('.tabs button[data-tab="entrenos"]');
+    await page.click('#hoyCard .wcard');
+    await page.click("#detEmpezar");
+    await expect(page.locator("#reproductor")).toBeVisible();
+    await page.click("#repSalir");
+    await page.click("#salirDescartar");
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
