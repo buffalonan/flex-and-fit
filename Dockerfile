@@ -1,13 +1,13 @@
 # Flex & Fit for the Mac: the web app and the sync API in one small image, with no npm packages at run time.
 # Built for Apple Silicon and Intel by .github/workflows/docker.yml and published to ghcr.io/buffalonan/flex-and-fit.
-FROM node:24-alpine AS web
+FROM node:26-alpine AS web
 WORKDIR /src
 ARG APP_VERSION=dev
 COPY web ./web
 COPY scripts/build-app-web.js ./scripts/
 RUN APP_VERSION=$APP_VERSION node scripts/build-app-web.js /site --web
 
-FROM node:24-alpine
+FROM node:26-alpine
 WORKDIR /app
 ARG APP_VERSION=dev
 ENV NODE_ENV=production PORT=3334 DATA_DIR=/data WEB_DIR=/app/web APP_VERSION=$APP_VERSION
