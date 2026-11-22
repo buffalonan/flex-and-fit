@@ -40,4 +40,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The stretching player and the rest timer vibrate on a side change and when a rest ends. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>

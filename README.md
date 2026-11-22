@@ -1,6 +1,9 @@
 # Flex & Fit
 
-Registro de entrenamientos de gimnasio y sesiones de flexibilidad: una web que sirve el Mac y una app Android para el móvil. Los datos se guardan en una base de datos en el Mac (Docker), con copias semanales.
+Entrenos de gimnasio y de flexibilidad: una web que sirve el Mac y una app Android para el móvil. Los datos se guardan en una base de datos en el Mac (Docker), con copias semanales.
+
+- **Entrenos:** tus cuatro rutinas de gimnasio y el plan de flexibilidad de 6 meses, cada uno con su maniquí de músculos. Los estiramientos llevan figuras animadas y un reproductor que avanza solo; el gimnasio, una tabla de series con el descanso automático.
+- **Progreso:** calendario de constancia y el test mensual del plan.
 
 Agentes de IA y revisores: empezad por [AGENTS.md](AGENTS.md).
 

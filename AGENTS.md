@@ -7,10 +7,10 @@ Context for AI agents and reviewers working on this repo. Read this first instea
 Flex & Fit: one person's log of gym workouts and flexibility sessions (Ferran, who writes in Spanish; the UI is in Spanish). A web app served by his Mac and the same app wrapped for Android (Samsung S23) with Capacitor. Modelled on `buffalonan/german-learning`: no framework, no build step, every merge to `main` releases the APK and the Mac's image.
 
 **Roadmap** (proposal doc: https://claude.ai/artifact/91xtGjZy26UdwRYwkTv3kG):
-1. Skeleton and releases: quick session log, history, sync with the Mac, JSON backups (this phase).
-2. Flexibility: the 6-month plan (6 phases, tests, daily checklist) with the animated SVG figures (v2 prototype in `prototypes/animaciones/`; Lottie and 3D are kept for later).
-3. Gym: sets, reps and weights, rest timer, repeat last session, history per exercise, records.
-4. Progress charts. Possibly importing heart rate and kcal from his Coros watch.
+1. Skeleton and releases: quick session log, history, sync with the Mac, JSON backups. Done.
+2. Workouts with the design guide (https://claude.ai/artifact/CkekWik1jW3c5HiwC4w247): the 6-month flexibility plan with animated SVG figures and a stretching player, Ferran's four Coros gym workouts with a basic set logger, the mannequin, progress (calendar, monthly test) and profile. Lottie and 3D prototypes are kept for later in `prototypes/animaciones/`.
+3. Gym in depth: history per exercise, records, editing workouts. **Health Connect** (Ferran approved it): the Android app reads the Coros sessions, heart rate and calories (if present) through a Capacitor Health Connect plugin, matches them by time to the session logged in the app and stores average HR and kcal with it (the summary already shows "FC media · reloj" and "Calorías · reloj" placeholders). Training load and HRV are not in Health Connect.
+4. Progress charts per exercise.
 
 **Workout UX (Ferran's requirement):** home is a list of workouts as cards; tapping one shows its exercises (animation, dose, cues) and a start button. Each workout shows a body mannequin, front and back, modelled on the Coros app: grey silhouettes on a dark panel, worked muscles in red, stronger with more sets, each with a dotted leader label ("9 series"), and stats below (series, tiempo, FC media, kcal, carga). Exercises carry their primary and secondary muscles; a workout's map is the sum of its exercises'.
 
@@ -18,14 +18,14 @@ Flex & Fit: one person's log of gym workouts and flexibility sessions (Ferran, w
 
 | Path | What it is |
 | --- | --- |
-| `web/` | The app: `index.html` (markup), `styles.css` (tokens on `:root`, light and dark), `app.js` (screens and UI), `store.js` (IndexedDB), `sync.js` (sync with the Mac), `icon.svg`, `manifest.webmanifest`. ES modules, no build step. |
+| `web/` | The app: `index.html` (markup), `styles.css` (tokens on `:root`, always dark), `app.js` (screens, player, logger), `datos.js` (the plan's stretches and phases, the gym workouts, dose parsing), `maniqui.js` (the mannequin), `figura.js` (the animated stretch figures), `html.js` (the escaping `html` tag), `store.js` (IndexedDB), `sync.js` (sync with the Mac), `fonts/` (Barlow and Barlow Condensed, SIL OFL), `icon.svg`, `manifest.webmanifest`. ES modules, no build step. |
 | `server/` | `server.js` (Node `http`, no npm packages: serves `web/` and the API), `db.js` (SQLite via `node:sqlite`), `backup.js` (weekly copies), `server.test.js` (`node --test`). Needs Node 24. |
 | `Dockerfile`, `docker-compose.yml`, `.env.example` | The Mac's container: image `ghcr.io/buffalonan/flex-and-fit`, port 3334, data in the volume `flexfit-data`, backups bind-mounted at `/backups/local` and `/backups/drive`. |
 | `scripts/mac/` | `install.sh` (sets up `~/flex-and-fit` on the Mac, writes `.env`, starts the container, installs the hourly launchd job) and `update.sh` (that job: `docker compose pull && up -d`). |
 | `scripts/build-app-web.js` | Copies `web/` into `www/` for the app (adding `capacitor.js`) or, with `--web`, elsewhere for Docker and Pages. Writes `APP_VERSION` into `<meta name="app-version">`. |
 | `scripts/build-icons.js` | Draws the Android launcher icons and splash screens from `web/icon.svg` with Playwright's Chromium. |
 | `android/` | Capacitor's Android project, app id `io.github.buffalonan.flexandfit`. Hand-edited only in `app/build.gradle` (version and signing from env vars, key alias `flexandfit`) and `AndroidManifest.xml` (`usesCleartextTraffic`, see below). |
-| `tests/` | Playwright tests against the real server, desktop and Pixel 7 sizes, with a fresh database per run. |
+| `tests/` | Playwright tests against the real server, desktop and Pixel 7 sizes, with a fresh database per run. `entrenos.spec.js` covers phase 2 and fakes the clock (`page.clock`); use `fastForward`, not `runFor`, so the figures' animation frames don't eat the test's time. |
 | `android-tests/` | Emulator smoke test of the real app, only in CI (`android.yml`). |
 | `prototypes/animaciones/` | Archived animation prototypes (SVG, Lottie, 3D). Not served, not linted. |
 
@@ -37,13 +37,18 @@ Flex & Fit: one person's log of gym workouts and flexibility sessions (Ferran, w
 - **Where the server is:** the web served by the Mac uses its own origin; the Android app has no default and the address is typed once in Ajustes (kept only in the phone's `localStorage`); the Pages demo has none, hides the server card and keeps data in the browser. **Never commit the owner's host names, Tailscale IPs, ports of other services or personal paths:** the repo and the Pages demo are public.
 - **Android and plain HTTP:** the app's WebView origin is `https://localhost`, so `CapacitorHttp` is enabled in `capacitor.config.json` to send `fetch` natively, and the manifest allows cleartext. Tailscale encrypts the traffic.
 - **Backups:** the server checks every hour and writes `flexfit-YYYY-MM-DD.db` (`VACUUM INTO`) into each `BACKUP_DIRS` folder whose newest copy is 7+ days old, keeping 12. On the Mac these are `~/Documents/fitness-backups/weekly` and Google Drive's `Backups/Fitness`. JSON export/import in Ajustes covers every record; import also takes the JSON copied from the 6-month flexibility plan artifact (`plan: "flexibilidad-6m-v1"`).
-- **UI:** three tabs (Hoy, Historial, Ajustes) at the bottom; the sync pill at the top shows Sincronizado, "N sin subir", "Sin conexión con el Mac" or "Solo en este dispositivo". `renderSync` drops overlapping renders so a stale read never wins. Settings live in `localStorage` under `flexfit.ajustes` (`servidor`, `token`, `tema`, `tab`), always in try/catch. Android Back goes to Hoy, and closes the app from Hoy.
+- **UI:** always dark (design guide). Four tabs at the bottom: Entrenos (today's routine on top, then the gym workouts and the plan's routines F1–F6 and "suave", filter Todos/Fuerza/Flex), Progreso (week counts, 5-week calendar, monthly test form and chart), Historial (sessions, plus a form to log one by hand) and Perfil (plan start date, server, backups). Tapping a card opens its detail (`#detalle`); EMPEZAR opens the full-screen stretching player (`#reproductor`) or the gym logger (`#registro`), and the end shows a summary (`#resumen`). The sync pill at the top shows Sincronizado, "N sin subir", "Sin conexión con el Mac" or "Solo en este dispositivo". `renderSync` drops overlapping renders so a stale read never wins. Settings live in `localStorage` under `flexfit.ajustes` (`servidor`, `token`, `tab`, `filtro`), always in try/catch. Android Back closes panels, leaves a session (asking first) or the detail, goes to Entrenos, and closes the app from there.
+- **Plan:** the start date is the record `ajustes/plan-flexibilidad` (`inicio`), set in Perfil, by the plan's JSON import, or by the first plan session done in the app. `enPlan()` gives the week, phase and today's routine (Sunday is "suave"; the last Sunday of a phase is test day). A stretching session is saved as `sesiones/plan-<fecha>` (same id as the plan import, one per day) with `ejercicios: [{ id, dosis, hecho }]`; monthly tests as `tests/fase-<n>`.
+- **Player:** `pasos()` turns a dose ("2 × 30 s /lado", "2 × 8", "3 ciclos /lado", "5 cambios + 30 s /lado") into timed steps; reps are timed at the exercise's `ritmo`. Short prep steps go between them (get ready, change side). It vibrates and beeps when a stretch starts, keeps the screen on (Wake Lock), and Saltar jumps to the next exercise; a stretch counts as done only if one of its steps ran to the end.
+- **Gym logger:** one page per exercise (a circuit is one page with its rounds), with last time's kg and reps filled in from the newest session of that workout. Ticking a set starts its rest timer (±15 s). A gym session is `sesiones/<uuid>` with `rutina` (g1–g4), `volumenKg` and `ejercicios: [{ n, series: [{ kg, reps | seg, hecho }] }]`.
+- **Mannequin** (`maniqui.js`): front and back, half shapes mirrored. Strength: primary muscles red, secondary amber (as in Coros), labels "N series" for the primary ones. Flexibility: teal by minutes (< 1, 1–3, 3+), primary muscles count their full time and secondary ones half.
+- **Figures** (`figura.js`): each stretch has a start pose and a stretch pose in joint angles; the figure rests on the floor on its own, eases into the stretch, breathes, and lights up where you feel it. Props (wall, door frame, towel, cushion) follow the pose.
 
 ## Rules
 
 - **Write markup only through the `html` tagged template** in `app.js`; it escapes every value. ESLint's `no-unsanitized` fails CI otherwise. Notes and imported JSON are user input.
 - Elements are shown and hidden with `el.hidden` (the `[hidden]` rule in `styles.css` makes that work).
-- Colours are CSS variables on `:root`, redefined for dark mode. Tap targets are at least 44px. The page must fit a phone without sideways scrolling (a test checks every tab).
+- Colours are CSS variables on `:root` (one dark set: the app is always dark). Tap targets are at least 44px (48px in the design guide). The page must fit a phone without sideways scrolling (a test checks every tab).
 - Exercise instructions must be safe and correct: tension, never pain; no bouncing.
 - New or changed behaviour needs a test (`tests/` for the app, `server/server.test.js` for the server). Never skip or delete a test to get CI green.
 - The server has no npm dependencies on purpose; keep it that way unless there's a strong reason.
