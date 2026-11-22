@@ -161,7 +161,7 @@ test("remembers the tab, and every screen fits a phone", async ({ page }) => {
   }
 });
 
-test("the Android app has no server address until one is typed in Ajustes", async ({ page }) => {
+test("the Android app has no server address until one is typed in Perfil", async ({ page }) => {
   // Pretend to be the Capacitor app.
   await page.addInitScript(() => {
     window.Capacitor = { isNativePlatform: () => true, registerPlugin: () => ({ addListener() {}, exitApp() {} }) };

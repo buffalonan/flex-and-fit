@@ -50,4 +50,4 @@ launchctl load "$PLIST"
 
 ip="$(tailscale ip -4 2> /dev/null | head -1 || true)"
 echo "Listo. Abre http://localhost:3334 en el Mac."
-echo "En el móvil (Ajustes de la app): http://$(scutil --get LocalHostName 2> /dev/null | tr 'A-Z' 'a-z'):3334${ip:+ o http://$ip:3334}"
+echo "En el móvil (pestaña Perfil de la app): http://$(scutil --get LocalHostName 2> /dev/null | tr 'A-Z' 'a-z'):3334${ip:+ o http://$ip:3334}"
