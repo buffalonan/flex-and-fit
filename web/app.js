@@ -14,7 +14,7 @@ const html = (strings, ...vals) => new SafeHTML(strings.reduce((out, str, i) => 
 const native = !!window.Capacitor?.isNativePlatform?.();
 // Where the Mac's server is: the app reaches it over Tailscale; the web page is served by it, so it's the same origin.
 // The GitHub Pages demo has no server.
-const defaultServer = () => (native ? "http://ferrans-macbook-air:3334" : location.hostname.endsWith("github.io") || location.protocol === "file:" ? "" : location.origin);
+const defaultServer = () => (native ? "http://ferrans-macbook-air:3334" : location.hostname === "buffalonan.github.io" || location.protocol === "file:" ? "" : location.origin);
 
 const KEY = "flexfit.ajustes";
 let ajustes = { servidor: null, token: "", tema: "", tab: "hoy" };
