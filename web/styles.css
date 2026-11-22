@@ -191,3 +191,4 @@ body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; 
 .ficha-cuerpo .zona { margin: 0; color: var(--app-muted); }
 .ficha-cuerpo .extra { margin: 6px 0 0; color: var(--amber); }
 .full-btns button:disabled { opacity: .4; }
+#detMaquinas a { color: var(--flex3); }

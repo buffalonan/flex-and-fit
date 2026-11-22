@@ -19,6 +19,7 @@ test("the app opens, has no server set until you type one, and saves a session o
     await expect.poll(() => page.evaluate(() => window.innerWidth), { message: "the WebView has no size (screen off?)", timeout: 30_000 }).toBeGreaterThan(0);
     await expect(page.locator("#entrenos")).toBeVisible({ timeout: 30_000 });
     await expect(page.locator("#listaFuerza .wcard")).toHaveCount(4);
+    await expect(page.locator("#listaPlantillas .wcard")).toHaveCount(3);
     expect(await page.evaluate(() => window.Capacitor.isNativePlatform())).toBe(true);
     // Native HTTP lets the app reach the Mac's plain-http server from the app's https origin.
     expect(await page.evaluate(() => window.Capacitor.isPluginAvailable("CapacitorHttp"))).toBe(true);

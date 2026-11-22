@@ -21,14 +21,17 @@ test("the list shows today's routine, the six phases and the four gym workouts",
   await expect(page.locator("#listaFuerza .wcard")).toHaveCount(4);
   await expect(page.locator("#listaFuerza")).toContainText("Tren superior · Empuje");
   await expect(page.locator("#listaFuerza")).toContainText("23 series");
+  await expect(page.locator("#listaPlantillas .wcard")).toHaveCount(3);
   // Every card has its mannequin.
-  await expect(page.locator("#entrenos .wcard svg.maniqui")).toHaveCount(12);
+  await expect(page.locator("#entrenos .wcard svg.maniqui")).toHaveCount(15);
 
   await page.locator('label:has(input[value="fuerza"])').click();
   await expect(page.locator("#grupoFlex")).toBeHidden();
   await expect(page.locator("#hoyCard")).toBeHidden();
+  await expect(page.locator("#grupoPlantillas")).toBeVisible();
   await page.locator('label:has(input[value="flex"])').click();
   await expect(page.locator("#grupoFuerza")).toBeHidden();
+  await expect(page.locator("#grupoPlantillas")).toBeHidden();
   await expect(page.locator("#grupoFlex")).toBeVisible();
 });
 
@@ -39,9 +42,9 @@ test("a gym workout shows its exercises as in Coros, and its muscles: primary re
   await expect(page.locator("#detSub")).toContainText("23 series");
   await expect(page.locator("#detNotas")).toContainText("Elevaciones laterales en polea");
   await expect(page.locator("#detLista .ej")).toHaveCount(6);
-  await expect(page.locator("#detLista .ej").first()).toContainText("1 Press de banca");
+  await expect(page.locator("#detLista .ej").first()).toContainText("Press de banca");
   await expect(page.locator("#detLista .ej").first()).toContainText("5 series · 8 reps · 40 kg · Descanso 1:30");
-  await expect(page.locator("#detLista .ej").nth(4)).toContainText("5 Fondos en paralelas");
+  await expect(page.locator("#detLista .ej").nth(4)).toContainText("Fondos en paralelas");
   await expect(page.locator("#detLista .ej").nth(4).locator(".dosis")).toHaveText("3 series · 8 reps · Descanso 1:30");
   await expect(page.locator("#detMaquinas")).toContainText("cuerda");
   expect(await fill(page, '#detMan [data-m="pecho"] >> nth=0')).toBe("var(--prim)");
@@ -241,4 +244,27 @@ test("each exercise can be looked at before starting: animation, dose and cues",
   await page.click("#fichaEmpezar");
   await expect(f).toBeHidden();
   await expect(page.locator("#registro")).toBeVisible();
+});
+
+test("professional templates: StrongLifts 5×5 A and B and the ACSM beginner routine, with their source", async ({ page }) => {
+  await abrirApp(page);
+  await page.click('#listaPlantillas [data-abrir="sl-a"]');
+  await expect(page.locator("#detTitle")).toHaveText("StrongLifts 5×5 · A");
+  await expect(page.locator("#detLista .ej")).toHaveCount(3);
+  await expect(page.locator("#detLista .ej").first().locator(".dosis")).toHaveText("5 series · 5 reps · 20 kg · Descanso 3:00");
+  await expect(page.locator("#detNotas")).toContainText("añade 2,5 kg");
+  await expect(page.locator("#detMaquinas a")).toHaveAttribute("href", "https://stronglifts.com/5x5/");
+  // No number in front of the exercises.
+  await expect(page.locator("#detLista .ej .name").first()).toHaveText("Sentadilla");
+  await page.click("#detVolver");
+
+  await page.click('#listaPlantillas [data-abrir="sl-b"]');
+  await expect(page.locator("#detLista .ej").nth(2).locator(".dosis")).toHaveText("1 serie · 5 reps · 40 kg · Descanso 3:00");
+  await page.click("#detVolver");
+
+  await page.click('#listaPlantillas [data-abrir="acsm"]');
+  await expect(page.locator("#detLista .ej")).toHaveCount(10);
+  await expect(page.locator("#detMaquinas")).toContainText("ACSM");
+  await page.locator("#detLista .ej").first().click();
+  await expect(page.locator("#fichaDosis")).toHaveText("2 series · 10 reps · peso a elegir");
 });

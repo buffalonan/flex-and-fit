@@ -96,10 +96,12 @@ function renderEntrenos() {
   $("hoyFecha").textContent = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
   $("planPos").textContent = `Semana ${Math.min(ep.semana, 26)} · F${ep.fase.n}`;
   $("hoyCard").innerHTML = html`${tarjeta(ep.rutina, { hoy: true })}${ep.test ? html`<p class="sub">Hoy toca el test mensual: apúntalo en Progreso.</p>` : ""}`;
-  $("listaFuerza").innerHTML = html`${GYM.map((w) => tarjeta(w.id))}`;
+  $("listaFuerza").innerHTML = html`${GYM.filter((w) => !w.fuente).map((w) => tarjeta(w.id))}`;
+  $("listaPlantillas").innerHTML = html`${GYM.filter((w) => w.fuente).map((w) => tarjeta(w.id))}`;
   $("listaFlex").innerHTML = html`${RUTINAS_FLEX.map((r) => tarjeta(r.id))}`;
   const f = ajustes.filtro;
   $("grupoFuerza").hidden = f === "flex";
+  $("grupoPlantillas").hidden = f === "flex";
   $("grupoFlex").hidden = f === "fuerza";
   $("hoyCard").hidden = f === "fuerza";
 }
@@ -131,7 +133,7 @@ function abrir(id) {
     $("detStats").innerHTML = html`${stat(r.items.length, "Ejercicios")}${stat(Math.round(seg / 60), "Estirando", "min")}${stat(r.int.replace(" / 10", ""), "Intensidad", "/10")}`;
     $("detLista").innerHTML = html`${r.items.map(([ex, dosis, extra], i) => html`<li class="ej" data-i="${i}">
       <span class="th">${figura(ex)}</span>
-      <div class="meta"><span class="sub">${String(i + 1).padStart(2, "0")}</span><span class="name">${EX[ex].n}</span><span class="dosis">${dosis}</span>
+      <div class="meta"><span class="name">${EX[ex].n}</span><span class="dosis">${dosis}</span>
         <span class="zona">Lo notas en: ${EX[ex].z}</span>
         ${extra ? html`<span class="extra">${extra}</span>` : ""}</div>
       <button type="button" class="ver" aria-label="${`Ver ${EX[ex].n}`}">›</button></li>`)}`;
@@ -145,7 +147,7 @@ function abrir(id) {
       <div class="leyenda"><span><i style="background:var(--prim)"></i>Músculos principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
     const vol = w.ej.reduce((a, e) => a + (e.kg && e.reps ? e.kg * e.reps * e.series : 0), 0);
     $("detStats").innerHTML = html`${stat(g.series, "Series")}${stat(w.ej.length, "Ejercicios")}${stat(vol.toLocaleString("es-ES"), "Volumen", "kg")}`;
-    const fila = (e, i) => html`<li class="ej g" data-i="${i}"><div class="meta"><span class="name">${i + 1} ${e.n}${e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : ""}</span>
+    const fila = (e, i) => html`<li class="ej g" data-i="${i}"><div class="meta"><span class="name">${e.n}${e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : ""}</span>
       <span class="dosis">${e.series} ${e.series === 1 ? "serie" : "series"} · ${e.seg ? mmss(e.seg) : `${e.reps} reps`}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : ""} · Descanso ${mmss(e.desc)}</span>
       <span class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</span></div>
       <button type="button" class="ver" aria-label="${`Ver ${e.n}`}">›</button></li>`;
@@ -157,7 +159,7 @@ function abrir(id) {
       out.push(html`<li class="bloque"><b>Repite ${w.bloques[e.bloque].rondas} veces</b><ol class="ejercicios">${items.map(([x, j]) => fila(x, j))}</ol></li>`);
     }
     $("detLista").innerHTML = html`${out}`;
-    $("detMaquinas").textContent = `Material: ${w.maquinas}.`;
+    $("detMaquinas").innerHTML = html`Material: ${w.maquinas}.${w.fuente ? html`<br>Fuente: <a href="${w.fuente.url}" target="_blank" rel="noopener">${w.fuente.n}</a>` : ""}`;
     $("detAvance").innerHTML = "";
   }
   for (const t of TABS) $(t).hidden = true;
@@ -196,7 +198,7 @@ function verFicha(i) {
     $("fichaTitulo").textContent = `${e.n}${lado(e)}`;
     $("fichaFig").innerHTML = html`${maniqui({ p, s: sec }, "f", { titulo: `Músculos de ${e.n}` })}
       <div class="leyenda"><span><i style="background:var(--prim)"></i>Principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
-    $("fichaDosis").textContent = `${e.series} ${e.series === 1 ? "serie" : "series"} · ${e.seg ? mmss(e.seg) : `${e.reps} reps`}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : " · peso corporal"}`;
+    $("fichaDosis").textContent = `${e.series} ${e.series === 1 ? "serie" : "series"} · ${e.seg ? mmss(e.seg) : `${e.reps} reps`}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : e.elige ? " · peso a elegir" : " · peso corporal"}`;
     // Same-named exercises (a side plank per side) are told apart by their order.
     const n = w.ej.slice(0, i).filter((x) => x.n === e.n).length;
     const ult = (ultima(abierto)?.ejercicios || []).filter((x) => x.n === e.n)[n]?.series?.filter((x) => x.hecho) || [];
