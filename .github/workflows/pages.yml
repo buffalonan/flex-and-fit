@@ -1,0 +1,41 @@
+name: Web demo
+
+# A demo of the web app on GitHub Pages (https://buffalonan.github.io/flex-and-fit/), with no server:
+# data stays in that browser. The real web app is the one the Mac serves on port 3334.
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", "scripts/build-app-web.js", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Publish to GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Collect the web app
+        env:
+          APP_VERSION: 1.${{ github.run_number }}-demo
+        run: node scripts/build-app-web.js _site --web
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+      - id: deployment
+        uses: actions/deploy-pages@v4

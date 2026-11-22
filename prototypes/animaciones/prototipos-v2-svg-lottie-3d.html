@@ -1,0 +1,396 @@
+<title>Isquiotibiales de pie</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: barra de control fija, tres escenarios iguales en rejilla, recomendación, mejoras y tabla */
+:root{
+  --bg:#EEF1F0; --surface:#FFFFFF; --stage:#F6F8F7; --ink:#17201E; --muted:#5C6966; --line:#D5DCDA;
+  --accent:#1F6F78; --accent-ink:#FFFFFF; --muscle:#D9534A; --soft:#E3ECEA;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111615; --surface:#1A2120; --stage:#202927; --ink:#E7ECEA; --muted:#9AA7A4; --line:#2E3936;
+  --accent:#5FB3BB; --accent-ink:#0D1514; --muscle:#F07068; --soft:#26302E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111615; --surface:#1A2120; --stage:#202927; --ink:#E7ECEA; --muted:#9AA7A4; --line:#2E3936;
+  --accent:#5FB3BB; --accent-ink:#0D1514; --muscle:#F07068; --soft:#26302E; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1120px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(28px,6vw,40px)} h2{font-size:24px} h3{font-size:20px}
+.lede{color:var(--muted);max-width:65ch;margin:6px 0 0}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:600}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:10px}
+.bar-top{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center}
+.phase{flex:1 1 220px;min-width:0}
+.phase b{font-family:var(--f-display);font-size:20px;display:block;line-height:1.15}
+.phase span{color:var(--muted);font-size:13px}
+.clock{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted)}
+button,select{font:inherit;font-size:14px;border-radius:8px;border:1px solid var(--line);background:var(--stage);color:var(--ink);padding:7px 12px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;min-width:104px}
+button[aria-pressed="true"]{background:var(--soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.stage{position:relative;aspect-ratio:1/1;max-width:100%;background:var(--stage);border-bottom:1px solid var(--line)}
+.stage svg,.stage canvas,.stage .lot{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tag{position:absolute;left:10px;top:10px;font-family:var(--f-mono);font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--muted)}
+.views{position:absolute;right:8px;top:8px;display:flex;gap:4px}
+.views button{font-size:12px;padding:3px 8px;background:var(--surface)}
+.hint{position:absolute;right:10px;bottom:8px;font-size:12px;color:var(--muted);pointer-events:none}
+.meta{padding:14px 16px 16px;display:grid;gap:8px}
+.meta p{margin:0;color:var(--muted);font-size:14px}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+dt{color:var(--muted)} dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:12px;min-width:0}
+.reco{border-left:4px solid var(--accent)}
+.panel p{margin:0;max-width:72ch}
+.ideas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.idea{background:var(--stage);border-radius:10px;padding:12px 14px;display:grid;gap:4px;align-content:start}
+.idea b{font-size:14px} .idea span{font-size:13px;color:var(--muted)}
+.idea em{font-style:normal;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:600}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:680px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+thead th{font-family:var(--f-display);font-size:17px;font-weight:700}
+tbody th{color:var(--muted);font-weight:500;width:130px}
+.win{color:var(--accent);font-weight:600}
+.err{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted);font-size:14px}
+#svgStage .lbl{font:600 12px var(--f-body);fill:var(--muscle)}
+#svgStage .lead{stroke:var(--muscle);stroke-width:1.2}
+#svgStage .ghost{fill:none;stroke:var(--muted);stroke-width:1.4;stroke-dasharray:4 4}
+#svgStage .shadow{fill:var(--ink);opacity:.10}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Prueba de animación · versión 2</div>
+    <h1>Estiramiento de isquiotibiales de pie</h1>
+    <p class="lede">El mismo movimiento con tres tecnologías, ahora con una figura anatómica: espalda que se curva en dos tramos, muslos y gemelos con forma, manos, pies y cabeza orientada. Elige el nivel para ver cómo progresa el estiramiento a lo largo del plan.</p>
+  </header>
+
+  <div class="bar" role="region" aria-label="Controles">
+    <div class="bar-top">
+      <div class="phase" aria-live="polite"><b id="phaseName">De pie</b><span id="phaseCue">Pies a la anchura de las caderas</span></div>
+      <span class="clock" id="clock">0.0 s</span>
+      <select id="level" aria-label="Nivel"><option value="0">Mes 1</option><option value="1" selected>Mes 3</option><option value="2">Mes 6</option></select>
+      <select id="speed" aria-label="Velocidad"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option></select>
+      <button class="primary" id="play">Pausar</button>
+    </div>
+    <input type="range" id="scrub" min="0" max="16" step="0.01" value="0" aria-label="Posición en la animación">
+  </div>
+
+  <section class="grid">
+    <article class="card">
+      <div class="stage"><svg id="svgStage" viewBox="20 20 360 370" role="img" aria-label="Figura en SVG haciendo el estiramiento"></svg><span class="tag">SVG + JS</span></div>
+      <div class="meta">
+        <h3>1 · SVG animado</h3>
+        <p>Figura vectorial con silueta guía de la pose final, sombra en el suelo y el músculo señalado.</p>
+        <dl><dt>Peso</dt><dd>≈ 8 KB, sin librerías</dd><dt>Esfuerzo</dt><dd>Bajo: 3 poses clave</dd></dl>
+      </div>
+    </article>
+    <article class="card">
+      <div class="stage"><div class="lot" id="lottieStage" aria-label="Figura en Lottie haciendo el estiramiento"></div><span class="tag">Lottie</span></div>
+      <div class="meta">
+        <h3>2 · Lottie</h3>
+        <p>Archivo de animación generado desde las mismas poses. Es lo que reproduciría una app nativa.</p>
+        <dl><dt>Peso</dt><dd><span id="lotW">…</span> + reproductor ≈ 65 KB gzip</dd><dt>Esfuerzo</dt><dd>Medio (alto con diseñador)</dd></dl>
+      </div>
+    </article>
+    <article class="card">
+      <div class="stage" id="threeWrap"><canvas id="threeStage" aria-label="Maniquí 3D haciendo el estiramiento"></canvas><span class="tag">Three.js 3D</span>
+        <div class="views" role="group" aria-label="Vista de cámara"><button data-az="0">Lado</button><button data-az="0.7" aria-pressed="true">3/4</button><button data-az="1.5708">Frente</button></div>
+        <span class="hint">Arrastra para girar</span></div>
+      <div class="meta">
+        <h3>3 · Three.js (3D)</h3>
+        <p>Maniquí con músculos torneados a partir de la misma anatomía, luz de estudio, sombras suaves y tres vistas.</p>
+        <dl><dt>Peso</dt><dd>≈ 150 KB gzip, sin modelo externo</dd><dt>Esfuerzo</dt><dd>Medio con este maniquí</dd></dl>
+      </div>
+    </article>
+  </section>
+
+  <section class="panel reco">
+    <div class="eyebrow">Qué ha cambiado</div>
+    <h2>Una sola anatomía para las tres tecnologías</h2>
+    <p>Cada parte del cuerpo se describe una vez, con su largo y su grosor por delante y por detrás. Con esa misma descripción se dibuja el SVG, se genera el Lottie y se tornea el maniquí 3D. Cada ejercicio sigue siendo solo unas pocas poses en ángulos, y el nivel (mes 1, 3 o 6) solo cambia cuánto baja la pose final. Como tu app Android usa la misma web por dentro, cualquiera de las tres funcionaría igual en el Mac y en el S23.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Más mejoras posibles</h2>
+    <div class="ideas">
+      <div class="idea"><em>Guía</em><b>Voz y vibración</b><span>"Inhala", "exhala, baja un poco más" y la cuenta atrás en voz alta. Una vibración del S23 al empezar y acabar cada mantenimiento.</span></div>
+      <div class="idea"><em>Técnica</em><b>Errores frecuentes</b><span>Una segunda figura en rojo que muestra qué evitar, como bloquear las rodillas o redondear la espalda, con un botón para alternar.</span></div>
+      <div class="idea"><em>Progresión</em><b>Nivel automático</b><span>La pose final se adapta sola a tu semana del plan, como el selector de mes de esta página.</span></div>
+      <div class="idea"><em>Anatomía</em><b>Capa de músculos</b><span>Ver el resto de músculos implicados (glúteo, gemelo, lumbares) con su nombre y cuánto trabaja cada uno.</span></div>
+      <div class="idea"><em>Seguimiento</em><b>Comparar con tu foto</b><span>Hacerte una foto en la pose final cada mes y verla al lado de la figura para notar el progreso.</span></div>
+      <div class="idea"><em>Avanzado</em><b>Corrección con la cámara</b><span>Detectar tu postura con la cámara del móvil y avisarte si doblas las rodillas. Es lo más costoso; lo dejaría para el final.</span></div>
+      <div class="idea"><em>Estilo</em><b>Lados y espejo</b><span>Para ejercicios de una pierna, cambiar de lado con un toque y ver la figura en espejo, como delante de un espejo de gimnasio.</span></div>
+      <div class="idea"><em>Realismo</em><b>Modelo humano con piel</b><span>Un personaje realista hecho en Blender o con un generador de avatares. Queda espectacular, pero cada ejercicio hay que animarlo a mano.</span></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Comparativa</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th></th><th>SVG + JS</th><th>Lottie</th><th>Three.js 3D</th></tr></thead>
+        <tbody>
+          <tr><th>Calidad</th><td>Ilustración clara con silueta guía y etiquetas. Ideal para entender la técnica.</td><td>Igual que el SVG, sin las ayudas dinámicas (etiqueta, silueta, sombra).</td><td class="win">La más rica: volumen, luz, vistas lateral, 3/4 y frontal.</td></tr>
+          <tr><th>Esfuerzo por ejercicio</th><td class="win">Bajo. 3 poses en ángulos.</td><td class="win">Bajo, porque se genera de las mismas poses.</td><td class="win">Bajo con este maniquí. Alto si se usa un humano realista.</td></tr>
+          <tr><th>Peso</th><td class="win">≈ 8 KB en total, sin librerías.</td><td>Unos 35 KB de JSON por ejercicio + reproductor.</td><td>≈ 150 KB comprimido de librería.</td></tr>
+          <tr><th>En tu app (web + Android)</th><td class="win">Funciona igual en las dos.</td><td>Funciona igual en las dos, pero añade una librería que no hace falta.</td><td>Funciona en las dos. Gasta más batería en el móvil.</td></tr>
+          <tr><th>Control en vivo</th><td class="win">Total: nivel, etiquetas, silueta, colores.</td><td>Hay que regenerar el archivo para cambiar el nivel.</td><td class="win">Total, más girar la cámara.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js" integrity="sha384-J8C0MvgX4WP58J4N2W99vCKd2J6z99ynOJ5bEfE6jeP7kVTW1drYtv/jzrxM5jbm" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js" integrity="sha384-RRHfJ6w1mTlKUBMYT/hvnRiOzEB/vyRV3DrQOseb6oYfvaZSfdd0byS4bHps0k2R" crossorigin="anonymous"></script>
+<script>
+(function(){
+/* =================== ANATOMÍA (compartida) ===================
+   Cada segmento apunta "hacia arriba" en su espacio local, de 0 a -len.
+   prof: [t, grosor delante, grosor detrás] en px. */
+const SEG={
+  shin:    {len:90, prof:[[0,7,8],[.2,8,12],[.5,9,15],[.8,9,11],[1,10,10]]},
+  thigh:   {len:92, prof:[[0,10,10],[.3,14,13],[.65,16,15],[1,15,17]]},
+  lumbar:  {len:50, prof:[[0,17,23],[.45,15,16],[1,16,14]]},
+  thoracic:{len:62, prof:[[0,16,14],[.4,20,15],[.75,20,16],[1,12,14]]},
+  neck:    {len:18, prof:[[0,6,6],[1,6,6]]},
+  upper:   {len:58, prof:[[0,8,8],[.35,8,9],[1,6,6]]},
+  fore:    {len:52, prof:[[0,6,6],[.3,7,7],[1,4.5,4.5]]},
+  hand:    {len:18, prof:[[0,4,4],[.55,6,5],[1,3.5,3.5]]}
+};
+const ANKLE={x:180,y:362}, FLOOR=378, T=16, FPS=30;
+const STAND={shin:0,thigh:0,lumbar:-4,thoracic:4,neck:2,upper:180,fore:178,hand:178};
+const LEVELS=[
+  {shin:4,thigh:-12,lumbar:70, thoracic:85, neck:110,upper:210,fore:205,hand:200}, // mes 1: manos a las rodillas
+  {shin:3,thigh:-16,lumbar:88, thoracic:105,neck:125,upper:205,fore:200,hand:195}, // mes 3: manos a media espinilla
+  {shin:2,thigh:-22,lumbar:105,thoracic:135,neck:150,upper:205,fore:200,hand:192}  // mes 6: manos al suelo
+];
+const LEVEL_CUE=["Manos hacia las rodillas","Manos hacia media espinilla","Manos hacia el suelo"];
+let level=1;
+const PHASES=[
+  [0,2,"De pie","Pies a la anchura de las caderas, rodillas sueltas"],
+  [2,5,"Inclínate desde la cadera","Cadera atrás, espalda larga. "],
+  [5,12,"Mantén y respira","En la app serán 30 s. Cada exhalación, un poco más abajo"],
+  [12,15,"Sube despacio","Vértebra a vértebra, sin tirones"],
+  [15,16,"Descansa","Repite 2 o 3 veces"]
+];
+const ease=x=>0.5-0.5*Math.cos(Math.PI*x);
+const progress=t=>t<2?0:t<5?ease((t-2)/3):t<12?1:t<15?1-ease((t-12)/3):0;
+const breath=t=>(t>5&&t<12)?(1-Math.cos(2*Math.PI*(t-5)/3.5))/2:0;
+function pose(t,lv=level){
+  const s=progress(t),b=breath(t),F=LEVELS[lv],p={};
+  for(const k in STAND) p[k]=STAND[k]+(F[k]-STAND[k])*s;
+  p.lumbar+=2*b; p.thoracic+=3*b; p.neck+=4*b;
+  p.stretch=s<1?s*0.85:0.85+0.15*b; return p;
+}
+const rad=d=>d*Math.PI/180;
+const step=(a,deg,L)=>({x:a.x+L*Math.sin(rad(deg)),y:a.y-L*Math.cos(rad(deg))});
+function joints(p){
+  const a=ANKLE,k=step(a,p.shin,SEG.shin.len),h=step(k,p.thigh,SEG.thigh.len),w=step(h,p.lumbar,SEG.lumbar.len),
+    s=step(w,p.thoracic,SEG.thoracic.len),ar=step(w,p.thoracic,SEG.thoracic.len-8),e=step(ar,p.upper,SEG.upper.len),wr=step(e,p.fore,SEG.fore.len);
+  return {shin:a,thigh:k,lumbar:h,thoracic:w,neck:s,upper:ar,fore:e,hand:wr};
+}
+const PARENT={thigh:"shin",lumbar:"thigh",thoracic:"lumbar",neck:"thoracic",upper:"thoracic",fore:"upper",hand:"fore"};
+const OFFSET={thigh:SEG.shin.len,lumbar:SEG.thigh.len,thoracic:SEG.lumbar.len,neck:SEG.thoracic.len,upper:SEG.thoracic.len-8,fore:SEG.upper.len,hand:SEG.fore.len};
+function prof(name,t){const P=SEG[name].prof;for(let i=1;i<P.length;i++){if(t<=P[i][0]){const a=P[i-1],b=P[i],u=ease((t-a[0])/(b[0]-a[0]));return [a[1]+(b[1]-a[1])*u,a[2]+(b[2]-a[2])*u];}}const l=P[P.length-1];return [l[1],l[2]];}
+/* contorno 2D cerrado en espacio local */
+function outline(name){
+  const L=SEG[name].len,pts=[],N=8;
+  for(let i=0;i<=N;i++){const t=i/N;pts.push([prof(name,t)[0],-t*L]);}
+  let [f1,b1]=prof(name,1),c=(f1-b1)/2,R=(f1+b1)/2;
+  for(let i=1;i<5;i++){const ph=Math.PI*i/5;pts.push([c+R*Math.cos(ph),-L-R*Math.sin(ph)]);}
+  for(let i=N;i>=0;i--){const t=i/N;pts.push([-prof(name,t)[1],-t*L]);}
+  let [f0,b0]=prof(name,0);c=(f0-b0)/2;R=(f0+b0)/2;
+  for(let i=1;i<5;i++){const ph=Math.PI+Math.PI*i/5;pts.push([c+R*Math.cos(ph),-R*Math.sin(ph)]);}
+  return pts;
+}
+function hamOutline(){
+  const L=SEG.thigh.len,pts=[],N=8,a=.1,b=.86;
+  for(let i=0;i<=N;i++){const t=a+(b-a)*i/N;pts.push([-prof("thigh",t)[1]+1.5,-t*L]);}
+  for(let i=N-1;i>0;i--){const t=a+(b-a)*i/N;pts.push([-prof("thigh",t)[1]+1.5+9*Math.sin(Math.PI*i/N),-t*L]);}
+  return pts;
+}
+const FOOT=[[-10,2],[-13,10],[-6,16],[30,16],[40,14],[38,9],[22,5],[8,-5],[-5,-6]].map(([x,y])=>[x+ANKLE.x,y+ANKLE.y]);
+/* Catmull-Rom cerrado -> tangentes bezier (para SVG y Lottie) */
+function smooth(pts){const n=pts.length;return pts.map((p,i)=>{const a=pts[(i-1+n)%n],b=pts[(i+1)%n];const tx=(b[0]-a[0])/6,ty=(b[1]-a[1])/6;return {v:p,o:[tx,ty],i:[-tx,-ty]};});}
+function svgD(pts){const s=smooth(pts),n=s.length;let d=`M${s[0].v[0].toFixed(1)} ${s[0].v[1].toFixed(1)}`;
+  for(let k=0;k<n;k++){const p=s[k],q=s[(k+1)%n];d+=`C${(p.v[0]+p.o[0]).toFixed(1)} ${(p.v[1]+p.o[1]).toFixed(1)} ${(q.v[0]+q.i[0]).toFixed(1)} ${(q.v[1]+q.i[1]).toFixed(1)} ${q.v[0].toFixed(1)} ${q.v[1].toFixed(1)}`;}return d+"Z";}
+const HEAD={cx:3,cy:-(SEG.neck.len+15),rx:15,ry:18,nose:[16,-(SEG.neck.len+14),3.2]};
+const COL={near:"#6F8FAF",far:"#4C6884",head:"#7E9CBA",muscle:"#E0564C",mat:"#9FC3BC"};
+
+/* =================== 1. SVG =================== */
+const NS="http://www.w3.org/2000/svg",svg=document.getElementById("svgStage");
+function el(tag,attrs,parent=svg){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent.appendChild(e);return e;}
+const defs=el("defs",{});const fl=el("filter",{id:"glow",x:"-50%",y:"-50%",width:"200%",height:"200%"},defs);el("feGaussianBlur",{stdDeviation:"3"},fl);
+const ghost=el("g",{opacity:0});
+const shadow=el("ellipse",{class:"shadow",cy:FLOOR+1,ry:5});
+el("rect",{x:70,y:FLOOR,width:270,height:7,rx:3.5,fill:COL.mat,opacity:.8});
+const D={};for(const n in SEG) D[n]=svgD(outline(n));
+const HAM=svgD(hamOutline()),FOOTD=svgD(FOOT);
+function partEls(color,dx,names,parent=svg){const g={};for(const n of names){g[n]=el("path",{d:D[n],fill:color},parent);g[n].dx=dx;}return g;}
+const farArm=partEls(COL.far,-5,["upper","fore","hand"]);
+const farLeg=partEls(COL.far,-7,["thigh","shin"]);
+el("path",{d:FOOTD,fill:COL.far,transform:"translate(-7 0)"});
+const body=partEls(COL.near,0,["lumbar","thoracic","neck"]);
+const headG=el("g",{});el("ellipse",{cx:HEAD.cx,cy:HEAD.cy,rx:HEAD.rx,ry:HEAD.ry,fill:COL.head},headG);el("circle",{cx:HEAD.nose[0],cy:HEAD.nose[1],r:HEAD.nose[2],fill:COL.head},headG);
+const nearLeg=partEls(COL.near,0,["thigh","shin"]);
+el("path",{d:FOOTD,fill:COL.near});
+const hamGlow=el("path",{d:HAM,fill:COL.muscle,filter:"url(#glow)",opacity:0});
+const ham=el("path",{d:HAM,fill:COL.muscle,opacity:0});
+const nearArm=partEls(COL.near,0,["upper","fore","hand"]);
+const lead=el("line",{class:"lead",opacity:0}),lbl=el("text",{class:"lbl",opacity:0,"text-anchor":"end"});lbl.textContent="Isquiotibiales";
+function buildGhost(){ghost.innerHTML="";const p=pose(8),j=joints(p);
+  for(const n of ["shin","thigh","lumbar","thoracic","neck","upper","fore","hand"]) el("path",{class:"ghost",d:D[n],transform:`translate(${j[n].x} ${j[n].y}) rotate(${p[n]})`},ghost);
+  const g=el("g",{transform:`translate(${j.neck.x} ${j.neck.y}) rotate(${p.neck})`},ghost);el("ellipse",{class:"ghost",cx:HEAD.cx,cy:HEAD.cy,rx:HEAD.rx,ry:HEAD.ry},g);}
+const tf=(e,pt,deg)=>e.setAttribute("transform",`translate(${(pt.x+(e.dx||0)).toFixed(2)} ${pt.y.toFixed(2)}) rotate(${deg.toFixed(2)})`);
+function drawSVG(p,t){
+  const j=joints(p);
+  for(const g of [farArm,farLeg,body,nearLeg,nearArm]) for(const n in g) tf(g[n],j[n],p[n]);
+  tf(headG,j.neck,p.neck); tf(ham,j.thigh,p.thigh); tf(hamGlow,j.thigh,p.thigh);
+  ham.setAttribute("opacity",p.stretch.toFixed(3)); hamGlow.setAttribute("opacity",(p.stretch*.7).toFixed(3));
+  const mid=step(j.thigh,p.thigh,SEG.thigh.len*.5),bk={x:-Math.cos(rad(p.thigh)),y:-Math.sin(rad(p.thigh))},
+        m={x:mid.x+bk.x*16,y:mid.y+bk.y*16},lo=Math.max(0,(p.stretch-.4)/.45);
+  lead.setAttribute("x1",m.x);lead.setAttribute("y1",m.y);lead.setAttribute("x2",m.x-28);lead.setAttribute("y2",m.y+22);
+  lbl.setAttribute("x",m.x-31);lbl.setAttribute("y",m.y+26);lead.setAttribute("opacity",lo);lbl.setAttribute("opacity",lo);
+  shadow.setAttribute("cx",((j.thigh.x+j.lumbar.x)/2+ (j.neck.x-ANKLE.x)*.25+10).toFixed(1));shadow.setAttribute("rx",(46+Math.abs(j.neck.x-ANKLE.x)*.35).toFixed(1));
+  ghost.setAttribute("opacity",t<2?.55:t<5?(.55*(1-progress(t))).toFixed(3):0);
+}
+
+/* =================== 2. Lottie (generado) =================== */
+let lot=null;
+const rgb=h=>[1,3,5].map(i=>+(parseInt(h.substr(i,2),16)/255).toFixed(3)).concat(1);
+function buildLottie(){
+  const keyT=[0,2,3.5,5];for(let k=1;k<=8;k++)keyT.push(5+0.875*k);keyT.push(13.5,15,16);
+  const kf=fn=>({a:1,k:keyT.map((t,i)=>{const o={t:Math.round(t*FPS),s:[+fn(pose(Math.min(t,T-.001))).toFixed(2)]};if(i<keyT.length-1){o.o={x:[.42],y:[0]};o.i={x:[.58],y:[1]};}return o;})});
+  const tr={ty:"tr",p:{a:0,k:[0,0]},a:{a:0,k:[0,0]},s:{a:0,k:[100,100]},r:{a:0,k:0},o:{a:0,k:100}};
+  const sh=pts=>{const s=smooth(pts);return {ty:"sh",ks:{a:0,k:{c:true,v:s.map(q=>q.v.map(v=>+v.toFixed(1))),i:s.map(q=>q.i.map(v=>+v.toFixed(1))),o:s.map(q=>q.o.map(v=>+v.toFixed(1)))}}};};
+  const fill=c=>({ty:"fl",c:{a:0,k:rgb(c)},o:{a:0,k:100},r:1});
+  const grp=(items,c)=>[{ty:"gr",it:[...items,fill(c),tr]}];
+  let ind=0;const L=[];
+  const layer=(nm,shapes,ks,parent)=>{const l={ddd:0,ind:++ind,ty:4,nm,sr:1,ao:0,ip:0,op:T*FPS,st:0,bm:0,shapes,
+    ks:Object.assign({o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[0,0,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]}},ks)};if(parent)l.parent=parent;L.push(l);return l.ind;};
+  const seg=(n,c,parentInd,parentName,dx=0,root)=>layer(n,grp([sh(outline(n))],c),
+     root?{p:{a:0,k:[root.x+dx,root.y,0]},r:kf(p=>p[n])}:{p:{a:0,k:[dx,-OFFSET[n],0]},r:kf(p=>p[n]-p[parentName])},parentInd);
+  // creación (los índices dan el parentesco); el orden de dibujo se fija al final
+  const fShin=seg("shin",COL.far,0,null,-7,ANKLE), fThigh=seg("thigh",COL.far,fShin,"shin");
+  const nShin=seg("shin",COL.near,0,null,0,ANKLE), nThigh=seg("thigh",COL.near,nShin,"shin");
+  const lum=seg("lumbar",COL.near,nThigh,"thigh"), tho=seg("thoracic",COL.near,lum,"lumbar");
+  const neck=layer("neck",[...grp([sh(outline("neck"))],COL.near),{ty:"gr",it:[{ty:"el",p:{a:0,k:[HEAD.cx,HEAD.cy]},s:{a:0,k:[HEAD.rx*2,HEAD.ry*2]}},{ty:"el",p:{a:0,k:[HEAD.nose[0],HEAD.nose[1]]},s:{a:0,k:[HEAD.nose[2]*2,HEAD.nose[2]*2]}},fill(COL.head),tr]}],
+     {p:{a:0,k:[0,-OFFSET.neck,0]},r:kf(p=>p.neck-p.thoracic)},tho);
+  const fUp=seg("upper",COL.far,tho,"thoracic",-4), fFo=seg("fore",COL.far,fUp,"upper"), fHa=seg("hand",COL.far,fFo,"fore");
+  const nUp=seg("upper",COL.near,tho,"thoracic"), nFo=seg("fore",COL.near,nUp,"upper"), nHa=seg("hand",COL.near,nFo,"fore");
+  const ham=layer("ham",grp([sh(hamOutline())],COL.muscle),{o:kf(p=>p.stretch*100)},nThigh);
+  const fFoot=layer("footF",grp([sh(FOOT.map(([x,y])=>[x-7,y]))],COL.far),{});
+  const nFoot=layer("footN",grp([sh(FOOT)],COL.near),{});
+  const mat=layer("mat",[{ty:"gr",it:[{ty:"rc",p:{a:0,k:[205,FLOOR+3.5]},s:{a:0,k:[270,7]},r:{a:0,k:3.5}},{...fill(COL.mat),o:{a:0,k:80}},tr]}],{});
+  const by=Object.fromEntries(L.map(l=>[l.ind,l]));
+  const back2front=[mat,fUp,fFo,fHa,fThigh,fShin,fFoot,lum,tho,neck,nThigh,nShin,nFoot,ham,nUp,nFo,nHa];
+  // la vista se recorta igual que el SVG (viewBox 20 20 360 370): un nulo raíz desplaza todo
+  return {v:"5.7.4",fr:FPS,ip:0,op:T*FPS,w:360,h:370,nm:"isquios-de-pie",ddd:0,assets:[],layers:back2front.reverse().map(i=>{const l=by[i];if(!l.parent){l.ks.p.k[0]-=20;l.ks.p.k[1]-=20;}return l;})};
+}
+function loadLottie(){
+  try{
+    const data=buildLottie();
+    document.getElementById("lotW").textContent=(JSON.stringify(data).length/1024).toFixed(0)+" KB JSON";
+    if(!window.lottie) throw new Error("no lottie");
+    if(lot) lot.destroy();
+    lot=lottie.loadAnimation({container:document.getElementById("lottieStage"),renderer:"svg",loop:false,autoplay:false,animationData:JSON.parse(JSON.stringify(data))});
+  }catch(e){document.getElementById("lottieStage").innerHTML='<div class="err">No se pudo cargar el reproductor de Lottie.</div>';lot=null;}
+}
+
+/* =================== 3. Three.js =================== */
+let three=null;
+if(window.THREE){try{
+  THREE.ColorManagement.legacyMode=false;
+  const canvas=document.getElementById("threeStage"),wrapEl=document.getElementById("threeWrap");
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.85;
+  const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(30,1,.1,100);
+  scene.add(new THREE.HemisphereLight(0xf4f7ff,0x6b7a78,.6));
+  const key=new THREE.DirectionalLight(0xfff4e8,1.7);key.position.set(2.5,5,3.5);key.castShadow=true;key.shadow.mapSize.set(2048,2048);key.shadow.radius=6;key.shadow.bias=-.0004;
+  Object.assign(key.shadow.camera,{left:-2.5,right:2.5,top:4,bottom:-1});scene.add(key);
+  const rim=new THREE.DirectionalLight(0xbfd8ff,1.3);rim.position.set(-3,3,-3);scene.add(rim);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(14,14),new THREE.ShadowMaterial({opacity:.22}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+  const matM=new THREE.Mesh(new THREE.BoxGeometry(2.6,.015,.85),new THREE.MeshStandardMaterial({color:COL.mat,roughness:.95}));matM.position.set(.35,.0075,0);matM.receiveShadow=true;scene.add(matM);
+  const M=c=>new THREE.MeshPhysicalMaterial({color:c,roughness:.5,clearcoat:.25,clearcoatRoughness:.6,sheen:.4,sheenColor:new THREE.Color(0xffffff)});
+  const mNear=M(COL.near),mFar=M(COL.far),mHead=M(COL.head);
+  const mMus=new THREE.MeshStandardMaterial({color:COL.muscle,emissive:COL.muscle,emissiveIntensity:.5,roughness:.6,transparent:true,opacity:0});
+  const K=.01,V2=THREE.Vector2;
+  function latheGeo(name){const L=SEG[name].len,r=t=>{const [f,b]=prof(name,t);return (f+b)/2;},pts=[],r0=r(0),r1=r(1);
+    for(let i=0;i<=6;i++){const a=-Math.PI/2+Math.PI/2*i/6;pts.push(new V2(r0*Math.cos(a)*K,r0*Math.sin(a)*K));}
+    for(let i=1;i<16;i++){const t=i/16;pts.push(new V2(r(t)*K,t*L*K));}
+    for(let i=0;i<=6;i++){const a=Math.PI/2*i/6;pts.push(new V2(Math.max(1e-4,r1*Math.cos(a))*K,(L+r1*Math.sin(a))*K));}
+    return new THREE.LatheGeometry(pts,28);}
+  const WIDTH={lumbar:1.55,thoracic:1.6,hand:.55};
+  function part(name,m,z){const g=new THREE.Group();const mesh=new THREE.Mesh(latheGeo(name),m);mesh.castShadow=true;mesh.receiveShadow=true;
+    if(WIDTH[name])mesh.scale.z=WIDTH[name];g.add(mesh);g.position.z=z;scene.add(g);return g;}
+  const P={};
+  for(const [s,m,zl,za] of [["n",mNear,.1,.27],["f",mFar,-.1,-.27]]){
+    P[s+"shin"]=part("shin",m,zl);P[s+"thigh"]=part("thigh",m,zl);
+    P[s+"upper"]=part("upper",m,za);P[s+"fore"]=part("fore",m,za);P[s+"hand"]=part("hand",m,za);
+    const sh=new THREE.Mesh(new THREE.SphereGeometry(.085,20,14),m);sh.castShadow=true;P[s+"upper"].add(sh);
+    const foot=new THREE.Mesh(new THREE.SphereGeometry(1,24,14),m);foot.scale.set(.27,.075,.085);foot.position.set(.13,.075,zl);foot.castShadow=true;scene.add(foot);
+  }
+  P.lumbar=part("lumbar",mNear,0);P.thoracic=part("thoracic",mNear,0);P.neck=part("neck",mNear,0);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(1,32,20),mHead);head.scale.set(HEAD.rx*K,HEAD.ry*K,.14);head.position.set(HEAD.cx*K,-HEAD.cy*K,0);head.castShadow=true;P.neck.add(head);
+  const nose=new THREE.Mesh(new THREE.SphereGeometry(.035,14,10),mHead);nose.position.set(HEAD.nose[0]*K,-HEAD.nose[1]*K,0);P.neck.add(nose);
+  // isquiotibiales: huso torneado en la cara posterior del muslo
+  const hp=[];for(let i=0;i<=16;i++){const u=i/16;hp.push(new V2(Math.max(1e-4,.052*Math.sin(Math.PI*u)),u*.66));}
+  const ham=new THREE.Mesh(new THREE.LatheGeometry(hp,20),mMus);ham.scale.z=1.3;ham.position.set(-.1,.12,0);P.nthigh.add(ham);
+  const to3=pt=>new THREE.Vector3((pt.x-ANKLE.x)*K,(FLOOR-pt.y)*K,0);
+  const place=(g,pt,deg)=>{const v=to3(pt);g.position.x=v.x;g.position.y=v.y;g.rotation.z=-rad(deg);};
+  let az=.7,azT=.7,drag=null;
+  const btns=[...document.querySelectorAll(".views button")];
+  btns.forEach(b=>b.onclick=()=>{azT=+b.dataset.az;btns.forEach(x=>x.setAttribute("aria-pressed",x===b));});
+  canvas.style.touchAction="pan-y";
+  canvas.addEventListener("pointerdown",e=>{drag=e.clientX;canvas.setPointerCapture(e.pointerId);});
+  canvas.addEventListener("pointermove",e=>{if(drag!==null){azT-=(e.clientX-drag)*.01;drag=e.clientX;btns.forEach(x=>x.setAttribute("aria-pressed",false));}});
+  canvas.addEventListener("pointerup",()=>drag=null);canvas.addEventListener("pointercancel",()=>drag=null);
+  const resize=()=>{const w=wrapEl.clientWidth,h=wrapEl.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();};
+  new ResizeObserver(resize).observe(wrapEl);resize();
+  three=p=>{
+    const j=joints(p);
+    for(const s of ["n","f"]) for(const n of ["shin","thigh","upper","fore","hand"]) place(P[s+n],j[n],p[n]);
+    for(const n of ["lumbar","thoracic","neck"]) place(P[n],j[n],p[n]);
+    mMus.opacity=p.stretch;mMus.emissiveIntensity=.3+.5*p.stretch;
+    az+=(azT-az)*.08;const tg=new THREE.Vector3(.35,1.7,0),d=7.6;
+    cam.position.set(tg.x+d*Math.sin(az),tg.y+.35,d*Math.cos(az));cam.lookAt(tg);renderer.render(scene,cam);
+  };
+}catch(e){console.error(e);three=null;document.getElementById("threeWrap").insertAdjacentHTML("beforeend",'<div class="err">WebGL no está disponible en este dispositivo.</div>');}}
+else document.getElementById("threeWrap").insertAdjacentHTML("beforeend",'<div class="err">No se pudo cargar Three.js.</div>');
+
+/* =================== Reloj común =================== */
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let t=reduce?7:0,playing=!reduce,last=performance.now(),speed=1;
+const $=id=>document.getElementById(id),btn=$("play"),scrub=$("scrub");
+btn.textContent=playing?"Pausar":"Reproducir";
+btn.onclick=()=>{playing=!playing;btn.textContent=playing?"Pausar":"Reproducir";last=performance.now();};
+$("speed").onchange=e=>speed=+e.target.value;
+$("level").onchange=e=>{level=+e.target.value;buildGhost();loadLottie();render();};
+scrub.oninput=()=>{t=+scrub.value;render();};
+function render(){
+  const p=pose(t);drawSVG(p,t);
+  if(lot)lot.goToAndStop(Math.min(t*FPS,T*FPS-1),true);
+  if(three)three(p);
+  const ph=PHASES.find(x=>t>=x[0]&&t<x[1])||PHASES[0];
+  let name=ph[2],cue=ph[3];
+  if(ph[0]===2)cue+=LEVEL_CUE[level];
+  if(ph[0]===5){const c=((t-5)%3.5)/3.5;name+=(c<.5?" · exhala":" · inhala")+" · "+Math.ceil(12-t)+" s";}
+  $("phaseName").textContent=name;$("phaseCue").textContent=cue;
+  $("clock").textContent=t.toFixed(1)+" s / "+T+" s";scrub.value=t;
+}
+function loop(now){if(playing)t=(t+(now-last)/1000*speed)%T;last=now;render();requestAnimationFrame(loop);}
+buildGhost();loadLottie();render();requestAnimationFrame(loop);
+})();
+</script>

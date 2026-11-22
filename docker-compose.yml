@@ -1,0 +1,21 @@
+# Flex & Fit on the Mac. Copy this file and .env.example (as .env) to ~/flex-and-fit, then:
+#   docker compose up -d
+# scripts/mac/install.sh does all of this, plus the hourly update job.
+services:
+  flexfit:
+    image: ghcr.io/buffalonan/flex-and-fit:latest
+    container_name: flex-and-fit
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "3334:3334"
+    environment:
+      BACKUP_DIRS: /backups/local,/backups/drive
+      SYNC_TOKEN: ${SYNC_TOKEN:-}
+    volumes:
+      - flexfit-data:/data
+      - ${BACKUP_DIR:?set BACKUP_DIR in .env}:/backups/local
+      - ${DRIVE_BACKUP_DIR:?set DRIVE_BACKUP_DIR in .env}:/backups/drive
+
+volumes:
+  flexfit-data:
