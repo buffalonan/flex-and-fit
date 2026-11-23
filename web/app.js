@@ -4,7 +4,7 @@ import * as store from "./store.js";
 import { syncNow } from "./sync.js";
 import { elegir, salud, buscarEnWifi, unir } from "./direccion.js";
 import { html } from "./html.js";
-import { EX, RUTINAS_FLEX, GYM, TESTS, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
+import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
 import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
 
@@ -149,7 +149,7 @@ function abrir(id) {
       <div class="leyenda"><span><i style="background:var(--prim)"></i>Músculos principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
     const vol = w.ej.reduce((a, e) => a + (e.kg && e.reps ? e.kg * e.reps * e.series * (e.porLado ? 2 : 1) : 0), 0);
     $("detStats").innerHTML = html`${stat(g.series, "Series")}${stat(w.ej.length, "Ejercicios")}${stat(vol.toLocaleString("es-ES"), "Volumen", "kg")}`;
-    const fila = (e, i) => html`<li class="ej g" data-i="${i}"><div class="meta"><span class="name">${e.n}${e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : ""}</span>
+    const fila = (e, i) => html`<li class="ej g" data-i="${i}">${FIG_FUERZA[e.n] ? html`<span class="th">${figura(FIG_FUERZA[e.n])}</span>` : ""}<div class="meta"><span class="name">${e.n}${e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : ""}</span>
       <span class="dosis">${dosisGym(e)}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : ""} · Descanso ${mmss(e.desc)}</span>
       <span class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</span></div>
       <button type="button" class="ver" aria-label="${`Ver ${e.n}`}">›</button></li>`;
@@ -198,7 +198,7 @@ function verFicha(i) {
     const e = w.ej[i];
     const p = Object.fromEntries(e.p.map((m) => [m, e.series])), sec = Object.fromEntries(e.s.map((m) => [m, e.series]));
     $("fichaTitulo").textContent = `${e.n}${lado(e)}`;
-    $("fichaFig").innerHTML = html`${maniqui({ p, s: sec }, "f", { titulo: `Músculos de ${e.n}` })}
+    $("fichaFig").innerHTML = html`${FIG_FUERZA[e.n] ? figura(FIG_FUERZA[e.n], { clase: "grande" }) : ""}${maniqui({ p, s: sec }, "f", { titulo: `Músculos de ${e.n}` })}
       <div class="leyenda"><span><i style="background:var(--prim)"></i>Principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
     $("fichaDosis").textContent = `${dosisGym(e)}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : e.elige ? " · peso a elegir" : " · peso corporal"}`;
     // Same-named exercises (a side plank per side) are told apart by their order.
@@ -447,6 +447,10 @@ function pagina(n) {
   $("regCuenta").textContent = `Ejercicio ${n + 1} de ${s.paginas.length}`;
   $("regTitulo").textContent = pg.titulo;
   const ms = new Set(pg.ej.flatMap((i) => w.ej[i].p)), ss = new Set(pg.ej.flatMap((i) => w.ej[i].s));
+  const fig = FIG_FUERZA[w.ej[pg.ej[0]].n];
+  $("regFig").innerHTML = html`${fig ? figura(fig) : ""}`;
+  $("regFig").hidden = !fig;
+  animar($("regFig"));
   $("regMusc").innerHTML = html`${[...ms].map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${[...ss].filter((m) => !ms.has(m)).map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}`;
   const timed = pg.ej.every((i) => w.ej[i].seg);
   $("regColReps").textContent = timed ? "SEG" : pg.ej.every((i) => w.ej[i].porLado) ? "REPS/LADO" : "REPS";

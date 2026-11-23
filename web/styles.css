@@ -11,7 +11,7 @@
 /* The app is dark in both system themes, so the dark values are the only ones. */
 :root, :root[data-theme="dark"], :root[data-theme="light"] {
   --app-bg: #0b0c0e; --card: #17181c; --card2: #1f2126; --app-line: #2b2e34; --fg: #f2f3f5; --app-muted: #8b909a;
-  --body: #30333a; --body-n: #26282e; --prop: #4a5160;
+  --body: #30333a; --body-n: #26282e; --prop: #4a5160; --peso: #c3c9d3;
   --heat1: #6b2a2a; --heat2: #b23a31; --heat3: #ff5a4e; --prim: #ff5a4e; --sec: #f2b33d;
   --flex1: #1d4f4d; --flex2: #2a8c86; --flex3: #3fd6cc; --glow: #3fd6cc;
   --ok: #3ccf7a; --amber: #ffb547; --warn: #ffb547;
@@ -186,6 +186,8 @@ body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; 
 #ficha.gym .dosis-grande { color: var(--prim); }
 .ficha-fig { background: var(--card); border-radius: 14px; padding: 8px; }
 .ficha-fig .maniqui { max-width: 320px; margin: 0 auto; display: block; }
+.ficha-fig .fig { max-width: 420px; margin: 0 auto 8px; }
+.reg-fig { background: var(--card); border-radius: 12px; max-width: 260px; margin: 0 auto; width: 100%; }
 .ficha-cuerpo h3 { margin: 12px 0 4px; font-size: 1rem; }
 .ficha-cuerpo .pasos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 .ficha-cuerpo .zona { margin: 0; color: var(--app-muted); }
