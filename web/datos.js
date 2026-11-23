@@ -129,7 +129,7 @@ export function enPlan(inicio, fecha) {
 }
 
 /* ---------- Gym workouts (Ferran's, from Coros) ---------- */
-// kg null = bodyweight. seg instead of reps for timed holds. bloque: exercises done as a circuit, `rondas` times.
+// kg null = bodyweight. seg instead of reps for timed holds. porLado: reps per arm/side. c: how to do it (optional). bloque: exercises done as a circuit, `rondas` times.
 export const GYM = [
   { id: "g1", n: "Tren superior · Empuje", sub: "Pecho, hombros y tríceps", maquinas: "Barra, mancuernas, máquinas y cuerda",
     notas: ["Elevaciones laterales en polea", "Tríceps con cuerda en polea"],
@@ -173,6 +173,35 @@ export const GYM = [
       { n: "Plancha lateral", series: 1, seg: 45, kg: null, desc: 30, bloque: "core", lado: "izq", p: ["oblicuos"], s: ["hombros", "gluteos"] },
       { n: "Plancha lateral", series: 1, seg: 45, kg: null, desc: 90, bloque: "core", lado: "der", p: ["oblicuos"], s: ["hombros", "gluteos"] },
     ], bloques: { core: { rondas: 3 } } },
+  { id: "kb", n: "Kettlebell · cuerpo completo", sub: "Halo, swings, press a una mano y más", maquinas: "Kettlebells (unos 8, 12 y 16 kg)",
+    notas: [
+      "Calienta 5 min antes y haz la primera serie de cada ejercicio con una kettlebell ligera",
+      "Los ejercicios /lado son repeticiones por brazo o por lado: haz todas las de un lado y luego el otro",
+      "Swings y cargada: la fuerza sale de la cadera, no de los brazos ni de la espalda. Espalda neutra siempre",
+      "Progresión: cuando completes todas las series con buena técnica dos sesiones seguidas, sube a la siguiente kettlebell",
+    ],
+    ej: [
+      { n: "Halo", series: 3, reps: 10, kg: 8, desc: 60, p: ["hombros"], s: ["trapecio", "triceps", "abdominales"],
+        c: ["Sujeta la kettlebell por los cuernos, boca abajo, delante del pecho", "Pásala alrededor de la cabeza, cerca del cuello, rodeándola entera", "5 vueltas en un sentido y 5 en el otro", "Glúteos y abdomen apretados: el tronco no se mueve, solo los brazos"] },
+      { n: "Peso muerto con kettlebell", series: 3, reps: 10, kg: 16, desc: 90, p: ["isquios", "gluteos"], s: ["lumbar", "antebrazo", "cuadriceps"],
+        c: ["Pies a la anchura de la cadera, kettlebell entre los pies", "Lleva la cadera atrás con la espalda recta y agárrala con las dos manos", "Empuja el suelo y sube apretando glúteos, sin echarte hacia atrás arriba"] },
+      { n: "Swing a dos manos", series: 4, reps: 15, kg: 12, desc: 90, p: ["gluteos", "isquios"], s: ["lumbar", "hombros", "antebrazo"],
+        c: ["Kettlebell un palmo por delante de los pies; inclínate con la espalda recta y agárrala", "Pásala hacia atrás entre las piernas, cerca de la ingle, como un pase de fútbol americano", "Extiende la cadera de golpe: la kettlebell sube hasta el pecho por inercia, los brazos solo la guían", "Arriba: de pie, recto, glúteos y abdomen apretados. Deja que caiga y vuelve a cargar la cadera"] },
+      { n: "Sentadilla goblet", series: 3, reps: 10, kg: 16, desc: 90, p: ["cuadriceps", "gluteos"], s: ["aductores", "abdominales"],
+        c: ["Sujeta la kettlebell por los cuernos, pegada al pecho, codos abajo", "Baja entre las rodillas con el pecho alto y los talones en el suelo", "Rodillas en la dirección de los pies; sube empujando el suelo"] },
+      { n: "Press de hombro a una mano", series: 3, reps: 8, porLado: true, kg: 12, desc: 90, p: ["hombros"], s: ["triceps", "trapecio", "oblicuos"],
+        c: ["Kettlebell en posición de rack: apoyada en el antebrazo, muñeca recta y codo pegado al cuerpo", "Aprieta glúteos y abdomen y empuja hacia arriba hasta estirar el brazo, bíceps junto a la oreja", "Baja controlando hasta el rack, sin arquear la espalda ni inclinarte hacia un lado"] },
+      { n: "Remo a una mano", series: 3, reps: 10, porLado: true, kg: 16, desc: 90, p: ["dorsales"], s: ["biceps", "trapecio"],
+        c: ["Mano libre apoyada en un banco o en el muslo, espalda recta casi paralela al suelo", "Tira de la kettlebell hacia la cadera llevando el codo atrás, pegado al cuerpo", "Baja despacio sin girar el tronco"] },
+      { n: "Swing a una mano", series: 3, reps: 10, porLado: true, kg: 10, desc: 90, p: ["gluteos", "isquios"], s: ["oblicuos", "antebrazo", "hombros"],
+        c: ["Como el swing a dos manos, con una sola mano en el asa", "El hombro bien colocado atrás y abajo; no dejes que la kettlebell te gire el tronco", "La fuerza sale de la cadera; arriba, de pie y recto"] },
+      { n: "Cargada a una mano", series: 3, reps: 6, porLado: true, kg: 10, desc: 90, p: ["gluteos", "isquios"], s: ["trapecio", "antebrazo", "abdominales"],
+        c: ["Empieza como un swing a una mano, pero lleva la kettlebell cerca del cuerpo", "Al extender la cadera, mete el codo y deja que la kettlebell rote y se apoye suave en el antebrazo (rack)", "Si te golpea la muñeca o el antebrazo, acércala más al cuerpo y gira la mano antes"] },
+      { n: "Molino", series: 2, reps: 5, porLado: true, kg: 8, desc: 60, p: ["oblicuos"], s: ["hombros", "isquios", "gluteos"],
+        c: ["Kettlebell arriba, brazo estirado; pies girados unos 45° hacia el lado contrario", "Mira la kettlebell todo el rato y lleva la cadera hacia el lado del brazo de arriba", "Baja la otra mano por la pierna solo hasta donde llegues sin perder la espalda recta", "Si es la primera vez, hazlo sin peso"] },
+      { n: "Levantamiento turco", series: 2, reps: 2, porLado: true, kg: 8, desc: 90, p: ["hombros", "abdominales"], s: ["gluteos", "triceps", "oblicuos"],
+        c: ["Tumbado, kettlebell arriba con el brazo estirado y la rodilla de ese lado doblada", "Sube por pasos: al codo, a la mano, cadera arriba, pasa la pierna atrás, rodilla en el suelo y ponte de pie", "Baja por los mismos pasos al revés; el brazo siempre vertical y los ojos en la kettlebell", "Lento y controlado; aprende los pasos primero con un zapato o sin peso"] },
+    ] },
 
   // Professional templates: only the structure (exercises, sets, reps, rest, progression), with the source.
   { id: "sl-a", n: "StrongLifts 5×5 · A", sub: "Sentadilla, banca y remo", maquinas: "Barra olímpica, discos, banco y rack",

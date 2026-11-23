@@ -12,18 +12,18 @@ async function abrirApp(page, time = MIERCOLES) {
 }
 const fill = (page, sel) => page.locator(sel).evaluate((el) => el.getAttribute("fill"));
 
-test("the list shows today's routine, the six phases and the four gym workouts", async ({ page }) => {
+test("the list shows today's routine, the six phases and the gym workouts", async ({ page }) => {
   await abrirApp(page);
   await expect(page.locator("#hoyCard")).toContainText("HOY · FLEX");
   await expect(page.locator("#hoyCard")).toContainText("Fase 1 · Despertar");
   await expect(page.locator("#planPos")).toHaveText("Semana 1 · F1");
   await expect(page.locator("#listaFlex .wcard")).toHaveCount(7);
-  await expect(page.locator("#listaFuerza .wcard")).toHaveCount(4);
+  await expect(page.locator("#listaFuerza .wcard")).toHaveCount(5);
   await expect(page.locator("#listaFuerza")).toContainText("Tren superior · Empuje");
   await expect(page.locator("#listaFuerza")).toContainText("23 series");
   await expect(page.locator("#listaPlantillas .wcard")).toHaveCount(3);
   // Every card has its mannequin.
-  await expect(page.locator("#entrenos .wcard svg.maniqui")).toHaveCount(15);
+  await expect(page.locator("#entrenos .wcard svg.maniqui")).toHaveCount(16);
 
   await page.locator('label:has(input[value="fuerza"])').click();
   await expect(page.locator("#grupoFlex")).toBeHidden();
@@ -267,4 +267,29 @@ test("professional templates: StrongLifts 5×5 A and B and the ACSM beginner rou
   await expect(page.locator("#detMaquinas")).toContainText("ACSM");
   await page.locator("#detLista .ej").first().click();
   await expect(page.locator("#fichaDosis")).toHaveText("2 series · 10 reps · peso a elegir");
+});
+
+test("the kettlebell workout: ten exercises with the halo, the one-arm press per side and swings, with how to do each", async ({ page }) => {
+  await abrirApp(page);
+  await page.click('#listaFuerza [data-abrir="kb"]');
+  await expect(page.locator("#detTitle")).toHaveText("Kettlebell · cuerpo completo");
+  await expect(page.locator("#detLista .ej")).toHaveCount(10);
+  await expect(page.locator("#detLista .ej .name").first()).toHaveText("Halo");
+  await expect(page.locator("#detLista")).toContainText("Swing a dos manos");
+  await expect(page.locator("#detLista")).toContainText("Swing a una mano");
+  const press = page.locator("#detLista .ej", { hasText: "Press de hombro a una mano" });
+  await expect(press.locator(".dosis")).toHaveText("3 series · 8 reps /lado · 12 kg · Descanso 1:30");
+  expect(await fill(page, '#detMan [data-m="gluteos"] >> nth=0')).toBe("var(--prim)");
+  expect(await fill(page, '#detMan [data-m="hombros"] >> nth=0')).toBe("var(--prim)");
+
+  await page.locator("#detLista .ej").first().click();
+  await expect(page.locator("#fichaDosis")).toHaveText("3 series · 10 reps · 8 kg");
+  await expect(page.locator("#fichaCuerpo .pasos li")).toHaveCount(4);
+  await expect(page.locator("#fichaCuerpo")).toContainText("alrededor de la cabeza");
+  await page.click("#fichaEmpezar");
+  await expect(page.locator("#registro")).toBeVisible();
+  await expect(page.locator("#regColReps")).toHaveText("REPS");
+  for (let i = 0; i < 4; i++) await page.click("#regSig");
+  await expect(page.locator("#regTitulo")).toContainText("Press de hombro a una mano");
+  await expect(page.locator("#regColReps")).toHaveText("REPS/LADO");
 });

@@ -28,6 +28,8 @@ const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0
 const parse = (s) => { const [a, b, c] = s.split("-").map(Number); return new Date(a, b - 1, c); };
 const fechaLarga = (s) => parse(s).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
 const mmss = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+// A gym exercise's sets and reps (or time), per side when it's done one arm at a time.
+const dosisGym = (e) => `${e.series} ${e.series === 1 ? "serie" : "series"} · ${e.seg ? mmss(e.seg) : `${e.reps} reps`}${e.porLado ? " /lado" : ""}`;
 const fmtMin = (m) => (m < 1 ? `${Math.round(m * 60)} s` : `${Math.round(m)} min`);
 const haceDias = (f) => { const n = Math.round((parse(iso(new Date())) - parse(f)) / 864e5); return n <= 0 ? "Hoy" : n === 1 ? "Ayer" : `Hace ${n} días`; };
 const vibrar = (p) => { try { navigator.vibrate?.(p); } catch (e) { /* not supported */ } };
@@ -145,10 +147,10 @@ function abrir(id) {
     $("detNotas").innerHTML = html`${w.notas.map((n) => html`<li>${n}</li>`)}`;
     $("detMan").innerHTML = html`${maniqui(g, "f", { etiquetas: etiquetasTop(g.p, 6, (v) => `${v} series`) })}
       <div class="leyenda"><span><i style="background:var(--prim)"></i>Músculos principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
-    const vol = w.ej.reduce((a, e) => a + (e.kg && e.reps ? e.kg * e.reps * e.series : 0), 0);
+    const vol = w.ej.reduce((a, e) => a + (e.kg && e.reps ? e.kg * e.reps * e.series * (e.porLado ? 2 : 1) : 0), 0);
     $("detStats").innerHTML = html`${stat(g.series, "Series")}${stat(w.ej.length, "Ejercicios")}${stat(vol.toLocaleString("es-ES"), "Volumen", "kg")}`;
     const fila = (e, i) => html`<li class="ej g" data-i="${i}"><div class="meta"><span class="name">${e.n}${e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : ""}</span>
-      <span class="dosis">${e.series} ${e.series === 1 ? "serie" : "series"} · ${e.seg ? mmss(e.seg) : `${e.reps} reps`}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : ""} · Descanso ${mmss(e.desc)}</span>
+      <span class="dosis">${dosisGym(e)}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : ""} · Descanso ${mmss(e.desc)}</span>
       <span class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</span></div>
       <button type="button" class="ver" aria-label="${`Ver ${e.n}`}">›</button></li>`;
     const out = [];
@@ -198,12 +200,13 @@ function verFicha(i) {
     $("fichaTitulo").textContent = `${e.n}${lado(e)}`;
     $("fichaFig").innerHTML = html`${maniqui({ p, s: sec }, "f", { titulo: `Músculos de ${e.n}` })}
       <div class="leyenda"><span><i style="background:var(--prim)"></i>Principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
-    $("fichaDosis").textContent = `${e.series} ${e.series === 1 ? "serie" : "series"} · ${e.seg ? mmss(e.seg) : `${e.reps} reps`}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : e.elige ? " · peso a elegir" : " · peso corporal"}`;
+    $("fichaDosis").textContent = `${dosisGym(e)}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : e.elige ? " · peso a elegir" : " · peso corporal"}`;
     // Same-named exercises (a side plank per side) are told apart by their order.
     const n = w.ej.slice(0, i).filter((x) => x.n === e.n).length;
     const ult = (ultima(abierto)?.ejercicios || []).filter((x) => x.n === e.n)[n]?.series?.filter((x) => x.hecho) || [];
     $("fichaCuerpo").innerHTML = html`<p class="zona">Descanso entre series: <b>${mmss(e.desc)}</b>${e.bloque ? html` · en circuito, ${w.bloques[e.bloque].rondas} rondas` : ""}</p>
       <h3>Músculos</h3><p class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</p>
+      ${e.c ? html`<h3>Cómo hacerlo</h3><ol class="pasos">${e.c.map((c) => html`<li>${c}</li>`)}</ol>` : ""}
       ${ult.length ? html`<h3>La última vez</h3><p class="sub">${ult.map((x) => `${x.kg ? `${String(x.kg).replace(".", ",")} kg × ` : ""}${x.seg ? mmss(x.seg) : x.reps}`).join(" · ")}</p>` : ""}`;
   }
   $("ficha").hidden = false;
@@ -294,7 +297,7 @@ async function terminar() {
       return { kg: v.kg, [e.seg ? "seg" : "reps"]: v.n, hecho: v.hecho };
     }) }));
     const hechas = Object.values(s.valores).filter((v) => v.hecho);
-    const vol = s.filas.reduce((a, f) => { const v = s.valores[f.k]; return a + (v.hecho && v.kg && !w.ej[f.e].seg ? v.kg * v.n : 0); }, 0);
+    const vol = s.filas.reduce((a, f) => { const v = s.valores[f.k]; return a + (v.hecho && v.kg && !w.ej[f.e].seg ? v.kg * v.n * (w.ej[f.e].porLado ? 2 : 1) : 0); }, 0);
     datos = { tipo: "gimnasio", fecha, rutina: w.id, nombre: w.n, duracionMin: min, notas: "", volumenKg: Math.round(vol), ejercicios };
     const p = {}, sec = {};
     for (const f of s.filas) if (s.valores[f.k].hecho) { for (const m of w.ej[f.e].p) p[m] = (p[m] || 0) + 1; for (const m of w.ej[f.e].s) sec[m] = (sec[m] || 0) + 1; }
@@ -446,7 +449,7 @@ function pagina(n) {
   const ms = new Set(pg.ej.flatMap((i) => w.ej[i].p)), ss = new Set(pg.ej.flatMap((i) => w.ej[i].s));
   $("regMusc").innerHTML = html`${[...ms].map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${[...ss].filter((m) => !ms.has(m)).map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}`;
   const timed = pg.ej.every((i) => w.ej[i].seg);
-  $("regColReps").textContent = timed ? "SEG" : "REPS";
+  $("regColReps").textContent = timed ? "SEG" : pg.ej.every((i) => w.ej[i].porLado) ? "REPS/LADO" : "REPS";
   $("regFilas").innerHTML = html`${pg.filas.map((f) => {
     const e = w.ej[f.e], v = s.valores[f.k];
     const nombre = f.ronda ? `${f.lbl} · ${e.n}${e.lado ? (e.lado === "izq" ? " izq." : " der.") : ""}` : f.lbl;
