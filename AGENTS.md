@@ -72,4 +72,4 @@ In Claude's cloud sessions use Node 24 (`export PATH=/opt/node24/bin:$PATH`) and
 - `tests.yml`: ESLint, server tests, Playwright. `security.yml`: npm audit, signatures, gitleaks (weekly too). `codeql.yml` and dependency review (public repo). `claude-review.yml`: Claude reviews each PR once (`@claude review` for another look).
 - `android.yml`: Android Lint, emulator smoke test, APK on every PR (artifact) and on `main` the release `app-v1.<run>` with `flex-and-fit.apk`, signed with `ANDROID_KEYSTORE_BASE64`/`ANDROID_KEYSTORE_PASSWORD` or a one-off key if missing.
 - `docker.yml`: builds the image for arm64 (the Mac is Apple Silicon, Docker via colima) and amd64; on `main` pushes `:latest` and `:1.<run>` to ghcr.io. The package must be public for the Mac to pull it without logging in.
-- `pages.yml`: the demo on GitHub Pages.
+- `pages.yml`: the demo on GitHub Pages, in two jobs (build, then deploy) so deploy-pages finds the uploaded artifact.
