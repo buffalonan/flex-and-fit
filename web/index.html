@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Flex &amp; Fit</title>
 <meta name="theme-color" content="#0b0c0e">
+<script>
+  // Under a proxy's sub-path, /fitness must become /fitness/ before anything loads: every URL here is relative.
+  if (/^https?:$/.test(location.protocol) && !/(\/|\.html)$/.test(location.pathname)) location.replace(location.pathname + "/" + location.search + location.hash);
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/barlow-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>

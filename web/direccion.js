@@ -3,17 +3,21 @@
 // Tailscale) from that answer, and on the home Wi-Fi can find the Mac's Bonjour announcement
 // (_flexandfit._tcp, published by the Mac's launch agent). Addresses are only ever stored on the device.
 
-/** The origin of a typed or discovered address, or null if it isn't an http(s) URL. */
+/**
+ * The base of a typed or discovered address: its origin plus any sub-path (the Mac's proxy can serve the app
+ * under one, like http://<mac>/fitness), without query, hash or trailing slashes. null if it isn't http(s).
+ */
 export function origen(u) {
   try {
     const x = new URL(String(u).trim());
-    return x.protocol === "http:" || x.protocol === "https:" ? x.origin : null;
+    if (x.protocol !== "http:" && x.protocol !== "https:") return null;
+    return x.origin + x.pathname.replace(/\/(index\.html)?$/, "").replace(/\/+$/, "");
   } catch (e) {
     return null;
   }
 }
 
-/** Unique origins, in order, at most `max`. */
+/** Unique bases, in order, at most `max`. */
 export function unir(listas, max = 6) {
   const out = [];
   for (const u of listas.flat()) {
