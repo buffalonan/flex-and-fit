@@ -1,4 +1,5 @@
 const { test, expect } = require("@playwright/test");
+const http = require("node:http");
 
 const unique = () => `nota-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -239,4 +240,66 @@ test("Buscar el Mac says so when it isn't on this Wi-Fi, and the web version has
   await web.getByRole("button", { name: "Perfil" }).click();
   await expect(web.locator("#buscarMac")).toBeHidden();
   await web.close();
+});
+
+// A reverse proxy like the Mac's: /fitness and /fitness/... go to the app with the prefix stripped (so /fitness
+// serves the page without the last slash, as some proxies do), every other path is another web (here a 404).
+async function proxyFitness() {
+  const server = http.createServer((req, res) => {
+    if (!/^\/fitness(\/|\?|$)/.test(req.url)) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      return res.end("otra web");
+    }
+    const up = http.request({ host: "127.0.0.1", port: 4173, path: req.url.slice("/fitness".length).replace(/^(?!\/)/, "/"), method: req.method, headers: req.headers },
+      (r) => { res.writeHead(r.statusCode, r.headers); r.pipe(res); });
+    up.on("error", () => { res.writeHead(502); res.end(); });
+    req.pipe(up);
+  });
+  await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
+  return { base: `http://127.0.0.1:${server.address().port}/fitness`, close: () => new Promise((ok) => server.close(ok)) };
+}
+
+test("works behind a proxy under /fitness, even typed without the last slash", async ({ page }) => {
+  const proxy = await proxyFitness();
+  // Outside /fitness/ nothing may be asked for once the page is at /fitness/ (before that, the browser's preload
+  // scanner can fetch a few files at the wrong place: harmless, the address bar is fixed before anything runs).
+  const fuera = [];
+  page.on("request", (r) => { if (page.url().endsWith("/fitness/") && !r.url().startsWith(`${proxy.base}/`)) fuera.push(r.url()); });
+  try {
+    await page.goto(proxy.base);
+    await expect(page).toHaveURL(`${proxy.base}/`);
+    await expect(page.locator("#syncPill")).toHaveText("Sincronizado");
+    const notas = unique();
+    await logSession(page, { notas });
+    await expect.poll(() => pendingCount(page)).toBe(0);
+    await expect(page.locator("#syncPill")).toHaveText("Sincronizado");
+    await page.getByRole("button", { name: "Perfil" }).click();
+    await expect(page.locator("#servidor")).toHaveValue(proxy.base);
+    expect(fuera).toEqual([]);
+  } finally {
+    await proxy.close();
+  }
+});
+
+test("the Android app keeps the /fitness path of a typed address", async ({ page }) => {
+  const proxy = await proxyFitness();
+  try {
+    await comoApp(page, []);
+    // The app's native HTTP has no CORS; here the proxy is another origin, so let it through.
+    await page.route(`${proxy.base}/api/**`, async (r) => {
+      const res = await r.fetch();
+      await r.fulfill({ response: res, headers: { ...res.headers(), "access-control-allow-origin": "*", "access-control-allow-headers": "*" } });
+    });
+    await page.addInitScript(() => localStorage.setItem("flexfit.ajustes", JSON.stringify({ servidor: "" })));
+    await page.goto("/");
+    await page.getByRole("button", { name: "Perfil" }).click();
+    await page.fill("#servidor", `${proxy.base}/`);
+    await page.getByRole("button", { name: "Guardar y sincronizar" }).click();
+    await expect(page.locator("#syncPill")).toHaveText("Sincronizado");
+    const guardado = await page.evaluate(() => JSON.parse(localStorage.getItem("flexfit.ajustes")));
+    expect(guardado.servidor).toBe(proxy.base);
+    expect(guardado.servidores[0]).toBe(proxy.base);
+  } finally {
+    await proxy.close();
+  }
 });

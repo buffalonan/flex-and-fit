@@ -6,7 +6,9 @@
 //   WEB_DIR       the web app to serve (default ./web)
 //   BACKUP_DIRS   comma-separated folders for the weekly backups (none by default)
 //   SYNC_TOKEN    if set, /api/sync needs "Authorization: Bearer <token>"
-//   DIRECCIONES   comma-separated addresses of this Mac (http://<ip>:3334), sent to the app in /api/salud
+//   DIRECCIONES   comma-separated addresses of this Mac (http://<ip>:3334, or a proxy's http://<ip>/fitness), sent to the app in /api/salud
+//
+// Behind a reverse proxy under a sub-path (/fitness), the proxy strips the prefix: every URL the web uses is relative.
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -63,14 +65,16 @@ function serveStatic(webDir, req, res) {
   });
 }
 
-// The addresses the Mac can be reached at (home Wi-Fi, Tailscale), only well-formed http(s) origins.
+// The addresses the Mac can be reached at (home Wi-Fi, Tailscale, a proxy's sub-path), only well-formed http(s)
+// URLs, kept as origin plus path without trailing slashes (the app appends /api/...).
 // update.sh writes them into the Mac's .env; the app learns them from /api/salud and keeps them on the phone.
 function origenes(lista) {
   const out = [];
   for (const d of lista || []) {
     try {
       const u = new URL(String(d).trim());
-      if ((u.protocol === "http:" || u.protocol === "https:") && !out.includes(u.origin)) out.push(u.origin);
+      const base = u.origin + u.pathname.replace(/\/+$/, "");
+      if ((u.protocol === "http:" || u.protocol === "https:") && !out.includes(base)) out.push(base);
     } catch (e) { /* not a URL: skipped */ }
   }
   return out;

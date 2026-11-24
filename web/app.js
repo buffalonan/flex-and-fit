@@ -16,7 +16,8 @@ const native = !!window.Capacitor?.isNativePlatform?.();
 // the address is typed once in Perfil and kept only on the phone, so no host name or IP is ever in this public repo.
 // The GitHub Pages demo has no server at all.
 const demo = location.hostname === "buffalonan.github.io";
-const defaultServer = () => (native || demo || location.protocol === "file:" ? "" : location.origin);
+// It may live under a sub-path behind a proxy (http://<mac>/fitness/), so the base is the page's folder, not the origin.
+const defaultServer = () => (native || demo || location.protocol === "file:" ? "" : new URL(".", location.href).href.replace(/\/+$/, ""));
 
 const KEY = "flexfit.ajustes";
 let ajustes = { servidor: null, servidores: [], token: "", tab: "entrenos", filtro: "todos" };
