@@ -293,3 +293,31 @@ test("the kettlebell workout: ten exercises with the halo, the one-arm press per
   await expect(page.locator("#regTitulo")).toContainText("Press de hombro a una mano");
   await expect(page.locator("#regColReps")).toHaveText("REPS/LADO");
 });
+
+test("every strength exercise has its animated figure: in the workout, its sheet and the set logger", async ({ page }) => {
+  await abrirApp(page);
+  const ids = await page.locator("#listaFuerza [data-abrir], #listaPlantillas [data-abrir]").evaluateAll((els) => els.map((e) => e.dataset.abrir));
+  expect(ids.length).toBe(8);
+  for (const id of ids) {
+    await page.click(`[data-abrir="${id}"]`);
+    const filas = page.locator("#detLista .ej");
+    await expect(filas.first()).toBeVisible();
+    const n = await filas.count();
+    await expect(page.locator("#detLista .ej .th svg.fig[data-fig]")).toHaveCount(n);
+    await page.clock.fastForward(1500);
+    // Every joint was drawn (no NaN from the pose maths) and the figures stay inside their frame.
+    const malos = await page.locator("#detLista svg.fig").evaluateAll((svgs) => svgs.filter((s) =>
+      [...s.querySelectorAll("line, path, circle, g")].some((e) => /NaN/.test(e.outerHTML))).map((s) => s.dataset.fig));
+    expect(malos).toEqual([]);
+    await page.click("#detVolver");
+  }
+
+  await page.click('#listaFuerza [data-abrir="kb"]');
+  await page.locator("#detLista .ej").first().click();
+  await expect(page.locator('#fichaFig svg.fig[data-fig="kb_halo"]')).toBeVisible();
+  await expect(page.locator("#fichaFig svg.maniqui")).toBeVisible();
+  await page.click("#fichaEmpezar");
+  await expect(page.locator('#regFig svg.fig[data-fig="kb_halo"]')).toBeVisible();
+  await page.click("#regSig");
+  await expect(page.locator('#regFig svg.fig[data-fig="kb_pm"]')).toBeVisible();
+});

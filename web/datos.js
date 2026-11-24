@@ -254,6 +254,23 @@ export const GYM = [
     ] },
 ];
 
+// The animated figure (figura.js) of each strength exercise, by its name.
+export const FIG_FUERZA = {
+  "Press de banca": "banca", "Press inclinado": "inclinado", "Press de hombro sentado con mancuernas": "press_hombro",
+  "Press de hombro con mancuernas": "press_hombro", "Elevaciones laterales": "laterales", "Fondos en paralelas": "fondos",
+  "Extensión de tríceps en polea": "triceps_polea", "Sentadilla": "sentadilla_barra", "Peso muerto rumano": "rumano",
+  "Sentadilla búlgara": "bulgara", "Prensa inclinada": "prensa", "Prensa de piernas": "prensa", "Curl femoral tumbado": "curl_femoral",
+  "Curl femoral": "curl_femoral", "Elevación de talones de pie": "talones", "Elevación de talones": "talones", "Peso muerto": "peso_muerto",
+  "Dominadas": "dominadas", "Remo con barra": "remo_barra", "Remo con mancuerna": "remo_manc", "Face pull en polea": "face_pull",
+  "Curl de bíceps con mancuerna": "curl", "Hip thrust": "hip_thrust", "Zancadas con mancuernas": "zancadas",
+  "Swing con kettlebell a dos manos": "kb_swing", "Elevación de piernas colgado": "piernas_colgado", "Plancha": "plancha",
+  "Plancha lateral": "plancha_lateral", "Press militar": "press_militar", "Press de pecho en máquina": "press_pecho",
+  "Jalón al pecho": "jalon", "Remo sentado en polea": "remo_polea", "Extensión de cuádriceps": "ext_cuadriceps",
+  "Extensión lumbar": "ext_lumbar", "Halo": "kb_halo", "Peso muerto con kettlebell": "kb_pm", "Swing a dos manos": "kb_swing",
+  "Sentadilla goblet": "kb_goblet", "Press de hombro a una mano": "kb_press", "Remo a una mano": "kb_remo",
+  "Swing a una mano": "kb_swing1", "Cargada a una mano": "kb_cargada", "Molino": "kb_molino", "Levantamiento turco": "kb_turco",
+};
+
 /** Total sets of a gym workout (a circuit counts once per round), and sets per muscle. */
 export function resumenGym(w) {
   let series = 0;
