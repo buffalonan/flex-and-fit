@@ -14,6 +14,9 @@ async function abrirApp(page, idioma) {
     HTMLCanvasElement.prototype.getContext = function (tipo, ...r) { return /webgl/.test(tipo) ? null : get.call(this, tipo, ...r); };
   }, idioma);
   await page.goto("/");
+  // The app's module waits for its dictionary (top-level await), which can end after the page's load event: wait
+  // until it has run (it fills in the version), so the static texts are already translated.
+  await expect(page.locator("#version")).not.toBeEmpty();
 }
 
 test("Perfil changes the language, and it stays after reopening the app", async ({ page }) => {

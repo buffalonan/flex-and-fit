@@ -663,4 +663,18 @@ export default {
   "Tus mejores marcas aparecerán cuando registres series en el gimnasio.": "Deine Bestwerte erscheinen, sobald du Sätze im Studio einträgst.",
   "¿Cuánto te ha costado?": "Wie anstrengend war es?",
   "1 muy fácil · 10 al límite": "1 sehr leicht · 10 am Limit",
+  /* ---------- Body weight ---------- */
+  "Peso corporal": "Körpergewicht",
+  "Para la fuerza relativa (tu 1RM frente a tu peso) y el volumen de los ejercicios con tu propio peso. Llega solo de Health Connect si tu báscula, Samsung Health o COROS lo guardan allí; también puedes apuntarlo aquí.": "Für die relative Kraft (dein 1RM im Verhältnis zu deinem Gewicht) und das Volumen von Übungen mit dem eigenen Körpergewicht. Es kommt von selbst aus Health Connect, wenn deine Waage, Samsung Health oder COROS es dort speichern; du kannst es auch hier eintragen.",
+  "Peso (kg)": "Gewicht (kg)",
+  "Guardar peso": "Gewicht speichern",
+  "Leer el peso de Health Connect": "Gewicht aus Health Connect lesen",
+  "{x}× tu peso": "{x}× dein Gewicht",
+  "últimos 6 meses": "letzte 6 Monate",
+  "Peso corporal: de {a} a {b}": "Körpergewicht: von {a} auf {b}",
+  "{kg} · {f} · {o}": "{kg} · {f} · {o}",
+  "apuntado a mano": "von Hand eingetragen",
+  "de Health Connect": "aus Health Connect",
+  "Sin peso todavía.": "Noch kein Gewicht.",
+  "Escribe tu peso en kg, entre 20 y 400.": "Gib dein Gewicht in kg ein, zwischen 20 und 400.",
 };

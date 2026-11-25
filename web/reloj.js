@@ -126,3 +126,40 @@ export async function importar(plugin, store, { dias = 30, enCurso = false } = {
   const ahora = await store.all("sesiones");
   return { leidas: relojes.length, unidas: ahora.filter((s) => s.origen !== "reloj" && s.reloj).length, sueltas: ahora.filter((s) => s.origen === "reloj").length };
 }
+
+/* ---------- Body weight ---------- */
+// Kept in the record `ajustes/peso` as { pesos: [{ fecha, kg, origen }] }, oldest first, one per day: "hc" from
+// Health Connect (a scale, Samsung Health, COROS…), "mano" typed in Perfil. A day typed by hand keeps that value.
+const MAX_PESOS = 730;
+const kgValido = (kg) => Number.isFinite(kg) && kg >= 20 && kg <= 400;
+
+/** Joins Health Connect readings ({ t, kg }) into the saved list: the day's latest reading, hand-typed days kept. */
+export function unirPesos(pesos = [], lecturas = []) {
+  const dia = new Map((pesos || []).filter((p) => p?.fecha && kgValido(p.kg)).map((p) => [p.fecha, p]));
+  const ultimo = new Map();
+  for (const l of lecturas || []) {
+    if (!Number.isFinite(l?.t) || !kgValido(l.kg)) continue;
+    const f = iso(l.t);
+    if (!ultimo.has(f) || ultimo.get(f).t < l.t) ultimo.set(f, l);
+  }
+  for (const [f, l] of ultimo) {
+    if (dia.get(f)?.origen === "mano") continue;
+    dia.set(f, { fecha: f, kg: Math.round(l.kg * 10) / 10, origen: "hc" });
+  }
+  return [...dia.values()].sort((a, b) => a.fecha.localeCompare(b.fecha)).slice(-MAX_PESOS);
+}
+
+/** Reads the last `dias` days of body weight and saves them when something changed. → { n } or { error }. */
+export async function importarPeso(plugin, store, { dias = 365 } = {}) {
+  let res;
+  try {
+    const hasta = Date.now();
+    res = await plugin.peso({ desde: hasta - dias * 864e5, hasta });
+  } catch (e) {
+    return { error: String(e?.message || e) };
+  }
+  const antes = (await store.all("ajustes")).find((r) => r.id === "peso")?.pesos || [];
+  const pesos = unirPesos(antes, res?.pesos || []);
+  if (!igual(pesos, antes)) await store.put("ajustes", "peso", { pesos });
+  return { n: pesos.length };
+}

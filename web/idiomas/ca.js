@@ -663,4 +663,18 @@ export default {
   "Tus mejores marcas aparecerán cuando registres series en el gimnasio.": "Les teves millors marques apareixeran quan registris sèries al gimnàs.",
   "¿Cuánto te ha costado?": "Quant t'ha costat?",
   "1 muy fácil · 10 al límite": "1 molt fàcil · 10 al límit",
+  /* ---------- Body weight ---------- */
+  "Peso corporal": "Pes corporal",
+  "Para la fuerza relativa (tu 1RM frente a tu peso) y el volumen de los ejercicios con tu propio peso. Llega solo de Health Connect si tu báscula, Samsung Health o COROS lo guardan allí; también puedes apuntarlo aquí.": "Per a la força relativa (el teu 1RM respecte al teu pes) i el volum dels exercicis amb el teu propi pes. Arriba sol de Health Connect si la teva bàscula, Samsung Health o COROS el desen allà; també el pots apuntar aquí.",
+  "Peso (kg)": "Pes (kg)",
+  "Guardar peso": "Desa el pes",
+  "Leer el peso de Health Connect": "Llegeix el pes de Health Connect",
+  "{x}× tu peso": "{x}× el teu pes",
+  "últimos 6 meses": "últims 6 mesos",
+  "Peso corporal: de {a} a {b}": "Pes corporal: de {a} a {b}",
+  "{kg} · {f} · {o}": "{kg} · {f} · {o}",
+  "apuntado a mano": "apuntat a mà",
+  "de Health Connect": "de Health Connect",
+  "Sin peso todavía.": "Encara no hi ha pes.",
+  "Escribe tu peso en kg, entre 20 y 400.": "Escriu el teu pes en kg, entre 20 i 400.",
 };

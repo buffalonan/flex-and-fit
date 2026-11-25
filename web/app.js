@@ -7,7 +7,7 @@ import { html } from "./html.js";
 import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
 import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
-import { importar as importarReloj } from "./reloj.js";
+import { importar as importarReloj, importarPeso, unirPesos } from "./reloj.js";
 import { ultimaRelease, codigoDe } from "./actualizar.js";
 import { t, tn, dosis as tDosis, num, locale, idioma, IDIOMAS, traducirPagina } from "./i18n.js";
 // The 3D figure (figura3d.js and Three.js, ~700 KB) loads the first time a sheet needs it; until then, and wherever
@@ -61,9 +61,12 @@ const titulo = (id) => { const r = rutinaFlex(id), w = gym(id); return r ? (r.n 
 /* ---------- Data the screens share ---------- */
 let sesiones = [];
 let inicioPlan = null;
+let pesos = []; // body weight per day, oldest first: [{ fecha, kg, origen }]
 async function cargar() {
   sesiones = (await store.all("sesiones")).sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "") || b._actualizado - a._actualizado);
-  inicioPlan = (await store.all("ajustes")).find((r) => r.id === "plan-flexibilidad")?.inicio || null;
+  const ajs = await store.all("ajustes");
+  inicioPlan = ajs.find((r) => r.id === "plan-flexibilidad")?.inicio || null;
+  pesos = Array.isArray(ajs.find((r) => r.id === "peso")?.pesos) ? ajs.find((r) => r.id === "peso").pesos : [];
 }
 const ultima = (rutina) => sesiones.find((s) => s.rutina === rutina);
 // The sets of the last time an exercise was done: the newest gym session of this workout where at least one of its
@@ -80,6 +83,25 @@ function ultimasSeries(w, i) {
   const otra = sesiones.find((x) => x.rutina !== w.id && hecho(x));
   return otra ? { series: de(otra).series, otra: true } : null;
 }
+
+/* ---------- Body weight ---------- */
+// The weight on a day: the latest one on or before it, else the first after it (weighed only later). null if none.
+function pesoEn(fecha) {
+  if (!pesos.length) return null;
+  let p = null;
+  for (const x of pesos) { if (!fecha || x.fecha <= fecha) p = x; else break; }
+  return (p || pesos[0]).kg;
+}
+// Exercises done with your own body (no weight in the workout, not a machine "to choose"): their load is your weight
+// plus what's added (negative: the machine's help). An approximation, the same for every such exercise.
+const corporal = (def) => !!def && def.kg == null && !def.elige && !def.seg;
+// The load of a set for the volume: its kg, or your weight plus its kg for a bodyweight exercise when the weight is known.
+function carga(kg, def, peso) {
+  const k = Number(kg) || 0;
+  if (corporal(def) && peso) return Math.max(0, peso + k);
+  return k > 0 ? k : 0;
+}
+const vecesPeso = (kg, fecha) => { const p = pesoEn(fecha); return p ? num(Math.round((kg / p) * 100) / 100) : null; };
 
 /* ---------- Records and progression (own rules: Epley's public formula, double progression) ---------- */
 // Estimated one-rep max (Epley) from a set with weight and 1–12 reps; with more reps it says little, so 0.
@@ -300,7 +322,7 @@ function verFicha(i) {
     $("fichaCuerpo").innerHTML = html`<p class="zona">${t("Descanso entre series:")} <b>${mmss(e.desc)}</b>${e.bloque ? html` · ${t("en circuito, {n} rondas", { n: w.bloques[e.bloque].rondas })}` : ""}</p>
       <h3>${t("Músculos")}</h3><p class="chips">${e.p.map((m) => html`<span class="chip f">${M(m)}</span>`)}${e.s.map((m) => html`<span class="chip">${M(m)}</span>`)}</p>
       ${e.c ? html`<h3>${t("Cómo hacerlo")}</h3><ol class="pasos">${e.c.map((c) => html`<li>${t(c)}</li>`)}</ol>` : ""}
-      ${rec ? html`<h3>${t("Tu récord")}</h3><p class="sub">${rec.rm ? t("{set} · 1RM estimado {kg}", { set: `${kgTxt(rec.set.kg)} × ${rec.set.reps}`, kg: kgTxt(rec.rm) }) : rec.kg ? t("Peso máximo {kg}", { kg: kgTxt(rec.kg) }) : e.seg ? mmss(rec.reps) : t("{n} reps", { n: rec.reps })}${rec.fecha ? ` · ${fechaCorta(rec.fecha)}` : ""}</p>` : ""}
+      ${rec ? html`<h3>${t("Tu récord")}</h3><p class="sub">${rec.rm ? t("{set} · 1RM estimado {kg}", { set: `${kgTxt(rec.set.kg)} × ${rec.set.reps}`, kg: kgTxt(rec.rm) }) + (vecesPeso(rec.rm, rec.fecha) ? ` · ${t("{x}× tu peso", { x: vecesPeso(rec.rm, rec.fecha) })}` : "") : rec.kg ? t("Peso máximo {kg}", { kg: kgTxt(rec.kg) }) : e.seg ? mmss(rec.reps) : t("{n} reps", { n: rec.reps })}${rec.fecha ? ` · ${fechaCorta(rec.fecha)}` : ""}</p>` : ""}
       ${ult.length ? html`<h3>${t("La última vez")}</h3><p class="sub">${ult.map((x) => `${x.kg ? `${num(x.kg)} kg × ` : ""}${x.seg ? mmss(x.seg) : x.reps}`).join(" · ")}</p>` : ""}`;
   }
   $("ficha").hidden = false;
@@ -474,7 +496,8 @@ async function terminar() {
       return { kg: v.kg, [e.seg ? "seg" : "reps"]: v.n, hecho: v.hecho };
     }) }));
     const hechas = Object.values(s.valores).filter((v) => v.hecho);
-    const vol = s.filas.reduce((a, f) => { const v = s.valores[f.k]; return a + (v.hecho && v.kg > 0 && !w.ej[f.e].seg ? v.kg * v.n * (w.ej[f.e].porLado ? 2 : 1) : 0); }, 0);
+    const peso = pesoEn(fecha);
+    const vol = s.filas.reduce((a, f) => { const v = s.valores[f.k], e = w.ej[f.e]; return a + (v.hecho && !e.seg && v.n > 0 ? carga(v.kg, e, peso) * v.n * (e.porLado ? 2 : 1) : 0); }, 0);
     datos = { tipo: "gimnasio", fecha, inicio: s.inicio, fin: Date.now(), rutina: w.id, nombre: w.n, duracionMin: min, notas: "", volumenKg: Math.round(vol), ejercicios };
     const p = {}, sec = {};
     for (const f of s.filas) if (s.valores[f.k].hecho) { for (const m of w.ej[f.e].p) p[m] = (p[m] || 0) + 1; for (const m of w.ej[f.e].s) sec[m] = (sec[m] || 0) + 1; }
@@ -812,6 +835,7 @@ async function renderProgreso() {
 
   semanaMusculos(ses.filter(gimnasio));
   tablaRecords();
+  grafPeso();
 
   const tests = await store.all("tests");
   grafica(tests);
@@ -838,6 +862,25 @@ function semanaMusculos(ses) {
       <p class="sub">${t("Series en que el músculo es el principal. La raya marca 10: entre 10 y 20 por semana es una guía habitual para ganar músculo.")}</p>`
     : html`<p class="sub">${t("Aún no hay series de fuerza esta semana.")}</p>`}`;
 }
+// Body weight over the last six months, when there are two or more days.
+function grafPeso() {
+  const desde = new Date(); desde.setDate(desde.getDate() - 182);
+  const pts = pesos.filter((p) => p.fecha >= iso(desde));
+  $("pesoGraf").hidden = pts.length < 2;
+  if (pts.length < 2) { $("pesoGraf").innerHTML = ""; return; }
+  const vs = pts.map((p) => p.kg), lo = Math.min(...vs), hi = Math.max(...vs);
+  const t0 = parse(pts[0].fecha).getTime(), t1 = parse(pts.at(-1).fecha).getTime();
+  const W = 300, H = 90, x = (p) => 16 + ((parse(p.fecha).getTime() - t0) / (t1 - t0 || 1)) * (W - 32), y = (v) => (hi === lo ? 48 : 74 - ((v - lo) / (hi - lo)) * 50);
+  const dif = Math.round((vs.at(-1) - vs[0]) * 10) / 10;
+  $("pesoGraf").innerHTML = html`<div class="hd"><h3>${t("Peso corporal")}</h3><span class="sub">${t("últimos 6 meses")}${dif ? ` · ${dif > 0 ? "+" : "−"}${kgTxt(Math.abs(dif))}` : ""}</span></div>
+    <svg class="grafica" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("Peso corporal: de {a} a {b}", { a: kgTxt(vs[0]), b: kgTxt(vs.at(-1)) })}">
+      <line x1="16" x2="${W - 16}" y1="${H - 6}" y2="${H - 6}" stroke="var(--app-line)" stroke-width=".8"/>
+      <polyline points="${pts.map((p) => `${x(p).toFixed(1)},${y(p.kg).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${x(pts.at(-1))}" cy="${y(vs.at(-1))}" r="4" fill="var(--fg)"/>
+      <text x="${x(pts[0])}" y="${y(vs[0]) - 8}" text-anchor="start">${kgTxt(vs[0])}</text>
+      <text x="${x(pts.at(-1))}" y="${y(vs.at(-1)) - 8}" text-anchor="end" style="fill:var(--fg);font-weight:600">${kgTxt(vs.at(-1))}</text>
+    </svg>`;
+}
 // Each exercise's best: the set with the best estimated 1RM, or most reps / longest hold with no weight. Newest first.
 function tablaRecords() {
   const gs = sesiones.filter(gimnasio);
@@ -847,7 +890,8 @@ function tablaRecords() {
     const seg = !!defGym(null, n)?.seg, b = mejorDe(gs, n, seg);
     if (!b || !(b.rm || b.kg || b.reps)) return null;
     const v = b.rm ? kgTxt(b.rm) : b.kg ? kgTxt(b.kg) : seg ? mmss(b.reps) : t("{n} reps", { n: b.reps });
-    const det = b.rm ? t("1RM est. · {set}", { set: `${kgTxt(b.set.kg)} × ${b.set.reps}` }) : t(b.kg ? "peso máximo" : seg ? "mejor tiempo" : "peso corporal");
+    const veces = b.rm ? vecesPeso(b.rm, b.fecha) : null;
+    const det = b.rm ? t("1RM est. · {set}", { set: `${kgTxt(b.set.kg)} × ${b.set.reps}` }) + (veces ? ` · ${t("{x}× tu peso", { x: veces })}` : "") : t(b.kg ? "peso máximo" : seg ? "mejor tiempo" : "peso corporal");
     return { n, v, det, fecha: b.fecha };
   }).filter(Boolean);
   $("records").innerHTML = html`<div class="hd"><h3>${t("Récords")}</h3><span class="sub">${t("1RM estimado (Epley)")}</span></div>
@@ -944,7 +988,7 @@ let sesionVista = null;
 const kgTxt = (kg) => `${num(kg)} kg`;
 // A saved gym exercise's definition (muscles, per side, timed): from the session's workout, else any workout's.
 const defGym = (rutina, n) => gym(rutina)?.ej.find((e) => e.n === n) || GYM.flatMap((w) => w.ej).find((e) => e.n === n) || null;
-const volSeries = (series, def) => (series || []).reduce((a, x) => a + (x?.hecho && x.kg > 0 && x.reps > 0 ? x.kg * x.reps * (def?.porLado ? 2 : 1) : 0), 0);
+const volSeries = (series, def, fecha) => { const peso = pesoEn(fecha); return (series || []).reduce((a, x) => a + (x?.hecho && x.reps > 0 ? carga(x.kg, def, peso) * x.reps * (def?.porLado ? 2 : 1) : 0), 0); };
 const cuando = (x) => `${x.fecha || ""}|${String(x.inicio || 0).padStart(15, "0")}`;
 // The best set of an exercise in each gym session (heaviest kg; reps or time when it's bodyweight), oldest first,
 // up to and including session `s`: the exercise's progression.
@@ -1072,12 +1116,13 @@ function renderSesion() {
       const n = (e?.series || []).filter((x) => x?.hecho).length;
       hechas += n;
       if (def && n) { for (const m of def.p) p[m] = (p[m] || 0) + n; for (const m of def.s) sec[m] = (sec[m] || 0) + n; }
-      const v = volSeries(e?.series, def);
+      const v = volSeries(e?.series, def, s.fecha);
       if (v > 0) vol.push([e.n, v]);
     }
     if (hechas) man = html`${maniqui({ p, s: sec }, "f", { titulo: t("Músculos trabajados"), etiquetas: etiquetasTop(p, 4, (v) => tn(v, "{n} serie", "{n} series")) })}
       <div class="leyenda"><span><i style="background:var(--prim)"></i>${t("Principales")}</span><span><i style="background:var(--sec)"></i>${t("Secundarios")}</span></div>`;
-    const volTotal = s.volumenKg ?? Math.round(vol.reduce((a, [, v]) => a + v, 0));
+    // From the sets (with your weight for bodyweight exercises, when known); a session logged by hand keeps its own.
+    const volTotal = ejs.length ? Math.round(vol.reduce((a, [, v]) => a + v, 0)) : s.volumenKg ?? 0;
     $("sesStats").innerHTML = html`${stat(hechas, t("Series"))}${stat(num(volTotal), t("Volumen"), "kg")}${stat(min || "—", t("Duración"), min ? "min" : "")}${esf}${reloj}`;
     const vistos = {};
     const recs = Object.fromEntries(records(s).map((x) => [x.n, x]));
@@ -1085,7 +1130,7 @@ function renderSesion() {
       const def = defGym(s.rutina, e.n), fig = FIG_FUERZA[e.n];
       const series = e.series || [];
       const n = series.filter((x) => x?.hecho).length;
-      const v = volSeries(series, def);
+      const v = volSeries(series, def, s.fecha);
       // The chart once per exercise, under its first row (a side plank per side shares it).
       const primera = !vistos[e.n];
       const graf = primera ? grafProgresion(s, e.n, !!def?.seg) : "";
@@ -1136,7 +1181,28 @@ function renderSesion() {
 $("sesVolver").addEventListener("click", () => show("historial"));
 
 /* ---------- Perfil ---------- */
+function renderPeso() {
+  const u = pesos.at(-1);
+  $("pesoEstado").textContent = u ? t("{kg} · {f} · {o}", { kg: kgTxt(u.kg), f: fechaCorta(u.fecha), o: t(u.origen === "mano" ? "apuntado a mano" : "de Health Connect") }) : t("Sin peso todavía.");
+  $("pesoPermiso").hidden = !(hc && estadoSalud.disponible && estadoSalud.permiso && estadoSalud.peso === false);
+}
+$("pesoForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const kg = Number(String($("pesoKg").value).replace(",", "."));
+  if (!(kg >= 20 && kg <= 400)) { $("pesoEstado").textContent = t("Escribe tu peso en kg, entre 20 y 400."); return; }
+  const hoy = iso(new Date());
+  const lista = [...pesos.filter((p) => p.fecha !== hoy), { fecha: hoy, kg: Math.round(kg * 10) / 10, origen: "mano" }];
+  await store.put("ajustes", "peso", { pesos: unirPesos(lista, []) });
+  $("pesoKg").value = "";
+});
+$("pesoPermiso").addEventListener("click", async () => {
+  try { estadoSalud = { ...estadoSalud, ...(await hc.pedirPermiso()) }; } catch (e) { /* refused */ }
+  renderPeso();
+  renderReloj();
+  if (estadoSalud.peso) await leerReloj({ forzar: true });
+});
 function renderPerfil() {
+  renderPeso();
   if (document.activeElement !== $("planInicio")) $("planInicio").value = inicioPlan || "";
   const ep = enPlan(inicioPlan, iso(new Date()));
   $("planEstado").textContent = !inicioPlan ? t("Empieza con tu primera sesión de flexibilidad, o elige la fecha aquí.")
@@ -1169,6 +1235,7 @@ async function comprobarSalud() {
   if (!hc) return;
   try { estadoSalud = { ...estadoSalud, ...(await hc.estado()) }; } catch (e) { estadoSalud = { disponible: false, permiso: false }; }
   renderReloj();
+  renderPeso();
 }
 function leerReloj({ forzar = false } = {}) {
   if (!hc || !estadoSalud.permiso) return Promise.resolve(null);
@@ -1176,7 +1243,9 @@ function leerReloj({ forzar = false } = {}) {
   if (leyendo) return forzar ? leyendo.then(() => leerReloj({ forzar })) : leyendo;
   if (!forzar && Date.now() - ultimaLectura < 60000) return Promise.resolve(null);
   ultimaLectura = Date.now();
-  leyendo = importarReloj(hc, store, { enCurso: !!sesion || !!leerEnCurso() }).then((r) => { renderReloj(r); return r; }).finally(() => (leyendo = null));
+  leyendo = importarReloj(hc, store, { enCurso: !!sesion || !!leerEnCurso() })
+    .then(async (r) => { if (estadoSalud.peso) await importarPeso(hc, store); renderReloj(r); return r; })
+    .finally(() => (leyendo = null));
   return leyendo;
 }
 async function renderReloj(r) {
