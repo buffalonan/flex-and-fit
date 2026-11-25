@@ -7,7 +7,7 @@ import { html } from "./html.js";
 import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
 import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
-import { importar as importarReloj, importarPeso, unirPesos } from "./reloj.js";
+import { importar as importarReloj, importarPeso, unirPesos, partesDe, unirA, separar } from "./reloj.js";
 import { ultimaRelease, codigoDe } from "./actualizar.js";
 import { t, tn, dosis as tDosis, num, locale, idioma, IDIOMAS, traducirPagina } from "./i18n.js";
 // The 3D figure (figura3d.js and Three.js, ~700 KB) loads the first time a sheet needs it; until then, and wherever
@@ -950,9 +950,14 @@ form.addEventListener("submit", async (e) => {
 });
 
 const hora = (ms) => new Date(ms).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+// A session's minutes: the longer of what was logged and the watch's time (the sets may have been logged in a minute).
+const durMin = (s) => Math.max(s.duracionMin || 0, s.reloj?.fin > s.reloj?.inicio ? Math.round((s.reloj.fin - s.reloj.inicio) / 60000) : 0) || null;
+// A session's name as the history shows it: the app's own workouts in the chosen language, the watch's with its title.
+const nombreSesion = (s) => (s.rutina ? (rutinaFlex(s.rutina) || gym(s.rutina) ? titulo(s.rutina) : s.nombre || s.rutina) : s.nombre || "");
 function lineaReloj(s) {
   const r = s.reloj;
   const partes = [`⌚ ${hora(r.inicio)}–${hora(r.fin)}`];
+  if (partesDe(r).length > 1) partes.push(tn(partesDe(r).length, "{n} entreno del reloj", "{n} entrenos del reloj"));
   if (r.fcMedia) partes.push(t("FC {v} ppm", { v: `${r.fcMedia}${r.fcMax ? `/${r.fcMax}` : ""}` }));
   if (r.kcal) partes.push(`${r.kcal} kcal`);
   return partes.join(" · ") + (s.origen === "reloj" ? `. ${t("Apunta las series y se unirán.")}` : "");
@@ -960,15 +965,14 @@ function lineaReloj(s) {
 function renderHistorial() {
   $("vacio").hidden = sesiones.length > 0;
   $("lista").innerHTML = html`${sesiones.map((s) => {
-    // The app's own workouts show their name in the chosen language; the watch's keep its title.
-    const nombre = s.rutina ? (rutinaFlex(s.rutina) || gym(s.rutina) ? titulo(s.rutina) : s.nombre || s.rutina) : s.nombre || "";
+    const nombre = nombreSesion(s);
     const hechos = Array.isArray(s.ejercicios) && s.tipo === "flexibilidad" ? s.ejercicios.filter((x) => x.hecho).length : null;
     const series = s.tipo === "gimnasio" && Array.isArray(s.ejercicios) ? s.ejercicios.flatMap((x) => x.series || []).filter((x) => x.hecho).length : null;
     return html`<li>
     <button type="button" class="txt" data-ver="${s.id}" aria-label="${t("Ver la sesión: {n}, {f}", { n: nombre || t(s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad"), f: s.fecha ? fechaLarga(s.fecha) : t("sin fecha") })}">
       <span class="tipo ${s.tipo === "gimnasio" ? "gimnasio" : ""}">${t(s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad")}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? ` · ${t("Solo en el reloj")}` : ""}</span>
       ${nombre ? html`<span class="l">${nombre}</span>` : ""}
-      <span class="l"><b>${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")}</b>${s.duracionMin ? ` · ${s.duracionMin} min` : ""}${hechos != null ? ` · ${hechos}/${s.ejercicios.length} ${t("ejercicios")}` : ""}${series ? ` · ${tn(series, "{n} serie", "{n} series")}` : ""}${s.volumenKg ? ` · ${num(s.volumenKg)} kg` : ""}</span>
+      <span class="l"><b>${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")}</b>${durMin(s) ? ` · ${durMin(s)} min` : ""}${hechos != null ? ` · ${hechos}/${s.ejercicios.length} ${t("ejercicios")}` : ""}${series ? ` · ${tn(series, "{n} serie", "{n} series")}` : ""}${s.volumenKg ? ` · ${num(s.volumenKg)} kg` : ""}</span>
       ${s.reloj ? html`<span class="l reloj">${lineaReloj(s)}</span>` : ""}
       ${s.notas ? html`<span class="l sub">${s.notas}</span>` : ""}
     </button>
@@ -1100,9 +1104,9 @@ function renderSesion() {
   $("sesTipo").textContent = `${t(g ? "Gimnasio" : "Flexibilidad")}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? ` · ${t("Solo en el reloj")}` : ""}`;
   // The app's own workouts show their name in the chosen language; the watch's keep its title.
   $("sesTitle").textContent = s.rutina ? (rutinaFlex(s.rutina) || gym(s.rutina) ? titulo(s.rutina) : s.nombre || s.rutina) : r?.titulo || t(g ? "Gimnasio" : "Flexibilidad");
-  const ini = s.inicio || r?.inicio, fin = s.fin || r?.fin;
-  $("sesSub").textContent = `${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")}${ini && fin ? ` · ${hora(ini)}–${hora(fin)}` : ""}`;
-  const min = s.duracionMin || (r ? Math.round((r.fin - r.inicio) / 60000) : null);
+  const ini = Math.min(...[s.inicio, r?.inicio].filter(Boolean)), fin = Math.max(...[s.fin, r?.fin].filter(Boolean));
+  $("sesSub").textContent = `${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")}${ini > 0 && fin > ini ? ` · ${hora(ini)}–${hora(fin)}` : ""}`;
+  const min = durMin(s);
   const ejs = Array.isArray(s.ejercicios) ? s.ejercicios : [];
   const esf = s.esfuerzo ? stat(s.esfuerzo, t("Esfuerzo"), "/10") : "";
   const reloj = r ? html`${stat(r.fcMedia || "—", t("FC media"), r.fcMedia ? t("ppm") : "")}${stat(r.fcMax || "—", t("FC máxima"), r.fcMax ? t("ppm") : "")}${stat(r.kcal || "—", t("Calorías"), r.kcal ? "kcal" : "")}` : "";
@@ -1172,6 +1176,7 @@ function renderSesion() {
   $("sesLista").innerHTML = html`${lista}`;
   $("sesNotas").innerHTML = html`${s.notas ? html`<h3>${t("Notas")}</h3><p>${s.notas}</p>` : ""}`;
   $("sesNotas").hidden = !s.notas;
+  renderUnirReloj(s);
   $("sesNota").textContent = t(s.origen === "reloj" ? "Solo en el reloj: apunta las series de este entreno y se unirán a estos datos."
     : !ejs.length ? "Sesión apuntada a mano, sin ejercicios."
       : r && !r.curva && hc ? "La gráfica del pulso aparecerá en la próxima lectura de Health Connect."
@@ -1179,6 +1184,42 @@ function renderSesion() {
   animar($("sesion"));
 }
 $("sesVolver").addEventListener("click", () => show("historial"));
+
+// Joining by hand: a watch-only workout to a session of the app (the same day or the next/previous one, closest
+// first), and separating a watch workout from a session (it goes back on its own and won't join it again).
+function renderUnirReloj(s) {
+  const box = $("sesReloj");
+  if (s.origen === "reloj") {
+    const dia = (f) => Date.parse(`${f}T12:00:00`);
+    const cerca = sesiones.filter((x) => x.origen !== "reloj" && x.fecha && s.fecha && Math.abs(dia(x.fecha) - dia(s.fecha)) <= 864e5)
+      .sort((a, b) => (a.tipo === s.tipo ? 0 : 1) - (b.tipo === s.tipo ? 0 : 1)
+        || Math.abs((a.inicio || dia(a.fecha)) - s.reloj.inicio) - Math.abs((b.inicio || dia(b.fecha)) - s.reloj.inicio)).slice(0, 6);
+    box.innerHTML = html`<h3>${t("Unir a una sesión")}</h3>
+      <p class="sub">${t(cerca.length ? "¿Apuntaste las series de este entreno en la app? Únelo a esa sesión." : "No hay sesiones apuntadas cerca de este día para unir.")}</p>
+      ${cerca.map((x) => html`<button type="button" class="btn unir" data-unir="${x.id}">${nombreSesion(x) || t(x.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad")} · ${fechaCorta(x.fecha)}${x.inicio ? ` ${hora(x.inicio)}` : ""}</button>`)}`;
+  } else if (s.reloj?.id) {
+    box.innerHTML = html`<h3>${t("Entrenos del reloj")}</h3>
+      <p class="sub">${t("Si uno no es de esta sesión, sepáralo: volverá al historial por su cuenta.")}</p>
+      <ul class="partes">${partesDe(s.reloj).map((p) => html`<li><span>⌚ ${hora(p.inicio)}–${hora(p.fin)}${p.titulo ? ` · ${p.titulo}` : ""}</span>
+        <button type="button" class="del" data-separar="${p.id}">${t("Separar")}</button></li>`)}</ul>`;
+  } else box.innerHTML = "";
+  box.hidden = !box.innerHTML;
+}
+$("sesReloj").addEventListener("click", async (e) => {
+  const s = sesiones.find((x) => x.id === sesionVista);
+  const unir = e.target.closest("[data-unir]")?.dataset.unir, wid = e.target.closest("[data-separar]")?.dataset.separar;
+  const destino = unir && sesiones.find((x) => x.id === unir);
+  if (s && destino) {
+    await store.put("sesiones", destino.id, unirA(destino, s));
+    await store.remove("sesiones", s.id);
+    verSesion(destino.id);
+  } else if (s && wid) {
+    const r = separar(s, wid);
+    if (!r) return;
+    await store.put("sesiones", s.id, r.sesion);
+    await store.put("sesiones", ...r.suelta);
+  }
+});
 
 /* ---------- Perfil ---------- */
 function renderPeso() {
