@@ -141,19 +141,21 @@ test("sets written into a watch-only workout make it a session of its own, still
 test("a stretching session's exercises are marked done or skipped", async ({ page }) => {
   await abrirApp(page);
   await poner(page, "plan-2026-11-24", { tipo: "flexibilidad", fecha: "2026-11-24", rutina: "F1", duracionMin: 20,
-    ejercicios: [{ id: "gato", dosis: "2 × 8", hecho: true }, { id: "isquio_toalla", dosis: "2 × 30 s /lado", hecho: false }] });
+    ejercicios: [{ id: "gato", dosis: "2 × 8", hecho: true }, { id: "viejo", dosis: "1 × 30 s", hecho: true }, { id: "isquio_toalla", dosis: "2 × 30 s /lado", hecho: false }] });
   await page.click('[data-tab="historial"]');
   await page.click('#lista [data-ver="plan-2026-11-24"]');
   await page.click("#sesEditar");
+  // A stretch the app no longer knows isn't shown, but stays in the session.
+  await expect(page.locator("#edLista li")).toHaveCount(2);
   await expect(page.locator("#edAnadirBox")).toBeHidden();
-  await page.locator('[data-hecho="1"]').click();
-  await expect(page.locator('[data-hecho="1"]')).toHaveText("Hecho ✓");
+  await page.locator('[data-hecho="2"]').click();
+  await expect(page.locator('[data-hecho="2"]')).toHaveText("Hecho ✓");
   await page.locator('[data-hecho="0"]').click();
   await page.click("#edGuardar");
-  await expect(page.locator("#sesStats")).toContainText("1/2Ejercicios");
+  await expect(page.locator("#sesStats")).toContainText("1/3Ejercicios");
   await expect(page.locator("#sesLista .ej").nth(0)).toHaveClass(/saltado/);
   await expect(page.locator("#sesLista .ej").nth(1)).not.toHaveClass(/saltado/);
   const r = await registro(page, "plan-2026-11-24");
-  expect(r.ejercicios.map((e) => e.hecho)).toEqual([false, true]);
+  expect(r.ejercicios.map((e) => [e.id, e.hecho])).toEqual([["gato", false], ["viejo", true], ["isquio_toalla", true]]);
   expect(r.rutina).toBe("F1");
 });
