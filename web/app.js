@@ -176,6 +176,7 @@ capApp?.addListener("backButton", () => {
   else if (!$("continuarPanel").hidden) $("continuarPanel").hidden = true;
   else if (!$("salirPanel").hidden) cerrarSalir();
   else if (!$("ficha").hidden) cerrarFicha();
+  else if (edicion) cerrarEdicion();
   else if (sesion) pedirSalir();
   else if (!$("resumen").hidden) cerrarResumen();
   else if (pantalla === "sesion") show("historial");
@@ -1220,6 +1221,128 @@ $("sesReloj").addEventListener("click", async (e) => {
     await store.put("sesiones", ...r.suelta);
   }
 });
+
+/* ---------- Editing a session of the history ---------- */
+// A copy of the session's exercises is edited here and written only on Guardar, on top of the record as it is then
+// (the watch may have refreshed it meanwhile). Records, progression, last time's weights and the week's sets are all
+// worked out from the saved sets, so they follow the edit; the volume is summed again. The watch data stays as it is.
+let edicion = null; // { id, gym, ejercicios: [{ n, series: [{ kg, n, hecho }] }] | [{ id, dosis, hecho }] }
+const ejerciciosGym = (rutina) => [...new Set([...(gym(rutina)?.ej || []), ...GYM.flatMap((w) => w.ej)].map((e) => e.n))];
+function abrirEdicion() {
+  const s = sesiones.find((x) => x.id === sesionVista);
+  if (!s) return;
+  const g = s.tipo === "gimnasio";
+  const ejs = Array.isArray(s.ejercicios) ? s.ejercicios : [];
+  edicion = { id: s.id, gym: g, rutina: s.rutina,
+    ejercicios: g ? ejs.filter((e) => e?.n).map((e) => ({ n: e.n, series: (e.series || []).map((x) => ({ kg: x?.kg ?? null, n: x?.seg ?? x?.reps ?? null, hecho: !!x?.hecho })) }))
+      : ejs.filter((e) => EX[e?.id]).map((e) => ({ ...e, hecho: !!e.hecho })) };
+  $("edFecha").textContent = `${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")} · ${$("sesTitle").textContent}`;
+  $("edMin").value = s.duracionMin ?? "";
+  $("edNotas").value = s.notas || "";
+  $("edAnadirBox").hidden = !g;
+  $("editar").hidden = false;
+  document.body.classList.add("en-sesion");
+  renderEdicion();
+  $("editar").scrollTo(0, 0);
+}
+function cerrarEdicion() {
+  edicion = null;
+  $("editar").hidden = true;
+  $("edLista").innerHTML = "";
+  document.body.classList.remove("en-sesion");
+}
+function renderEdicion() {
+  const ed = edicion;
+  const nombres = ejerciciosGym(ed.rutina);
+  if (!ed.gym) {
+    $("edLista").innerHTML = html`${ed.ejercicios.map((e, i) => html`<li class="${`ej ses${e.hecho ? "" : " saltado"}`}"><span class="th">${figura(e.id)}</span><div class="meta">
+      <span class="name">${t(EX[e.id].n)}</span><span class="dosis">${tDosis(e.dosis || "")}</span>
+      <button type="button" class="btn ed-hecho" data-hecho="${i}" aria-pressed="${String(e.hecho)}">${t(e.hecho ? "Hecho ✓" : "Saltado")}</button></div></li>`)}`;
+    animar($("edLista"));
+    return;
+  }
+  const opciones = (actual) => html`${[...new Set([actual, ...nombres])].map((n) => html`<option value="${n}" ${n === actual ? "selected" : ""}>${t(n)}</option>`)}`;
+  $("edLista").innerHTML = html`${ed.ejercicios.map((e, ei) => {
+    const def = defGym(ed.rutina, e.n);
+    return html`<li class="card ed-ej" data-e="${ei}">
+      <div class="ed-cab"><select data-cambiar="${ei}" aria-label="${t("Ejercicio {i}", { i: ei + 1 })}">${opciones(e.n)}</select>
+        <button type="button" class="del" data-quitar="${ei}" aria-label="${t("Quitar {x}", { x: t(e.n) })}">${t("Quitar")}</button></div>
+      ${e.series.length ? html`<table class="sets"><thead><tr><th>${t("SERIE")}</th><th>${t("KG")}</th><th>${t(def?.seg ? "SEG" : def?.porLado ? "REPS/LADO" : "REPS")}</th><th><span class="sr">${t("Hecha")}</span>✓</th><th><span class="sr">${t("Quitar")}</span></th></tr></thead>
+      <tbody>${e.series.map((x, si) => html`<tr data-k="${`${ei}-${si}`}" class="${x.hecho ? "done" : ""}"><td class="num">${si + 1}</td>
+        <td><input type="number" step="0.5" data-c="kg" value="${x.kg ?? ""}" placeholder="—" aria-label="${t("Kg, serie {n}", { n: si + 1 })}"></td>
+        <td><input type="number" inputmode="numeric" min="0" data-c="n" value="${x.n ?? ""}" aria-label="${t(def?.seg ? "Segundos, serie {n}" : "Repeticiones, serie {n}", { n: si + 1 })}"></td>
+        <td><button type="button" class="ck" data-ck="${`${ei}-${si}`}" aria-pressed="${String(x.hecho)}" aria-label="${t("Serie {n} hecha", { n: si + 1 })}">✓</button></td>
+        <td><button type="button" class="ck quita" data-quita="${`${ei}-${si}`}" aria-label="${t("Quitar la serie {n}", { n: si + 1 })}">✕</button></td></tr>`)}</tbody></table>` : ""}
+      <button type="button" class="btn ghost" data-serie="${ei}">${t("+ Añadir una serie")}</button></li>`;
+  })}`;
+  $("edAnadir").innerHTML = html`<option value="">${t("Elige un ejercicio…")}</option>${nombres.map((n) => html`<option value="${n}">${t(n)}</option>`)}`;
+}
+const celda = (k) => { const [ei, si] = k.split("-").map(Number); return edicion?.ejercicios[ei]?.series[si]; };
+$("edLista").addEventListener("input", (e) => {
+  const i = e.target.closest("input[data-c]"), x = celda(i?.closest("tr")?.dataset.k || "");
+  if (!x) return;
+  const v = Number(String(i.value).replace(",", "."));
+  x[i.dataset.c] = i.value === "" || !Number.isFinite(v) ? null : v;
+});
+$("edLista").addEventListener("change", (e) => {
+  const sel = e.target.closest("[data-cambiar]");
+  if (!sel || !edicion) return;
+  // Another exercise in its place: the sets stay, with their kg and reps (or seconds).
+  edicion.ejercicios[Number(sel.dataset.cambiar)].n = sel.value;
+  renderEdicion();
+});
+$("edLista").addEventListener("click", (e) => {
+  const ed = edicion;
+  if (!ed) return;
+  const b = e.target.closest("button");
+  if (!b) return;
+  const d = b.dataset;
+  if (d.hecho != null) { const x = ed.ejercicios[Number(d.hecho)]; x.hecho = !x.hecho; }
+  else if (d.ck) { const x = celda(d.ck); x.hecho = !x.hecho; }
+  else if (d.quita) { const [ei, si] = d.quita.split("-").map(Number); ed.ejercicios[ei].series.splice(si, 1); }
+  else if (d.quitar != null) ed.ejercicios.splice(Number(d.quitar), 1);
+  else if (d.serie != null) {
+    // A new set like the last one (done), or the exercise's dose when it has none yet.
+    const ej = ed.ejercicios[Number(d.serie)], def = defGym(ed.rutina, ej.n), u = ej.series.at(-1);
+    ej.series.push(u ? { kg: u.kg, n: u.n, hecho: true } : { kg: def?.kg ?? null, n: def?.seg || def?.reps || null, hecho: true });
+  } else return;
+  renderEdicion();
+});
+$("edAnadir").addEventListener("change", () => {
+  const n = $("edAnadir").value;
+  if (!n || !edicion) return;
+  const def = defGym(edicion.rutina, n);
+  edicion.ejercicios.push({ n, series: [{ kg: def?.kg ?? null, n: def?.seg || def?.reps || null, hecho: true }] });
+  renderEdicion();
+  $("edLista").lastElementChild?.scrollIntoView({ block: "nearest" });
+});
+async function guardarEdicion() {
+  const ed = edicion, s = sesiones.find((x) => x.id === ed?.id);
+  if (!s) { cerrarEdicion(); return; }
+  const { id, _actualizado, ...d } = s; // eslint-disable-line no-unused-vars
+  const min = Number($("edMin").value);
+  if ($("edMin").value !== "" && Number.isFinite(min) && min > 0) d.duracionMin = Math.round(min); else delete d.duracionMin;
+  d.notas = $("edNotas").value.trim();
+  if (ed.gym) {
+    d.ejercicios = ed.ejercicios.filter((e) => e.series.length).map((e) => {
+      const seg = !!defGym(ed.rutina, e.n)?.seg;
+      return { n: e.n, series: e.series.map((x) => ({ kg: x.kg, [seg ? "seg" : "reps"]: x.n, hecho: x.hecho })) };
+    });
+    if (d.ejercicios.length || Array.isArray(s.ejercicios)) {
+      d.volumenKg = Math.round(d.ejercicios.reduce((a, e) => a + volSeries(e.series, defGym(ed.rutina, e.n), d.fecha), 0));
+    }
+    // A watch-only workout with sets written in becomes a session of its own, keeping its watch data (a session
+    // logged later no longer takes it).
+    if (d.origen === "reloj" && d.ejercicios.length) delete d.origen;
+    if (!d.ejercicios.length && !Array.isArray(s.ejercicios)) delete d.ejercicios;
+  } else if (ed.ejercicios.length) d.ejercicios = ed.ejercicios;
+  cerrarEdicion();
+  await store.put("sesiones", ed.id, d);
+}
+$("sesEditar").addEventListener("click", abrirEdicion);
+$("edSalir").addEventListener("click", cerrarEdicion);
+$("edCancelar").addEventListener("click", cerrarEdicion);
+$("edGuardar").addEventListener("click", guardarEdicion);
 
 /* ---------- Perfil ---------- */
 function renderPeso() {
