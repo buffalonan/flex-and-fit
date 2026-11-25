@@ -139,6 +139,10 @@ for (const idioma of ["en", "de", "ca"]) {
       await page.locator("#lista [data-ver]").nth(i).click();
       await expect(page.locator("#sesion")).toBeVisible();
       await revisar(`session ${i}`);
+      await page.locator("#sesEditar").click();
+      await expect(page.locator("#editar")).toBeVisible();
+      await revisar(`editing session ${i}`);
+      await page.locator("#edCancelar").click();
       await page.locator("#sesVolver").click();
     }
 

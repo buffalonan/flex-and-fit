@@ -121,3 +121,25 @@ test("a session with no cardio shows no cardio card, and Cancelar adds nothing",
   await expect(page.locator("#sesCardio")).toBeHidden();
   await expect(page.locator("#sesStats")).not.toContainText("Cardio");
 });
+
+test("cardio can be added to, changed in or removed from a past gym session by editing it", async ({ page }) => {
+  await abrirApp(page);
+  await page.evaluate(async () => (await import("./store.js")).put("sesiones", "a", { tipo: "gimnasio", fecha: "2026-11-24", rutina: "g1", nombre: "Tren superior · Empuje",
+    ejercicios: [{ n: "Press de banca", series: [{ kg: 40, reps: 8, hecho: true }] }], cardio: [{ tipo: "eliptica", momento: "antes", min: 10 }] }));
+  await page.click('[data-tab="historial"]');
+  await page.click('#lista [data-ver="a"]');
+  await page.click("#sesEditar");
+  await expect(page.locator("#edCardio .cardio-it")).toHaveText(["Elíptica · 10 min✕"]);
+  await page.click("#edCardio [data-cardio-add]");
+  await page.click('#cardioTipos [data-tipo="remo"]');
+  await page.fill('#cardioCampos input[data-campo="min"]', "6");
+  await page.click("#cardioGuardar");
+  await page.click('#edCardio [data-cardio-del="0"]');
+  // Nothing is written until Guardar.
+  expect((await page.evaluate(async () => (await (await import("./store.js")).all("sesiones")).find((s) => s.id === "a"))).cardio).toHaveLength(1);
+  await page.click("#edGuardar");
+  await expect(page.locator("#sesCardio li")).toHaveText(["RemoDespués de la fuerza · 6 min"]);
+  const s = await page.evaluate(async () => (await (await import("./store.js")).all("sesiones")).find((s) => s.id === "a"));
+  expect(s.cardio).toEqual([{ tipo: "remo", momento: "despues", min: 6 }]);
+  expect(s.volumenKg).toBe(320);
+});

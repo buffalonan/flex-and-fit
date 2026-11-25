@@ -121,6 +121,7 @@
       <h2 id="sesTitle"></h2>
       <p class="sub" id="sesSub"></p>
     </div>
+    <button type="button" class="btn" id="sesEditar">✎ Editar la sesión</button>
     <div class="panel-man" id="sesMan"></div>
     <div class="stats" id="sesStats"></div>
     <div class="card" id="sesFc"></div>
@@ -224,6 +225,20 @@
   <p class="sub" id="regNota"></p>
   <div class="cardio-reg" id="regCardio"></div>
   <div class="full-btns"><button type="button" class="btn-sec" id="regAnt">ANTERIOR</button><button type="button" class="btn-go" id="regSig">SIGUIENTE</button></div>
+</section>
+
+<!-- Editing a session of the history: its sets (kg, reps or time, done), its exercises, minutes and notes. -->
+<section id="editar" class="full" aria-labelledby="edTitulo" hidden>
+  <div class="full-top"><span class="sub" id="edFecha"></span><button type="button" class="x" id="edSalir" aria-label="Cerrar">✕</button></div>
+  <h2 id="edTitulo">Editar la sesión</h2>
+  <ol class="ed-lista" id="edLista"></ol>
+  <label class="f" id="edAnadirBox">Añadir un ejercicio <select id="edAnadir"></select></label>
+  <div class="card" id="edCardioBox" hidden><h3>Cardio</h3><div class="cardio-reg" id="edCardio"></div></div>
+  <div class="row">
+    <label class="f">Minutos <input type="number" id="edMin" min="1" max="600" inputmode="numeric"></label>
+  </div>
+  <label class="f">Notas <textarea id="edNotas" rows="2" maxlength="2000"></textarea></label>
+  <div class="full-btns"><button type="button" class="btn-sec" id="edCancelar">CANCELAR</button><button type="button" class="btn-go" id="edGuardar">GUARDAR</button></div>
 </section>
 
 <!-- One exercise of a workout, opened from its detail before starting. -->
