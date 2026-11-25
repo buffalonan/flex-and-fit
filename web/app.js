@@ -58,6 +58,20 @@ async function cargar() {
   inicioPlan = (await store.all("ajustes")).find((r) => r.id === "plan-flexibilidad")?.inicio || null;
 }
 const ultima = (rutina) => sesiones.find((s) => s.rutina === rutina);
+// The sets of the last time an exercise was done: the newest gym session of this workout where at least one of its
+// sets was ticked (a session logged by hand, or one where it was skipped, doesn't count), matched by name and, for
+// same-named ones (a side plank per side), by their order. Failing that, the newest time in another workout, whose
+// weights carry over but not its reps (another workout may do it 5×5 instead of 3×8). → { series, otra } or null.
+function ultimasSeries(w, i) {
+  const e = w.ej[i];
+  const n = w.ej.slice(0, i).filter((x) => x.n === e.n).length;
+  const de = (x) => (x.ejercicios || []).filter((y) => y?.n === e.n)[n];
+  const hecho = (x) => x.tipo === "gimnasio" && de(x)?.series?.some((y) => y?.hecho);
+  const misma = sesiones.find((x) => x.rutina === w.id && hecho(x));
+  if (misma) return { series: de(misma).series, otra: false };
+  const otra = sesiones.find((x) => x.rutina !== w.id && hecho(x));
+  return otra ? { series: de(otra).series, otra: true } : null;
+}
 
 /* ---------- Screens ---------- */
 const TABS = ["entrenos", "progreso", "historial", "perfil"];
@@ -75,7 +89,8 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
 
 const capApp = native ? window.Capacitor.registerPlugin("App") : null;
 capApp?.addListener("backButton", () => {
-  if (!$("salirPanel").hidden) cerrarSalir();
+  if (!$("continuarPanel").hidden) $("continuarPanel").hidden = true;
+  else if (!$("salirPanel").hidden) cerrarSalir();
   else if (!$("ficha").hidden) cerrarFicha();
   else if (sesion) pedirSalir();
   else if (!$("resumen").hidden) cerrarResumen();
@@ -217,9 +232,7 @@ function verFicha(i) {
       <div class="leyenda"><span><i style="background:var(--prim)"></i>Principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
     if (FIG_FUERZA[e.n]) en3d($("fichaFig").querySelector(".fig3d"), FIG_FUERZA[e.n], { musculos: e });
     $("fichaDosis").textContent = `${dosisGym(e)}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : e.elige ? " · peso a elegir" : " · peso corporal"}`;
-    // Same-named exercises (a side plank per side) are told apart by their order.
-    const n = w.ej.slice(0, i).filter((x) => x.n === e.n).length;
-    const ult = (ultima(abierto)?.ejercicios || []).filter((x) => x.n === e.n)[n]?.series?.filter((x) => x.hecho) || [];
+    const ult = ultimasSeries(w, i)?.series.filter((x) => x?.hecho) || [];
     $("fichaCuerpo").innerHTML = html`<p class="zona">Descanso entre series: <b>${mmss(e.desc)}</b>${e.bloque ? html` · en circuito, ${w.bloques[e.bloque].rondas} rondas` : ""}</p>
       <h3>Músculos</h3><p class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</p>
       ${e.c ? html`<h3>Cómo hacerlo</h3><ol class="pasos">${e.c.map((c) => html`<li>${c}</li>`)}</ol>` : ""}
@@ -258,14 +271,74 @@ function pitido(f = 880) {
     o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.25);
   } catch (e) { /* no audio */ }
 }
-function entrar(id) {
+function entrar(id, inicio = Date.now()) {
   document.body.classList.add("en-sesion");
-  sesion.inicio = Date.now();
+  sesion.inicio = inicio;
   sesion.rutina = id;
+  abierto = id;
   pantallaEncendida(true);
   fcEnVivo();
   sesion.timerFc = setInterval(fcEnVivo, 30000);
+  entreno?.empezar({ titulo: titulo(id), inicio }).catch(() => {});
+  guardarEnCurso();
 }
+
+/* ---------- The session in progress, kept on the phone ---------- */
+// Android may close the app while the phone is locked (Samsung is quick to do it), and the session lived only in
+// memory. So every change is written to localStorage (synchronous, so nothing is lost if the app dies right after),
+// and on the next start the app offers to continue it, save what was done, or discard it. It's this device's only:
+// it never syncs, and it's removed when the session is saved or discarded.
+const EN_CURSO = "flexfit.enCurso";
+function guardarEnCurso() {
+  const s = sesion;
+  if (!s?.rutina) return;
+  const d = s.tipo === "gym"
+    ? { tipo: "gym", rutina: s.rutina, inicio: s.inicio, valores: s.valores, pag: s.pag, desc: s.desc }
+    : { tipo: "flex", rutina: s.rutina, inicio: s.inicio, idx: s.idx, hechos: [...s.hechos], seg: s.seg };
+  try { localStorage.setItem(EN_CURSO, JSON.stringify({ ...d, guardado: Date.now() })); } catch (e) { /* no storage */ }
+}
+function borrarEnCurso() { try { localStorage.removeItem(EN_CURSO); } catch (e) { /* no storage */ } }
+// The saved session, if it still fits the app's workouts (an update may have changed them); else it's dropped.
+function leerEnCurso() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(EN_CURSO) || "null"); } catch (e) { /* none or broken */ }
+  if (!d || typeof d !== "object" || !Number.isFinite(d.inicio)) return null;
+  const ok = d.tipo === "gym" ? !!gym(d.rutina) && d.valores && typeof d.valores === "object"
+    : d.tipo === "flex" && !!rutinaFlex(d.rutina) && Array.isArray(d.hechos);
+  if (!ok) borrarEnCurso();
+  return ok ? d : null;
+}
+let pendienteEnCurso = null;
+function ofrecerContinuar() {
+  const d = leerEnCurso();
+  if (!d || sesion) return;
+  pendienteEnCurso = d;
+  const ini = new Date(d.inicio);
+  const cuando = iso(ini) === iso(new Date()) ? "hoy" : ini.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  let hecho;
+  if (d.tipo === "gym") { const n = Object.values(d.valores).filter((v) => v?.hecho).length; hecho = `${n} ${n === 1 ? "serie hecha" : "series hechas"}`; }
+  else { const n = new Set(d.hechos).size; hecho = `${n} de ${rutinaFlex(d.rutina).items.length} posturas`; }
+  $("contTexto").textContent = `${titulo(d.rutina)}, empezado ${cuando} a las ${ini.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })} · ${hecho}.`;
+  $("continuarPanel").hidden = false;
+}
+function retomar() {
+  const d = pendienteEnCurso;
+  pendienteEnCurso = null;
+  $("continuarPanel").hidden = true;
+  if (!d || sesion) return false;
+  if (d.tipo === "gym") empezarGym(d.rutina, d); else empezarFlex(d.rutina, d);
+  return true;
+}
+$("contSeguir").addEventListener("click", () => retomar());
+$("contGuardar").addEventListener("click", () => { if (retomar()) terminar(); });
+$("contDescartar").addEventListener("click", () => { pendienteEnCurso = null; borrarEnCurso(); $("continuarPanel").hidden = true; });
+// Also on the way to the background, in case a change didn't get its own save.
+document.addEventListener("visibilitychange", () => { if (document.hidden) guardarEnCurso(); });
+window.addEventListener("pagehide", () => guardarEnCurso());
+
+// In the Android app, a foreground service with an ongoing notification ("Entreno en curso") while a session is
+// open, so Android is much less likely to close the app with the phone locked (EntrenoPlugin.java).
+const entreno = native ? window.Capacitor.registerPlugin("Entreno") : null;
 // While training: the latest heart rate in Health Connect, if the watch writes it during the workout (COROS usually
 // writes everything when the workout ends and syncs, so this mostly stays hidden).
 async function fcEnVivo() {
@@ -283,6 +356,8 @@ function salirSesion() {
   clearInterval(sesion?.timer);
   clearInterval(sesion?.timerFc);
   sesion = null;
+  borrarEnCurso();
+  entreno?.terminar().catch(() => {});
   document.body.classList.remove("en-sesion");
   $("reproductor").hidden = true;
   $("registro").hidden = true;
@@ -343,6 +418,8 @@ async function terminar() {
     resumenId = store.newId();
     await store.put("sesiones", resumenId, datos);
   }
+  // Saved: the copy kept in case the app closed isn't needed any more (salirSesion removes it too).
+  borrarEnCurso();
   salirSesion();
   document.body.classList.add("en-sesion");
   $("resFecha").textContent = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
@@ -387,13 +464,25 @@ function construirPasos(r) {
   return out;
 }
 
-function empezarFlex(id) {
+// `previo`: a session saved before the app closed. It goes back to the start of the step it was on (to the
+// "get ready" before a stretch), paused, so there's time to get back into position.
+function empezarFlex(id, previo = null) {
   const r = rutinaFlex(id);
   sesion = { tipo: "flex", pasos: construirPasos(r), idx: 0, hechos: new Set(), seg: {}, pausa: null, pausado: 0 };
-  entrar(id);
+  let i = 0;
+  if (previo) {
+    const n = r.items.length;
+    sesion.hechos = new Set(previo.hechos.filter((x) => Number.isInteger(x) && x >= 0 && x < n));
+    for (const [k, v] of Object.entries(previo.seg || {})) if (sesion.hechos.has(Number(k)) && Number.isFinite(v)) sesion.seg[k] = v;
+    i = Math.max(0, Math.min(Number(previo.idx) || 0, sesion.pasos.length - 1));
+    if (sesion.pasos[i].tipo === "work" && sesion.pasos[i - 1]?.tipo === "prep") i--;
+    sesion.pausa = Date.now();
+  }
+  entrar(id, previo?.inicio);
+  $("repPausa").textContent = sesion.pausa ? "SEGUIR" : "PAUSA";
   $("reproductor").hidden = false;
   window.scrollTo(0, 0);
-  irA(0);
+  irA(i);
   sesion.timer = setInterval(tick, 200);
 }
 const ahora = () => (sesion.pausa ?? Date.now());
@@ -432,7 +521,8 @@ function irA(i) {
   const sig = s.pasos.slice(i + 1).find((q) => q.tipo === "work" && q.i !== p.i);
   $("repSig").innerHTML = html`${sig ? html`<span class="th">${figura(sig.ex)}</span><span>Después: <b>${EX[sig.ex].n}</b> · ${r.items[sig.i][1]}</span>` : html`<span>Es la última postura.</span>`}`;
   animar($("repSig"));
-  if (p.tipo === "work") { vibrar(p.lado ? [120, 80, 120] : 150); pitido(p.lado === "der" ? 990 : 880); }
+  if (p.tipo === "work" && !s.pausa) { vibrar(p.lado ? [120, 80, 120] : 150); pitido(p.lado === "der" ? 990 : 880); }
+  guardarEnCurso();
   tick();
 }
 function tick() {
@@ -464,9 +554,9 @@ $("repSaltar").addEventListener("click", () => {
 });
 
 /* ---------- Gym logger ---------- */
-function empezarGym(id) {
+// `previo`: a session saved before the app closed, whose sets, page and rest timer come back as they were.
+function empezarGym(id, previo = null) {
   const w = gym(id);
-  const prev = ultima(id);
   // Pages: one per exercise; a circuit is one page with its rounds in order.
   const paginas = [];
   const filas = [];
@@ -483,16 +573,29 @@ function empezarGym(id) {
       paginas.push({ titulo: `Circuito · ${w.bloques[e.bloque].rondas} vueltas`, filas: fs, ej: idx });
     }
   }
+  // Each set starts with last time's weight and reps (a set beyond last time's takes its last set's numbers).
   const valores = {};
+  const ult = w.ej.map((_, i) => ultimasSeries(w, i));
   for (const f of filas) {
-    const e = w.ej[f.e];
-    const ps = prev?.ejercicios?.[f.e]?.series?.[f.si];
-    valores[f.k] = { kg: ps?.kg ?? e.kg, n: ps?.[e.seg ? "seg" : "reps"] ?? (e.seg || e.reps), hecho: false, prev: ps ? `${ps.kg ? `${String(ps.kg).replace(".", ",")}×` : ""}${ps[e.seg ? "seg" : "reps"] ?? ""}${e.seg ? " s" : ""}` : "—" };
+    const e = w.ej[f.e], u = ult[f.e], c = e.seg ? "seg" : "reps";
+    const ps = u && (u.series[f.si] || u.series[u.series.length - 1]);
+    const kg = ps && ps.kg != null ? ps.kg : e.kg;
+    const n = ps && !u.otra && ps[c] != null ? ps[c] : e.seg || e.reps;
+    valores[f.k] = { kg, n, hecho: false, prev: ps ? `${ps.kg ? `${String(ps.kg).replace(".", ",")}×` : ""}${ps[c] ?? ""}${e.seg ? " s" : ""}` : "—" };
   }
-  sesion = { tipo: "gym", paginas, filas, valores, pag: 0, desc: null };
-  entrar(id);
+  let pag = 0, desc = null;
+  if (previo) {
+    for (const f of filas) {
+      const v = previo.valores[f.k];
+      if (v && typeof v === "object") valores[f.k] = { ...valores[f.k], kg: v.kg ?? null, n: v.n ?? null, hecho: !!v.hecho, prev: v.prev ?? valores[f.k].prev };
+    }
+    pag = Math.max(0, Math.min(Number(previo.pag) || 0, paginas.length - 1));
+    if (previo.desc?.fin > Date.now()) desc = previo.desc;
+  }
+  sesion = { tipo: "gym", paginas, filas, valores, pag, desc };
+  entrar(id, previo?.inicio);
   $("registro").hidden = false;
-  pagina(0);
+  pagina(pag);
   sesion.timer = setInterval(tickGym, 250);
 }
 function pagina(n) {
@@ -523,6 +626,7 @@ function pagina(n) {
   $("regNota").textContent = w.notas.find((x) => pg.ej.some((i) => x.toLowerCase().startsWith(w.ej[i].n.toLowerCase().split(" ").slice(0, 2).join(" ")))) || "";
   $("regAnt").disabled = n === 0;
   $("regSig").textContent = n === s.paginas.length - 1 ? "TERMINAR" : "SIGUIENTE";
+  guardarEnCurso();
 }
 $("regFilas").addEventListener("input", (e) => {
   const i = e.target.closest("input"), k = i?.closest("tr")?.dataset.k;
@@ -540,6 +644,7 @@ $("regFilas").addEventListener("input", (e) => {
     if (inp) inp.value = val ?? "";
   }
 });
+$("regFilas").addEventListener("input", () => guardarEnCurso());
 $("regFilas").addEventListener("click", (e) => {
   const k = e.target.closest("[data-ck]")?.dataset.ck;
   if (!k) return;
@@ -553,6 +658,7 @@ $("regFilas").addEventListener("click", (e) => {
     sesion.desc = { fin: Date.now() + ej.desc * 1000, total: ej.desc };
     tickGym();
   }
+  guardarEnCurso();
 });
 function tickGym() {
   const s = sesion;
@@ -566,9 +672,9 @@ function tickGym() {
   $("regDescBar").style.width = `${Math.max(0, Math.min(100, (quedan / d.total) * 100))}%`;
   if (quedan <= 0) { s.desc = null; $("regDescanso").hidden = true; vibrar([200, 100, 200]); pitido(); }
 }
-$("regMenos").addEventListener("click", () => { if (sesion?.desc) { sesion.desc.fin -= 15000; tickGym(); } });
-$("regMas").addEventListener("click", () => { if (sesion?.desc) { sesion.desc.fin += 15000; sesion.desc.total += 15; tickGym(); } });
-$("regFinDesc").addEventListener("click", () => { if (sesion) { sesion.desc = null; tickGym(); } });
+$("regMenos").addEventListener("click", () => { if (sesion?.desc) { sesion.desc.fin -= 15000; tickGym(); guardarEnCurso(); } });
+$("regMas").addEventListener("click", () => { if (sesion?.desc) { sesion.desc.fin += 15000; sesion.desc.total += 15; tickGym(); guardarEnCurso(); } });
+$("regFinDesc").addEventListener("click", () => { if (sesion) { sesion.desc = null; tickGym(); guardarEnCurso(); } });
 $("regAnt").addEventListener("click", () => sesion.pag > 0 && pagina(sesion.pag - 1));
 $("regSig").addEventListener("click", () => (sesion.pag < sesion.paginas.length - 1 ? pagina(sesion.pag + 1) : terminar()));
 
@@ -719,7 +825,7 @@ function leerReloj({ forzar = false } = {}) {
   if (leyendo) return forzar ? leyendo.then(() => leerReloj({ forzar })) : leyendo;
   if (!forzar && Date.now() - ultimaLectura < 60000) return Promise.resolve(null);
   ultimaLectura = Date.now();
-  leyendo = importarReloj(hc, store, { enCurso: !!sesion }).then((r) => { renderReloj(r); return r; }).finally(() => (leyendo = null));
+  leyendo = importarReloj(hc, store, { enCurso: !!sesion || !!leerEnCurso() }).then((r) => { renderReloj(r); return r; }).finally(() => (leyendo = null));
   return leyendo;
 }
 async function renderReloj(r) {
@@ -896,5 +1002,6 @@ $("version").textContent = `Versión ${ver || "local"}${native ? " · app Androi
 show(ajustes.tab);
 await renderAll();
 await renderSync();
+ofrecerContinuar();
 comprobarSalud().then(() => leerReloj());
 sync();

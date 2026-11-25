@@ -1,0 +1,47 @@
+package io.github.buffalonan.flexandfit;
+
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+/**
+ * Keeps the app alive during a session: while one is open (stretching player or gym logger) a foreground service
+ * shows an ongoing notification, so Android (and Samsung's battery manager) is much less likely to close the app
+ * when the phone is locked. The session is also saved on every change in the web code, in case it closes anyway.
+ * JS: Capacitor.registerPlugin("Entreno").empezar({ titulo, inicio }) and .terminar().
+ */
+@CapacitorPlugin(name = "Entreno")
+public class EntrenoPlugin extends Plugin {
+    @PluginMethod
+    public void empezar(PluginCall call) {
+        // Android 13+ shows the notification only with this permission; the service runs either way.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && getActivity() != null
+                && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(getActivity(), new String[] { Manifest.permission.POST_NOTIFICATIONS }, 7301);
+        }
+        Intent i = new Intent(getContext(), EntrenoServicio.class);
+        i.putExtra("titulo", call.getString("titulo", "Entreno"));
+        Double inicio = call.getDouble("inicio");
+        i.putExtra("inicio", inicio == null ? System.currentTimeMillis() : inicio.longValue());
+        try {
+            ContextCompat.startForegroundService(getContext(), i);
+            call.resolve();
+        } catch (RuntimeException e) {
+            // Not allowed right now (the app isn't in the foreground): the saved session still covers it.
+            call.reject("No se pudo iniciar el servicio: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void terminar(PluginCall call) {
+        getContext().stopService(new Intent(getContext(), EntrenoServicio.class));
+        call.resolve();
+    }
+}

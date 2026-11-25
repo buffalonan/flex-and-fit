@@ -38,6 +38,16 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- While a session is open: an ongoing notification so Android doesn't close the app with the phone locked (EntrenoPlugin.java). -->
+        <service
+            android:name=".EntrenoServicio"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps a workout in progress (timers and logged sets) alive while the screen is locked." />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -54,6 +64,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- The stretching player and the rest timer vibrate on a side change and when a rest ends. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- The "Entreno en curso" foreground service and its notification (EntrenoServicio.java). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Health Connect, read only: the watch's workouts (COROS), their heart rate and calories (SaludPlugin.java). -->
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />

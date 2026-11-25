@@ -84,9 +84,10 @@ test("a flexibility routine shows each stretch animated, with its dose and cues"
   // The figure moves: its trunk is drawn somewhere else a few seconds later (only figures on screen are animated).
   await page.locator("#detLista .ej").nth(1).scrollIntoViewIfNeeded();
   const trunk = () => page.locator('#detLista .ej >> nth=1 >> [data-k="tr"]').getAttribute("d");
+  // The IntersectionObserver reports the figure on screen in real time, maybe after the first fake seconds have run,
+  // so keep running the clock until it moves.
   const before = await trunk();
-  await page.clock.runFor(3000);
-  expect(await trunk()).not.toBe(before);
+  await expect.poll(async () => { await page.clock.runFor(1000); return trunk(); }).not.toBe(before);
 });
 
 test("the plan's start date decides today's routine, and Sunday is the gentle one", async ({ page }) => {
@@ -227,6 +228,47 @@ test("changing a set's weight carries it to the exercise's later sets not ticked
   await expect(page.locator("#resStats")).toContainText("992kg");
 });
 
+test("each exercise starts with last time's weights: from its newest session where it was done, else from another workout", async ({ page }) => {
+  await abrirApp(page);
+  await page.locator('label:has(input[value="fuerza"])').click();
+  const kg = (n) => page.locator(`#regFilas tr >> nth=${n} >> input[data-c="kg"]`);
+  const reps = (n) => page.locator(`#regFilas tr >> nth=${n} >> input[data-c="n"]`);
+  const g1 = async () => { await page.getByRole("button", { name: "Entrenos" }).click(); await page.click('[data-abrir="g1"]'); await page.click("#detEmpezar"); };
+  await g1();
+  await kg(0).fill("47.5");
+  await reps(0).fill("6");
+  await page.click('[data-ck="0-0"]');
+  for (let i = 0; i < 6; i++) await page.click("#regSig");
+  await page.click("#resListo");
+
+  // Next time: the bench press has 47.5 kg on every set; the incline press, not done, keeps its default.
+  await g1();
+  await expect(kg(0)).toHaveValue("47.5");
+  await expect(reps(0)).toHaveValue("6");
+  await expect(kg(4)).toHaveValue("47.5");
+  await expect(reps(4)).toHaveValue("8");
+  await page.click("#regSig");
+  await expect(kg(0)).toHaveValue("24");
+  // A session where the bench press was skipped (only the incline press done) doesn't reset it.
+  await page.click('[data-ck="1-0"]');
+  for (let i = 0; i < 5; i++) await page.click("#regSig");
+  await page.click("#resListo");
+  await g1();
+  await expect(kg(0)).toHaveValue("47.5");
+  await page.click("#regSalir");
+  await page.click("#salirDescartar");
+
+  // StrongLifts A has a bench press too: it takes the weight, but keeps its own 5 reps.
+  await page.click("#detVolver");
+  await page.locator('label:has(input[value="todos"])').click();
+  await page.click('[data-abrir="sl-a"]');
+  await page.click("#detEmpezar");
+  await page.click("#regSig");
+  await expect(page.locator("#regTitulo")).toHaveText("Press de banca");
+  await expect(kg(0)).toHaveValue("47.5");
+  await expect(reps(0)).toHaveValue("5");
+});
+
 test("assisted pull-ups take a negative weight, which adds nothing to the volume", async ({ page }) => {
   await abrirApp(page);
   await page.locator('label:has(input[value="fuerza"])').click();
@@ -287,9 +329,10 @@ test("each exercise can be looked at before starting: animation, dose and cues",
   await expect(f.locator("svg.fig.grande")).toHaveCount(1);
   // The big figure moves too.
   const trunk = () => f.locator('[data-k="tr"]').first().getAttribute("d");
+  // The IntersectionObserver reports the figure on screen in real time, maybe after the first fake seconds have run,
+  // so keep running the clock until it moves.
   const before = await trunk();
-  await page.clock.runFor(3000);
-  expect(await trunk()).not.toBe(before);
+  await expect.poll(async () => { await page.clock.runFor(1000); return trunk(); }).not.toBe(before);
   await page.click("#fichaSig");
   await expect(page.locator("#fichaCuenta")).toHaveText("Ejercicio 5 de 9");
   await page.click("#fichaSalir");
