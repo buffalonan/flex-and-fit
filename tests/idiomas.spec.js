@@ -121,6 +121,13 @@ for (const idioma of ["en", "de", "ca"]) {
     await revisar("gym summary");
     await page.locator("#resListo").click();
     await revisar("history");
+    // Both sessions just saved, opened from the history.
+    for (const i of [0, 1]) {
+      await page.locator("#lista [data-ver]").nth(i).click();
+      await expect(page.locator("#sesion")).toBeVisible();
+      await revisar(`session ${i}`);
+      await page.locator("#sesVolver").click();
+    }
 
     await tab(1);
     await revisar("progress");
