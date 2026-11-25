@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
         // Local plugins must be registered before the bridge starts.
         registerPlugin(DescubrirPlugin.class);
         registerPlugin(SaludPlugin.class);
+        registerPlugin(EntrenoPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

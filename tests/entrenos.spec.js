@@ -227,6 +227,47 @@ test("changing a set's weight carries it to the exercise's later sets not ticked
   await expect(page.locator("#resStats")).toContainText("992kg");
 });
 
+test("each exercise starts with last time's weights: from its newest session where it was done, else from another workout", async ({ page }) => {
+  await abrirApp(page);
+  await page.locator('label:has(input[value="fuerza"])').click();
+  const kg = (n) => page.locator(`#regFilas tr >> nth=${n} >> input[data-c="kg"]`);
+  const reps = (n) => page.locator(`#regFilas tr >> nth=${n} >> input[data-c="n"]`);
+  const g1 = async () => { await page.getByRole("button", { name: "Entrenos" }).click(); await page.click('[data-abrir="g1"]'); await page.click("#detEmpezar"); };
+  await g1();
+  await kg(0).fill("47.5");
+  await reps(0).fill("6");
+  await page.click('[data-ck="0-0"]');
+  for (let i = 0; i < 6; i++) await page.click("#regSig");
+  await page.click("#resListo");
+
+  // Next time: the bench press has 47.5 kg on every set; the incline press, not done, keeps its default.
+  await g1();
+  await expect(kg(0)).toHaveValue("47.5");
+  await expect(reps(0)).toHaveValue("6");
+  await expect(kg(4)).toHaveValue("47.5");
+  await expect(reps(4)).toHaveValue("8");
+  await page.click("#regSig");
+  await expect(kg(0)).toHaveValue("24");
+  // A session where the bench press was skipped (only the incline press done) doesn't reset it.
+  await page.click('[data-ck="1-0"]');
+  for (let i = 0; i < 5; i++) await page.click("#regSig");
+  await page.click("#resListo");
+  await g1();
+  await expect(kg(0)).toHaveValue("47.5");
+  await page.click("#regSalir");
+  await page.click("#salirDescartar");
+
+  // StrongLifts A has a bench press too: it takes the weight, but keeps its own 5 reps.
+  await page.click("#detVolver");
+  await page.locator('label:has(input[value="todos"])').click();
+  await page.click('[data-abrir="sl-a"]');
+  await page.click("#detEmpezar");
+  await page.click("#regSig");
+  await expect(page.locator("#regTitulo")).toHaveText("Press de banca");
+  await expect(kg(0)).toHaveValue("47.5");
+  await expect(reps(0)).toHaveValue("5");
+});
+
 test("assisted pull-ups take a negative weight, which adds nothing to the volume", async ({ page }) => {
   await abrirApp(page);
   await page.locator('label:has(input[value="fuerza"])').click();

@@ -200,6 +200,17 @@
   </div>
 </div>
 
+<!-- A session left open when the app closed (the phone locked and Android closed the app). -->
+<div class="salir" id="continuarPanel" role="dialog" aria-labelledby="contTitulo" hidden>
+  <div class="card">
+    <h3 id="contTitulo">Tienes un entreno sin terminar</h3>
+    <p class="sub" id="contTexto"></p>
+    <button type="button" class="btn-main" id="contSeguir">Continuar</button>
+    <button type="button" class="btn" id="contGuardar">Guardar lo hecho</button>
+    <button type="button" class="btn ghost" id="contDescartar">Descartar</button>
+  </div>
+</div>
+
 <!-- Summary at the end. -->
 <section id="resumen" class="full" aria-labelledby="resTitulo" hidden>
   <p class="sub" id="resFecha"></p>
