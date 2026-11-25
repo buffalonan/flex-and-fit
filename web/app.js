@@ -471,7 +471,17 @@ $("regFilas").addEventListener("input", (e) => {
   const i = e.target.closest("input"), k = i?.closest("tr")?.dataset.k;
   if (!k) return;
   const v = Number(String(i.value).replace(",", "."));
-  sesion.valores[k][i.dataset.c] = i.value === "" || !Number.isFinite(v) ? null : v;
+  const val = i.value === "" || !Number.isFinite(v) ? null : v;
+  sesion.valores[k][i.dataset.c] = val;
+  // A new weight carries on to the exercise's later sets not ticked yet, so they needn't be changed one by one.
+  if (i.dataset.c !== "kg") return;
+  const f = sesion.filas.find((x) => x.k === k);
+  for (const g of sesion.filas) {
+    if (g.e !== f.e || g.si <= f.si || sesion.valores[g.k].hecho) continue;
+    sesion.valores[g.k].kg = val;
+    const inp = $("regFilas").querySelector(`tr[data-k="${g.k}"] input[data-c="kg"]`);
+    if (inp) inp.value = val ?? "";
+  }
 });
 $("regFilas").addEventListener("click", (e) => {
   const k = e.target.closest("[data-ck]")?.dataset.ck;
