@@ -7,6 +7,7 @@ import { html } from "./html.js";
 import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
 import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
+import { importar as importarReloj } from "./reloj.js";
 // The 3D figure (figura3d.js and Three.js, ~700 KB) loads the first time a sheet needs it; until then, and wherever
 // WebGL isn't available, the SVG figure stays.
 let modulo3d = null;
@@ -130,6 +131,8 @@ function etiquetasTop(valores, n, texto) {
   return Object.entries(valores).sort((a, b) => b[1] - a[1]).slice(0, n).map(([m, v]) => ({ m, t: texto(v) }));
 }
 const stat = (v, l, u = "") => html`<div class="stat"><b>${v}${u ? html`<small>${u}</small>` : ""}</b><span>${l}</span></div>`;
+// The watch's numbers in the summary: filled in when its workout arrives from Health Connect (see rellenarResumen).
+const statsReloj = () => html`<div class="stat"><b id="resFc">—</b><span>FC media · reloj</span></div><div class="stat"><b id="resKcal">—</b><span>Calorías · reloj</span></div>`;
 
 function abrir(id) {
   abierto = id;
@@ -260,9 +263,25 @@ function entrar(id) {
   sesion.inicio = Date.now();
   sesion.rutina = id;
   pantallaEncendida(true);
+  fcEnVivo();
+  sesion.timerFc = setInterval(fcEnVivo, 30000);
+}
+// While training: the latest heart rate in Health Connect, if the watch writes it during the workout (COROS usually
+// writes everything when the workout ends and syncs, so this mostly stays hidden).
+async function fcEnVivo() {
+  const s = sesion;
+  for (const id of ["repFc", "regFc"]) $(id).hidden = true;
+  if (!s || !hc || !estadoSalud.fc) return;
+  let r = null;
+  try { r = await hc.fc({ desde: Date.now() - 3 * 60000, hasta: Date.now() }); } catch (e) { /* not now */ }
+  if (sesion !== s || !r?.ultima) return;
+  const el = $(s.tipo === "flex" ? "repFc" : "regFc");
+  el.textContent = `♥ ${r.ultima}`;
+  el.hidden = false;
 }
 function salirSesion() {
   clearInterval(sesion?.timer);
+  clearInterval(sesion?.timerFc);
   sesion = null;
   document.body.classList.remove("en-sesion");
   $("reproductor").hidden = true;
@@ -283,6 +302,7 @@ async function terminar() {
   if (!s) return;
   // Close the session at once, so a second tap can't save it twice.
   clearInterval(s.timer);
+  clearInterval(s.timerFc);
   sesion = null;
   for (const id of ["reproductor", "registro", "salirPanel"]) $(id).hidden = true;
   const fecha = iso(new Date(s.inicio));
@@ -292,17 +312,21 @@ async function terminar() {
     const r = rutinaFlex(s.rutina);
     const ep = enPlan(inicioPlan, fecha);
     const hechos = r.items.filter((_, i) => s.hechos.has(i)).length;
-    datos = { tipo: "flexibilidad", fecha, rutina: s.rutina, fase: r.n || ep.fase.n, semana: ep.semana, duracionMin: min, notas: "",
+    datos = { tipo: "flexibilidad", fecha, inicio: s.inicio, fin: Date.now(), rutina: s.rutina, fase: r.n || ep.fase.n, semana: ep.semana, duracionMin: min, notas: "",
       ejercicios: r.items.map(([id, dosis], i) => ({ id, dosis, hecho: s.hechos.has(i) })) };
     const musc = {};
     for (const [i, [id]] of r.items.entries()) if (s.hechos.has(i)) { for (const m of EX[id].p) musc[m] = (musc[m] || 0) + s.seg[i] / 60; for (const m of EX[id].s) musc[m] = (musc[m] || 0) + s.seg[i] / 120; }
     man = maniqui(musc, "x");
     const estirando = Object.values(s.seg).reduce((a, b) => a + b, 0) / 60;
-    stats = html`${stat(mmss((Date.now() - s.inicio) / 1000), "Duración")}${stat(`${hechos}/${r.items.length}`, "Ejercicios")}${stat(Math.round(estirando), "Estirando", "min")}${stat("—", "FC media · reloj")}${stat("—", "Calorías · reloj")}`;
+    stats = html`${stat(mmss((Date.now() - s.inicio) / 1000), "Duración")}${stat(`${hechos}/${r.items.length}`, "Ejercicios")}${stat(Math.round(estirando), "Estirando", "min")}${statsReloj()}`;
     // The plan starts with the first session done in the app, unless a start date was set.
     if (!inicioPlan && r.n) await store.put("ajustes", "plan-flexibilidad", { plan: "flexibilidad-6m-v1", inicio: fecha });
-    // One plan session per day, with the same id the plan's JSON import uses.
-    await store.put("sesiones", `plan-${fecha}`, datos);
+    // One plan session per day, with the same id the plan's JSON import uses. A second one that day keeps the first's start.
+    const antes = sesiones.find((x) => x.id === `plan-${fecha}`);
+    if (antes?.inicio) datos.inicio = antes.inicio;
+    if (antes?.reloj) datos.reloj = antes.reloj;
+    resumenId = `plan-${fecha}`;
+    await store.put("sesiones", resumenId, datos);
   } else {
     const w = gym(s.rutina);
     const ejercicios = w.ej.map((e, ei) => ({ n: e.n, series: s.filas.filter((f) => f.e === ei).map((f) => {
@@ -311,12 +335,13 @@ async function terminar() {
     }) }));
     const hechas = Object.values(s.valores).filter((v) => v.hecho);
     const vol = s.filas.reduce((a, f) => { const v = s.valores[f.k]; return a + (v.hecho && v.kg > 0 && !w.ej[f.e].seg ? v.kg * v.n * (w.ej[f.e].porLado ? 2 : 1) : 0); }, 0);
-    datos = { tipo: "gimnasio", fecha, rutina: w.id, nombre: w.n, duracionMin: min, notas: "", volumenKg: Math.round(vol), ejercicios };
+    datos = { tipo: "gimnasio", fecha, inicio: s.inicio, fin: Date.now(), rutina: w.id, nombre: w.n, duracionMin: min, notas: "", volumenKg: Math.round(vol), ejercicios };
     const p = {}, sec = {};
     for (const f of s.filas) if (s.valores[f.k].hecho) { for (const m of w.ej[f.e].p) p[m] = (p[m] || 0) + 1; for (const m of w.ej[f.e].s) sec[m] = (sec[m] || 0) + 1; }
     man = maniqui({ p, s: sec }, "f", { etiquetas: etiquetasTop(p, 4, (v) => `${v} series`) });
-    stats = html`${stat(hechas.length, "Series")}${stat(Math.round(vol).toLocaleString("es-ES"), "Volumen", "kg")}${stat(mmss((Date.now() - s.inicio) / 1000), "Duración")}${stat("—", "FC media · reloj")}${stat("—", "Calorías · reloj")}`;
-    await store.put("sesiones", store.newId(), datos);
+    stats = html`${stat(hechas.length, "Series")}${stat(Math.round(vol).toLocaleString("es-ES"), "Volumen", "kg")}${stat(mmss((Date.now() - s.inicio) / 1000), "Duración")}${statsReloj()}`;
+    resumenId = store.newId();
+    await store.put("sesiones", resumenId, datos);
   }
   salirSesion();
   document.body.classList.add("en-sesion");
@@ -326,8 +351,23 @@ async function terminar() {
   $("resStats").innerHTML = html`${stats}`;
   $("resumen").classList.toggle("flex", s.tipo === "flex");
   $("resumen").hidden = false;
+  rellenarResumen();
+  // The watch may already have synced its workout (stopped on the watch first): look now, and again in a minute.
+  leerReloj({ forzar: true });
+  setTimeout(() => leerReloj({ forzar: true }), 60000);
 }
-function cerrarResumen() { $("resumen").hidden = true; document.body.classList.remove("en-sesion"); show("historial"); }
+let resumenId = null;
+function rellenarResumen() {
+  if ($("resumen").hidden || !resumenId) return;
+  const r = sesiones.find((x) => x.id === resumenId)?.reloj;
+  $("resFc").textContent = r?.fcMedia ? `${r.fcMedia}` : "—";
+  $("resKcal").textContent = r?.kcal ? `${r.kcal}` : "—";
+  $("resNota").textContent = r ? (r.fcMax ? `Del reloj: FC máxima ${r.fcMax} ppm.` : "Datos del reloj vía Health Connect.")
+    : !hc ? "FC media y kcal llegan de tu Coros a través de Health Connect, en la app de Android."
+      : !estadoSalud.permiso ? "Conecta Health Connect en Perfil para ver aquí la FC y las calorías de tu Coros."
+        : "Aparecerán cuando tu Coros sincronice el entreno con el teléfono.";
+}
+function cerrarResumen() { resumenId = null; $("resumen").hidden = true; document.body.classList.remove("en-sesion"); show("historial"); }
 $("resListo").addEventListener("click", cerrarResumen);
 
 /* ---------- Stretching player ---------- */
@@ -618,6 +658,14 @@ form.addEventListener("submit", async (e) => {
   setTimeout(() => ($("nuevaOk").hidden = true), 1800);
 });
 
+const hora = (ms) => new Date(ms).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+function lineaReloj(s) {
+  const r = s.reloj;
+  const partes = [`⌚ ${hora(r.inicio)}–${hora(r.fin)}`];
+  if (r.fcMedia) partes.push(`FC ${r.fcMedia}${r.fcMax ? `/${r.fcMax}` : ""} ppm`);
+  if (r.kcal) partes.push(`${r.kcal} kcal`);
+  return partes.join(" · ") + (s.origen === "reloj" ? ". Apunta las series y se unirán." : "");
+}
 function renderHistorial() {
   $("vacio").hidden = sesiones.length > 0;
   $("lista").innerHTML = html`${sesiones.map((s) => {
@@ -626,9 +674,10 @@ function renderHistorial() {
     const series = s.tipo === "gimnasio" && Array.isArray(s.ejercicios) ? s.ejercicios.flatMap((x) => x.series || []).filter((x) => x.hecho).length : null;
     return html`<li>
     <div class="txt">
-      <span class="tipo ${s.tipo === "gimnasio" ? "gimnasio" : ""}">${s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad"}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}</span>
+      <span class="tipo ${s.tipo === "gimnasio" ? "gimnasio" : ""}">${s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad"}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? " · Solo en el reloj" : ""}</span>
       ${nombre ? html`<div>${nombre}</div>` : ""}
       <div><b>${s.fecha ? fechaLarga(s.fecha) : "Sin fecha"}</b>${s.duracionMin ? ` · ${s.duracionMin} min` : ""}${hechos != null ? ` · ${hechos}/${s.ejercicios.length} ejercicios` : ""}${series ? ` · ${series} series` : ""}${s.volumenKg ? ` · ${s.volumenKg.toLocaleString("es-ES")} kg` : ""}</div>
+      ${s.reloj ? html`<div class="reloj">${lineaReloj(s)}</div>` : ""}
       ${s.notas ? html`<div class="sub">${s.notas}</div>` : ""}
     </div>
     <button type="button" class="del" data-del="${s.id}" aria-label="Borrar la sesión del ${s.fecha || ""}">Borrar</button>
@@ -652,6 +701,54 @@ $("planInicio").addEventListener("change", async (e) => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) await store.put("ajustes", "plan-flexibilidad", { plan: "flexibilidad-6m-v1", inicio: e.target.value });
 });
 $("planCard").addEventListener("submit", (e) => e.preventDefault());
+
+/* ---------- Reloj (Health Connect) ---------- */
+// Only in the Android app: the watch's workouts, heart rate and calories (reloj.js joins them to the sessions).
+const hc = native ? window.Capacitor.registerPlugin("Salud") : null;
+let estadoSalud = { disponible: false, permiso: false };
+let leyendo = null;
+let ultimaLectura = 0;
+async function comprobarSalud() {
+  if (!hc) return;
+  try { estadoSalud = { ...estadoSalud, ...(await hc.estado()) }; } catch (e) { estadoSalud = { disponible: false, permiso: false }; }
+  renderReloj();
+}
+function leerReloj({ forzar = false } = {}) {
+  if (!hc || !estadoSalud.permiso) return Promise.resolve(null);
+  // A forced read (after a session) mustn't be lost to one already running from before it was saved.
+  if (leyendo) return forzar ? leyendo.then(() => leerReloj({ forzar })) : leyendo;
+  if (!forzar && Date.now() - ultimaLectura < 60000) return Promise.resolve(null);
+  ultimaLectura = Date.now();
+  leyendo = importarReloj(hc, store, { enCurso: !!sesion }).then((r) => { renderReloj(r); return r; }).finally(() => (leyendo = null));
+  return leyendo;
+}
+async function renderReloj(r) {
+  $("relojCard").hidden = !hc;
+  if (!hc) return;
+  const st = $("relojEstado"), btn = $("relojBoton");
+  st.classList.toggle("error", !!r?.error || !estadoSalud.disponible);
+  btn.hidden = !estadoSalud.disponible;
+  btn.textContent = estadoSalud.permiso ? "Leer ahora" : "Conectar Health Connect";
+  if (!estadoSalud.disponible) { st.textContent = "Health Connect no está disponible en este teléfono (hace falta Android 14 o posterior)."; return; }
+  if (!estadoSalud.permiso) { st.textContent = "Sin permiso todavía: pulsa el botón y permite leer ejercicio, frecuencia cardiaca y calorías."; return; }
+  if (r?.error) { st.textContent = r.error; return; }
+  const ult = await store.getMeta("relojLectura");
+  const n = r || { unidas: sesiones.filter((s) => s.origen !== "reloj" && s.reloj).length, sueltas: sesiones.filter((s) => s.origen === "reloj").length };
+  st.textContent = `${ult ? `Última lectura: ${new Date(ult).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" })}. ` : ""}`
+    + `${n.unidas} ${n.unidas === 1 ? "sesión unida" : "sesiones unidas"} a su entreno del reloj${n.sueltas ? `, ${n.sueltas} solo en el reloj` : ""}.`
+    + `${estadoSalud.fc === false ? " Falta el permiso de frecuencia cardiaca." : ""}${estadoSalud.kcal === false ? " Falta el permiso de calorías." : ""}`;
+}
+$("relojBoton").addEventListener("click", async () => {
+  if (!estadoSalud.permiso) {
+    try { estadoSalud = { ...estadoSalud, ...(await hc.pedirPermiso()) }; } catch (e) { /* refused */ }
+    renderReloj();
+    if (!estadoSalud.permiso) return;
+  }
+  $("relojEstado").textContent = "Leyendo Health Connect…";
+  await leerReloj({ forzar: true });
+});
+capApp?.addListener("resume", () => comprobarSalud().then(() => leerReloj()));
+setInterval(() => leerReloj(), 2 * 60 * 1000);
 
 /* ---------- Sync ---------- */
 const ERRORES = { "sin-conexion": "No encuentro el Mac. Se sincronizará cuando esté encendido y a tu alcance.", clave: "La clave no coincide con la del Mac.", "sin-servidor": "Sin servidor: los datos se quedan solo en este dispositivo." };
@@ -786,6 +883,7 @@ async function renderAll() {
   renderHistorial();
   renderPerfil();
   await renderProgreso();
+  rellenarResumen();
   animar();
 }
 store.onChange(async (origen) => {
@@ -798,4 +896,5 @@ $("version").textContent = `Versión ${ver || "local"}${native ? " · app Androi
 show(ajustes.tab);
 await renderAll();
 await renderSync();
+comprobarSalud().then(() => leerReloj());
 sync();

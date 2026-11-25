@@ -206,3 +206,5 @@ body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; 
 .reg-fig .f3d-lienzo { aspect-ratio: 4 / 3; }
 .reg-fig.f3d { max-width: 340px; padding: 0 6px 2px; }
 .reg-fig .f3d-vistas button { font-size: .8rem; }
+.list .reloj { font-size: .85rem; color: var(--app-muted); }
+.full-top .fc { color: var(--heat3); }
