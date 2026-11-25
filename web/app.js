@@ -7,6 +7,16 @@ import { html } from "./html.js";
 import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
 import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
+// The 3D figure (figura3d.js and Three.js, ~700 KB) loads the first time a sheet needs it; until then, and wherever
+// WebGL isn't available, the SVG figure stays.
+let modulo3d = null;
+function en3d(host, id, opts = {}) {
+  if (!id) return;
+  host.dataset.fig3d = id;
+  (modulo3d ||= import("./figura3d.js").catch(() => null)).then((m) => {
+    if (m && host.isConnected && host.dataset.fig3d === id) m.montar(host, id, opts);
+  });
+}
 
 const $ = (id) => document.getElementById(id);
 /* eslint-disable security/detect-object-injection -- lookups below use ids and keys from this app's own data */
@@ -189,7 +199,8 @@ function verFicha(i) {
     const [ex, dosis, extra] = r.items[i];
     const e = EX[ex];
     $("fichaTitulo").textContent = e.n;
-    $("fichaFig").innerHTML = html`${figura(ex, { clase: "grande" })}`;
+    $("fichaFig").innerHTML = html`<div class="fig3d">${figura(ex, { clase: "grande" })}</div>`;
+    en3d($("fichaFig").querySelector(".fig3d"), ex, { musculos: e });
     $("fichaDosis").textContent = dosis;
     $("fichaCuerpo").innerHTML = html`<p class="zona">Lo notas en: <b>${e.z}</b></p>
       ${extra ? html`<p class="extra">${extra}</p>` : ""}
@@ -199,8 +210,9 @@ function verFicha(i) {
     const e = w.ej[i];
     const p = Object.fromEntries(e.p.map((m) => [m, e.series])), sec = Object.fromEntries(e.s.map((m) => [m, e.series]));
     $("fichaTitulo").textContent = `${e.n}${lado(e)}`;
-    $("fichaFig").innerHTML = html`${FIG_FUERZA[e.n] ? figura(FIG_FUERZA[e.n], { clase: "grande" }) : ""}${maniqui({ p, s: sec }, "f", { titulo: `Músculos de ${e.n}` })}
+    $("fichaFig").innerHTML = html`${FIG_FUERZA[e.n] ? html`<div class="fig3d">${figura(FIG_FUERZA[e.n], { clase: "grande" })}</div>` : ""}${maniqui({ p, s: sec }, "f", { titulo: `Músculos de ${e.n}` })}
       <div class="leyenda"><span><i style="background:var(--prim)"></i>Principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
+    if (FIG_FUERZA[e.n]) en3d($("fichaFig").querySelector(".fig3d"), FIG_FUERZA[e.n], { musculos: e });
     $("fichaDosis").textContent = `${dosisGym(e)}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : e.elige ? " · peso a elegir" : " · peso corporal"}`;
     // Same-named exercises (a side plank per side) are told apart by their order.
     const n = w.ej.slice(0, i).filter((x) => x.n === e.n).length;
@@ -366,12 +378,14 @@ function irA(i) {
     $("repFig").innerHTML = html`${figura(p.ex, { clase: "grande" })}`;
     $("repFig").dataset.ex = p.ex;
     const svg = $("repFig").querySelector("svg");
-    svg._ctl = (t) => {
+    const ctl = (t) => {
       if (!sesion) return { p: 0, t };
       const cur = sesion.pasos[sesion.idx];
       return { p: cur.tipo === "work" ? enPaso(cur.ex, transcurrido()) : 0, t: sesion.pausa ? 0 : t };
     };
+    svg._ctl = ctl;
     animar($("repFig"));
+    en3d($("repFig"), p.ex, { ctl, compacto: true, musculos: ex });
   }
   $("repCueT").textContent = p.tipo === "prep" ? "Cómo" : "Siente";
   $("repCue").textContent = p.tipo === "prep" ? ex.c[0] : `${ex.z}. Tensión, nunca dolor: respira lento y suelta un poco más al exhalar.`;
@@ -452,6 +466,7 @@ function pagina(n) {
   $("regFig").innerHTML = html`${fig ? figura(fig) : ""}`;
   $("regFig").hidden = !fig;
   animar($("regFig"));
+  en3d($("regFig"), fig, { musculos: { p: [...ms], s: [...ss] } });
   $("regMusc").innerHTML = html`${[...ms].map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${[...ss].filter((m) => !ms.has(m)).map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}`;
   const timed = pg.ej.every((i) => w.ej[i].seg);
   $("regColReps").textContent = timed ? "SEG" : pg.ej.every((i) => w.ej[i].porLado) ? "REPS/LADO" : "REPS";

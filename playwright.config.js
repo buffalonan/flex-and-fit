@@ -16,7 +16,11 @@ module.exports = defineConfig({
     baseURL: "http://127.0.0.1:4173",
     trace: "retain-on-failure",
     // Optional: a Chromium already on the machine (PW_CHROMIUM=/path/to/chrome), instead of `npx playwright install`.
-    launchOptions: process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {},
+    // SwiftShader gives the headless browser WebGL on machines with no GPU (CI), for the 3D figure's tests.
+    launchOptions: {
+      args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+      ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}),
+    },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },

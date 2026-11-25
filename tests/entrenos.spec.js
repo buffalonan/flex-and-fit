@@ -5,9 +5,19 @@ const { test, expect } = require("@playwright/test");
 // A Wednesday, so today's routine is the phase's, not Sunday's. Each test uses a browser with no server set,
 // so data from other tests (they share the server) never shows up here.
 const MIERCOLES = new Date("2026-11-25T10:00:00");
-async function abrirApp(page, time = MIERCOLES) {
+// WebGL is off unless a test asks for it: the 3D figure is slow on CI's software renderer, and without it the app
+// keeps the SVG figure, which is what most tests look at.
+async function abrirApp(page, time = MIERCOLES, { webgl = false } = {}) {
   await page.clock.install({ time });
   await page.addInitScript(() => localStorage.setItem("flexfit.ajustes", JSON.stringify({ servidor: "" })));
+  if (!webgl) {
+    await page.addInitScript(() => {
+      const get = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (tipo, ...r) {
+        return /webgl/.test(tipo) ? null : get.call(this, tipo, ...r);
+      };
+    });
+  }
   await page.goto("/");
 }
 const fill = (page, sel) => page.locator(sel).evaluate((el) => el.getAttribute("fill"));
@@ -320,4 +330,53 @@ test("every strength exercise has its animated figure: in the workout, its sheet
   await expect(page.locator('#regFig svg.fig[data-fig="kb_halo"]')).toBeVisible();
   await page.click("#regSig");
   await expect(page.locator('#regFig svg.fig[data-fig="kb_pm"]')).toBeVisible();
+});
+
+test("the exercise sheet, the player and the set logger show the 3D figure, with buttons for each angle", async ({ page }) => {
+  test.slow();
+  await abrirApp(page, MIERCOLES, { webgl: true });
+  await page.click('#listaFuerza [data-abrir="kb"]');
+  await page.locator("#detLista .ej").first().click();
+  await expect(page.locator("#fichaFig canvas")).toBeVisible();
+  await expect(page.locator("#fichaFig svg.fig")).toHaveCount(0);
+  const vistas = page.locator("#fichaFig .f3d-vistas button");
+  await expect(vistas).toHaveCount(5);
+  await expect(vistas.filter({ hasText: "Frente" })).toHaveAttribute("aria-pressed", "true");
+  await vistas.filter({ hasText: "Espalda" }).click();
+  await expect(vistas.filter({ hasText: "Espalda" })).toHaveAttribute("aria-pressed", "true");
+  await expect(vistas.filter({ hasText: "Frente" })).toHaveAttribute("aria-pressed", "false");
+  for (const b of await vistas.all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+
+  // The logger takes the canvas over, with its own angle buttons.
+  await page.click("#fichaEmpezar");
+  await expect(page.locator("#regFig canvas")).toBeVisible();
+  await expect(page.locator("#fichaFig canvas")).toHaveCount(0);
+  await expect(page.locator("#regFig .f3d-vistas button")).toHaveCount(5);
+  await page.click("#regSig");
+  await expect(page.locator("#regFig")).toHaveAttribute("data-fig3d", "kb_pm");
+  await expect(page.locator("#regFig canvas")).toBeVisible();
+});
+
+test("the stretching player shows the 3D figure in its ring, turned by dragging", async ({ page }) => {
+  test.slow();
+  await abrirApp(page, MIERCOLES, { webgl: true });
+  await page.click('#hoyCard [data-abrir="F1"]');
+  await page.click("#detEmpezar");
+  await expect(page.locator("#repFig canvas")).toBeVisible();
+  await expect(page.locator("#repFig svg.fig")).toHaveCount(0);
+  // The ring has no room for buttons.
+  await expect(page.locator("#repFig .f3d-vistas")).toHaveCount(0);
+});
+
+test("every 3D figure keeps its joints, stays on the floor and holds what the 2D figure holds", async ({ page }) => {
+  await abrirApp(page);
+  const problemas = await page.evaluate(async () => {
+    const { revisar } = await import("./figura3d.js");
+    const { FIGURAS, FIGURAS_FUERZA } = await import("./figura.js");
+    const r = {}, todas = [...FIGURAS, ...FIGURAS_FUERZA];
+    for (const id of todas) { const p = revisar(id); if (p.length) r[id] = p; }
+    return { n: todas.length, r };
+  });
+  expect(problemas.n).toBeGreaterThan(60);
+  expect(problemas.r).toEqual({});
 });

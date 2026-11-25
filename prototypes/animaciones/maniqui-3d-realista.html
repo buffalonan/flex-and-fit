@@ -1,0 +1,1007 @@
+<title>Figura 3D Flex &amp; Fit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: one column like the app; the 3D stage on top, view buttons right under it (as in Coros), then the current SVG to compare. */
+:root {
+  --bg: #0b0c0e; --card: #17181c; --card2: #1f2126; --line: #2b2e34; --fg: #f2f3f5; --muted: #8b909a;
+  --prim: #ff5a4e; --sec: #f2b33d; --flex: #3fd6cc; --flex2: #2a8c86;
+  --glow: #3fd6cc; --app-line: #2b2e34; --prop: #4a5160; --peso: #c3c9d3;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif; --text: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font: 16px/1.45 var(--text); }
+main { max-width: 640px; margin: 0 auto; padding-block: 16px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 14px; }
+h1, h2 { font-family: var(--display); font-weight: 700; line-height: 1.05; margin: 0; text-wrap: balance; }
+h1 { font-size: 2rem; } h2 { font-size: 1.3rem; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--display); text-transform: uppercase; letter-spacing: .1em; font-size: .85rem; color: var(--muted); font-weight: 600; }
+.sub { color: var(--muted); font-size: .92rem; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--card); padding: 5px; border-radius: 14px; }
+button { font: 600 1rem var(--text); color: var(--fg); background: var(--card2); border: 0; border-radius: 10px; min-height: 48px; padding: 0 14px; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--flex); outline-offset: 2px; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.stage { position: relative; background: radial-gradient(120% 80% at 50% 35%, #1a1d22 0%, #0b0c0e 70%); border-radius: 18px; overflow: hidden; aspect-ratio: 4 / 5; max-height: 68vh; width: 100%; max-width: 100%; margin: 0 auto; touch-action: pan-y; }
+.stage canvas { width: 100%; height: 100%; display: block; }
+.badge { position: absolute; top: 12px; left: 12px; font: 600 .8rem var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: rgba(11,12,14,.7); padding: 4px 9px; border-radius: 999px; }
+.phase { position: absolute; top: 12px; right: 12px; font: 700 1rem var(--display); letter-spacing: .04em; color: var(--fg); background: rgba(11,12,14,.7); padding: 4px 10px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.err { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
+.vistas { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.vistas button { flex: 1 1 0; min-width: 0; padding: 0 6px; font-size: .95rem; background: var(--card); border: 1px solid var(--line); }
+.vistas button[aria-pressed="true"] { border-color: var(--fg); background: var(--card2); }
+.ctl { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ctl button { background: var(--card); border: 1px solid var(--line); }
+.ctl .grow { flex: 1; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 7px; background: var(--card); border-radius: 999px; padding: 6px 12px 6px 9px; font-size: .9rem; }
+.dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+.card { background: var(--card); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.compara { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.fig { width: 100%; height: auto; display: block; background: var(--bg); border-radius: 10px; }
+.fig-nota { fill: var(--muted); font: 500 8px var(--text); }
+ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 6px; }
+li { color: var(--fg); }
+li span { color: var(--muted); }
+</style>
+
+<main>
+  <header style="display:flex;flex-direction:column;gap:6px">
+    <p class="eyebrow">Flex &amp; Fit · prototipo</p>
+    <h1>Figura 3D más realista</h1>
+    <p class="sub">Maniquí propio hecho en Three.js: cuerpo liso con ropa de deporte, músculos trabajados pintados con un degradado suave, luz de estudio, sombras y movimiento con cinemática inversa. Arrastra la figura para girarla.</p>
+  </header>
+
+  <div class="seg" role="group" aria-label="Ejercicio">
+    <button id="b-halo" data-ej="halo" aria-pressed="true">Halo con kettlebell</button>
+    <button id="b-isquio" data-ej="isquio" aria-pressed="false">Isquios con toalla</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="c" aria-label="Figura 3D haciendo el ejercicio"></canvas>
+    <span class="badge">3D · Three.js</span>
+    <span class="phase" id="fase"></span>
+  </div>
+
+  <div class="vistas" id="vistas" role="group" aria-label="Ángulo de cámara"></div>
+
+  <div class="ctl">
+    <button id="b-pausa" class="grow">Pausa</button>
+    <button id="b-vel" aria-label="Velocidad">1×</button>
+    <button id="b-giro" aria-pressed="false">Girar sola</button>
+  </div>
+
+  <div class="chips" id="chips"></div>
+  <p class="sub" id="dosis"></p>
+
+  <section class="card">
+    <h2>Ahora en la app (SVG v2)</h2>
+    <p class="sub">La misma animación tal como se ve hoy en la ficha del ejercicio, para comparar.</p>
+    <div class="compara" id="svgslot"></div>
+  </section>
+
+  <section class="card">
+    <h2>Qué cambiaría en la app</h2>
+    <ul>
+      <li>Un único maniquí 3D para todos los ejercicios <span>(las poses se definen por ángulos de articulación, como ahora).</span></li>
+      <li>Los músculos trabajados se iluminan sobre el propio cuerpo <span>(rojo principal, ámbar secundario en fuerza; turquesa en flexibilidad).</span></li>
+      <li>Botones de ángulo y giro con el dedo en la ficha del ejercicio.</li>
+      <li>Peso: Three.js añade unos 600 KB; funciona sin conexión dentro del APK.</li>
+      <li>En la lista de entrenos seguiría la figura SVG pequeña <span>(muchas figuras 3D a la vez gastan batería).</span></li>
+    </ul>
+  </section>
+</main>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module">
+// html`...` builds markup and escapes every value in it, unless the value was itself built with html`...`.
+// It's the only way the app writes markup (ESLint's no-unsanitized checks that).
+class SafeHTML { constructor(s) { this.s = s; } toString() { return this.s; } }
+// eslint-disable-next-line security/detect-object-injection -- c is one of the five characters in the regex
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const asHTML = (v) => (v instanceof SafeHTML ? v.s : Array.isArray(v) ? v.map(asHTML).join("") : v == null || v === false ? "" : esc(v));
+// eslint-disable-next-line security/detect-object-injection -- i is the template literal's own index
+const html = (strings, ...vals) => new SafeHTML(strings.reduce((out, str, i) => out + str + (i < vals.length ? asHTML(vals[i]) : ""), ""));
+
+// Animated SVG figures for the stretches, after the v2 prototype (prototypes/animaciones/): a jointed figure that eases
+// from a start pose (a) into the stretch (b), holds it while breathing, and lights up where you should feel it.
+// Angles are in degrees: 0 points up, 90 right, 180 down, 270 left. The figure faces right.
+// Pose keys: x/y hip position (y is optional: without it the figure rests on the floor), tr trunk, cv trunk curve,
+// hd head, a1/a2 near/far arm [upper, fore], l1/l2 near/far leg [thigh, shin], f1/f2 foot angle,
+// vista "frente" or "arriba" (front or top view: limbs split left and right of the trunk).
+// Strength figures (GYM below) add: m1/m2 a hand's target [dx, dy] from its shoulder and p1/p2 an ankle's target from its
+// hip, solved with two-bone IK (c1/c2, k1/k2 flip the elbow or knee); fijo [joint, x, y] pins a joint (feet on the floor,
+// hands on a bar, hips on a bench); peso the weight held; obj fixed furniture; cable a pulley anchor; fr keyframes
+// for movements that aren't a simple back and forth (modo "ciclo").
+
+
+const L = { tr: 38, ua: 19, fa: 17, th: 30, sh: 29, ft: 9 };
+const FLOOR = 142;
+const COL = { near: "#7d9cbc", far: "#4d6986", head: "#8fadc9" };
+
+const base = { x: 100, tr: 0, cv: 0, hd: null, a1: [180, 180], a2: [180, 180], l1: [180, 180], l2: [180, 180] };
+// modo "hold": ease into b and stay. "reps": move a ↔ b. T: seconds per cycle. hl: what lights up.
+const P = {
+  resp: { modo: "reps", T: 10, hl: ["tr"], a: { x: 112, tr: 270, a1: [70, 100], a2: [75, 105], l1: [40, 150], l2: [44, 152], f1: 90, f2: 90 }, b: { cv: 4 } },
+  gato: { modo: "reps", T: 8, hl: ["tr"], a: { x: 128, tr: 281, hd: 300, cv: -5, a1: [180, 180], a2: [182, 182], l1: [180, 90], l2: [182, 92], f1: 90, f2: 90 }, b: { cv: 9, hd: 220 } },
+  rodpecho: { hl: ["lum", "glu"], a: { x: 108, tr: 270, l1: [0, 80], l2: [4, 84], a1: [30, 100], a2: [34, 104] }, b: { l1: [-35, 50], l2: [-31, 54], a1: [10, 110], a2: [14, 114] } },
+  isquio_toalla: { hl: ["th1"], toalla: true, a: { x: 100, tr: 270, l1: [45, 50], l2: [90, 90], f2: 0, a1: [40, 55], a2: [90, 90] }, b: { l1: [8, 14], a1: [25, 30] } },
+  flex_cadera: { hl: ["th2"], cojin: "k2", a: { x: 96, tr: 0, l1: [90, 180], l2: [200, 270], f1: 90, f2: 270, a1: [160, 115], a2: [165, 120] }, b: { x: 102, tr: -4, l1: [96, 168], l2: [214, 270] } },
+  fig4: { hl: ["glu"], a: { x: 104, tr: 270, l2: [25, 105], l1: [75, 320], a1: [45, 20], a2: [49, 24] }, b: { l2: [0, 90], l1: [55, 285], a1: [30, 10], a2: [34, 14] } },
+  mariposa: { vista: "frente", hl: ["th1", "th2"], a: { x: 100, y: 112, tr: 0, l1: [75, 235], l2: [-75, 125], a1: [170, 150], a2: [190, 210] }, b: { l1: [100, 245], l2: [-100, 115] } },
+  nino: { hl: ["lum", "dor"], a: { x: 74, tr: 25, hd: 40, l1: [135, 270], l2: [137, 272], f1: 270, f2: 270, a1: [150, 110], a2: [152, 112] }, b: { tr: 103, hd: 125, a1: [100, 92], a2: [102, 94] } },
+  torsion: { vista: "arriba", hl: ["lum", "glu"], a: { x: 112, y: 62, tr: 270, a1: [180, 180], a2: [0, 0], l1: [100, 90], l2: [100, 90] }, b: { l1: [148, 100], l2: [148, 100] } },
+  gemelo: { hl: ["sh1"], pared: "W1", a: { x: 92, tr: 16, l1: [200, 200], l2: [160, 192], f1: 90, f2: 90, a1: [75, 80], a2: [78, 82] }, b: { x: 100, tr: 34, l1: [212, 212], l2: [150, 196], a1: [62, 70], a2: [64, 72] } },
+  tobillo_pared: { modo: "reps", T: 4, hl: ["sh1"], pared: "T1", a: { x: 98, tr: 4, l1: [90, 178], l2: [192, 270], f1: 90, f2: 270, a1: [65, 80], a2: [67, 82] }, b: { x: 104, l1: [100, 148], l2: [200, 270], a1: [70, 78] } },
+  cuad_pie: { hl: ["th1"], pared: "W2", a: { x: 100, tr: 2, l2: [180, 180], f2: 90, l1: [182, 290], f1: 200, a1: [195, 175], a2: [65, 82] }, b: { l1: [188, 348], f1: 260, a1: [205, 160] } },
+  pecho_puerta: { hl: ["dor", "ua1"], marco: "E1", a: { x: 104, tr: 3, l1: [168, 180], l2: [194, 186], f1: 90, f2: 90, a1: [262, 0], a2: [175, 180] }, b: { x: 110, tr: 8, a1: [272, 2] } },
+  hombro_cruz: { vista: "frente", hl: ["sho1"], a: { x: 100, tr: 0, l1: [175, 180], l2: [185, 180], a1: [215, 200], a2: [170, 160] }, b: { a1: [268, 268], a2: [160, 62] } },
+  angeles: { vista: "frente", modo: "reps", T: 6, hl: ["dor", "sho1", "sho2"], muro: true, a: { x: 100, tr: 0, l1: [175, 180], l2: [185, 180], a1: [115, 20], a2: [245, 340] }, b: { a1: [58, 15], a2: [302, 345] } },
+  cuello: { vista: "frente", hl: ["neck"], a: { x: 100, tr: 0, hd: 0, l1: [175, 180], l2: [185, 180], a1: [178, 180], a2: [182, 180] }, b: { hd: 24, a1: [40, 300], a2: [184, 180] } },
+  esfinge: { hl: ["lum"], a: { x: 80, tr: 76, hd: 70, l1: [270, 270], l2: [270, 270], f1: 270, f2: 270, a1: [118, 90], a2: [120, 92] }, b: { tr: 60, hd: 30, a1: [178, 90], a2: [180, 92] } },
+  sentadilla: { hl: ["glu", "sh1"], marco: "W1", a: { x: 96, tr: 10, l1: [150, 192], l2: [152, 194], f1: 90, f2: 90, a1: [85, 85], a2: [87, 87] }, b: { tr: 30, l1: [78, 196], l2: [80, 198], a1: [78, 82], a2: [80, 84] } },
+  nov90: { vista: "arriba", modo: "reps", T: 7, hl: ["glu"], a: { x: 100, y: 74, tr: 0, l1: [90, 180], l2: [270, 0], a1: [205, 190], a2: [155, 170] }, b: { l1: [90, 0], l2: [270, 180] } },
+  paloma: { hl: ["glu"], cojin: "h", a: { x: 92, tr: 6, l1: [98, 250], l2: [263, 270], f1: 200, f2: 270, a1: [172, 178], a2: [176, 182] }, b: { tr: 62, hd: 90, a1: [110, 100], a2: [112, 102] } },
+  pinza_pie: { hl: ["th1", "lum"], a: { x: 100, tr: 4, l1: [178, 184], l2: [180, 186], f1: 90, f2: 90, a1: [182, 178], a2: [184, 180] }, b: { tr: 160, hd: 178, l1: [172, 188], l2: [174, 190], a1: [175, 180], a2: [177, 182] } },
+  estocada_rot: { modo: "reps", T: 6, hl: ["th2", "dor"], a: { x: 92, tr: 55, l1: [88, 180], l2: [245, 252], f1: 90, f2: 0, a1: [165, 180], a2: [160, 178] }, b: { a1: [0, 0], hd: 20 } },
+  pinza_sentado: { hl: ["th1"], a: { x: 70, tr: 8, l1: [90, 90], l2: [91, 91], f1: 0, f2: 0, a1: [150, 140], a2: [152, 142] }, b: { tr: 66, hd: 100, a1: [98, 94], a2: [100, 96] } },
+  aductor: { vista: "frente", modo: "reps", T: 6, hl: ["th1"], a: { x: 92, tr: 0, l2: [180, 180], ls2: 0.25, l1: [128, 128], a1: [200, 150], a2: [160, 210] }, b: { x: 86, l1: [113, 113] } },
+  paso_toalla: { vista: "frente", modo: "reps", T: 6, hl: ["sho1", "sho2"], toalla2: true, a: { x: 100, tr: 0, l1: [175, 180], l2: [185, 180], a1: [140, 140], a2: [220, 220] }, b: { a1: [35, 35], a2: [325, 325] } },
+  slr_activa: { modo: "reps", T: 7, hl: ["th1"], a: { x: 100, tr: 270, l1: [90, 90], l2: [91, 91], f1: 0, f2: 0, a1: [95, 92], a2: [97, 94] }, b: { l1: [22, 22] } },
+  aguja: { modo: "reps", T: 7, hl: ["dor", "sho1"], a: { x: 128, tr: 281, hd: 270, a1: [180, 180], a2: [182, 182], l1: [180, 90], l2: [182, 92], f1: 90, f2: 90 }, b: { tr: 250, hd: 235, a1: [100, 92], a2: [160, 170] } },
+  puente: { modo: "reps", T: 6, hl: ["glu"], a: { x: 112, tr: 270, l1: [40, 150], l2: [44, 152], f1: 90, f2: 90, a1: [95, 90], a2: [97, 92] }, b: { tr: 292, l1: [76, 168], l2: [78, 170], a1: [112, 90], a2: [114, 92] } },
+  cobra: { hl: ["lum"], a: { x: 82, tr: 70, hd: 60, l1: [270, 270], l2: [270, 270], f1: 270, f2: 270, a1: [262, 150], a2: [264, 152] }, b: { tr: 44, hd: 20, a1: [212, 150], a2: [214, 152] } },
+};
+const FIGURAS = Object.keys(P);
+
+/* ---------- Strength exercises ---------- */
+// Side view facing right unless vista says otherwise. Floor at y 142; a bench top at y 112.
+const G = {};
+const DE_PIE = { p1: [2, 58], p2: [4, 58], f1: 90, f2: 90 };
+const PIES = ["A1", 100, 138];
+const BANCO = [["r", 46, 112, 96, 6, 3], ["r", 54, 118, 5, 24, 1], ["r", 128, 118, 5, 24, 1]];
+const TORRE = (x) => [["r", x, 6, 8, 136, 2]];
+const RACK = (x) => [["r", x - 2, 104, 10, 6, 2]];
+const kbRemo = { hl: ["dor", "ua1"], fijo: ["A1", 74, 138], obj: [["r", 112, 104, 40, 6, 3], ["r", 118, 110, 5, 32, 1], ["r", 142, 110, 5, 32, 1]],
+  a: { tr: 75, hd: 85, p1: [-6, 56], p2: [12, 54], f1: 90, f2: 90, m1: [0, 33], m2: [10, 33] }, b: { m1: [-16, 14] } };
+const swingA = { tr: 66, hd: 76, p1: [16, 50], p2: [18, 50], f1: 90, f2: 90, m1: [-10, 32], m2: [-8, 32] };
+const tumbado = { tr: 270, hd: 270 };
+Object.assign(G, {
+  kb_halo: { vista: "frente", hl: ["sho1", "sho2"], peso: [["kb", "manos"]], T: 3.5, fr: [
+    { x: 100, tr: 0, l1: [175, 180], l2: [185, 180], m1: [-9, 2], m2: [9, 2], c1: -1, c2: 1 },
+    { m1: [9, -12], m2: [27, -12] }, { m1: [-9, -28], m2: [9, -28] }, { m1: [-27, -12], m2: [-9, -12] }] },
+  kb_pm: { hl: ["glu", "th1"], peso: [["kb", "manos"]], fijo: PIES, T: 3.5,
+    a: { tr: 66, hd: 74, p1: [18, 46], p2: [20, 46], f1: 90, f2: 90, m1: [0, 34], m2: [2, 34] }, b: { tr: 0, hd: 0, ...DE_PIE, m1: [3, 34], m2: [5, 34] } },
+  kb_swing: { hl: ["glu", "th1"], peso: [["kb", "manos"]], fijo: PIES, T: 2.4, a: swingA, b: { tr: -4, hd: -4, ...DE_PIE, m1: [35, 2], m2: [35, 4] } },
+  kb_goblet: { hl: ["th1", "glu"], peso: [["kb", "manos"]], fijo: PIES, T: 4,
+    a: { tr: 0, hd: 0, ...DE_PIE, m1: [9, 14], m2: [11, 14] }, b: { tr: 30, hd: 10, p1: [30, 22], p2: [32, 22], m1: [12, 14], m2: [14, 14] } },
+  kb_press: { escala: 0.84, hl: ["sho1", "ua1"], peso: [["kb", "W1"]], fijo: PIES, a: { tr: 0, ...DE_PIE, m1: [7, 12], m2: [2, 35] }, b: { m1: [2, -35] } },
+  kb_remo: { ...kbRemo, peso: [["kb", "W1"]] },
+  kb_swing1: { hl: ["glu", "th1"], peso: [["kb", "W1"]], fijo: PIES, T: 2.4, a: { ...swingA, m2: [-4, 33] }, b: { tr: -4, hd: -4, ...DE_PIE, m1: [35, 2], m2: [16, 28] } },
+  kb_cargada: { hl: ["glu", "th1"], peso: [["kb", "W1"]], fijo: PIES, T: 2.6, a: { ...swingA, m2: [-4, 33] }, b: { tr: 0, hd: 0, ...DE_PIE, m1: [7, 12], m2: [4, 34] } },
+  kb_molino: { escala: 0.84, vista: "frente", hl: ["tr"], peso: [["kb", "W1"]], T: 5,
+    a: { x: 100, tr: 0, l1: [162, 180], l2: [198, 180], m1: [0, -35], m2: [0, 35] }, b: { x: 108, tr: -42, m2: [-6, 34] } },
+  kb_turco: { escala: 0.84, hl: ["sho1", "tr"], peso: [["kb", "W1"]], T: 14, fr: [
+    { tr: 270, hd: 270, l1: [40, 150], l2: [92, 92], f1: 90, f2: 0, m1: [0, -35], a2: [120, 100] },
+    { tr: 305, hd: 320, a2: [190, 260] },
+    { tr: 330, hd: 350, a2: [200, 200] },
+    { tr: 340, hd: 0, l1: [70, 170], l2: [110, 110], a2: [200, 200] },
+    { tr: 0, hd: 0, l1: [90, 180], l2: [180, 270], f2: 270, a2: [185, 185] },
+    { tr: 0, hd: 0, l1: [180, 180], l2: [182, 182], f1: 90, f2: 90, a2: [182, 182] },
+    { tr: 0, hd: 0, l1: [90, 180], l2: [180, 270], f2: 270, a2: [185, 185] },
+    { tr: 340, hd: 0, l1: [70, 170], l2: [110, 110], f2: 0, a2: [200, 200] },
+    { tr: 330, hd: 350, l1: [40, 150], l2: [92, 92], a2: [200, 200] },
+    { tr: 305, hd: 320, a2: [190, 260] }] },
+
+  banca: { hl: ["dor", "ua1"], peso: [["barra", "manos"]], fijo: ["H", 112, 106], obj: [...BANCO, ...RACK(66)],
+    a: { ...tumbado, p1: [20, 33], p2: [22, 33], f1: 90, f2: 90, m1: [8, -8], m2: [9, -8] }, b: { m1: [3, -35], m2: [4, -35] } },
+  inclinado: { hl: ["dor", "ua1"], peso: [["barra", "manos"]], fijo: ["H", 106, 106], obj: [["l", 112, 110, 64, 80, 6], ["r", 90, 108, 30, 6, 3], ["r", 102, 114, 5, 28, 1]],
+    a: { tr: 302, hd: 320, p1: [22, 33], p2: [24, 33], f1: 90, f2: 90, m1: [12, -4], m2: [13, -4] }, b: { m1: [6, -35], m2: [7, -35] } },
+  press_hombro: { hl: ["sho1", "ua1"], peso: [["manc", "W1"], ["manc", "W2"]], fijo: ["H", 96, 106], obj: [["r", 80, 108, 32, 6, 3], ["r", 76, 50, 6, 58, 3], ["r", 94, 114, 5, 28, 1]],
+    a: { tr: 0, hd: 0, l1: [90, 180], l2: [92, 182], f1: 90, f2: 90, m1: [8, -3], m2: [10, -3] }, b: { m1: [3, -35], m2: [5, -35] } },
+  laterales: { vista: "frente", hl: ["sho1", "sho2"], peso: [["manc", "W1"], ["manc", "W2"]],
+    a: { x: 100, tr: 0, l1: [175, 180], l2: [185, 180], a1: [168, 172], a2: [192, 188] }, b: { a1: [90, 98], a2: [270, 262] } },
+  fondos: { hl: ["ua1", "dor"], fijo: ["W1", 100, 72], obj: [["l", 70, 72, 140, 72, 4], ["r", 132, 72, 5, 70, 1], ["r", 72, 72, 5, 70, 1]],
+    a: { tr: 10, hd: 12, l1: [172, 268], l2: [174, 270], f1: 180, f2: 180, m1: [-3, 34], m2: [-2, 34] }, b: { tr: 24, hd: 30, m1: [8, 20], m2: [9, 20] } },
+  triceps_polea: { hl: ["ua1"], fijo: ["A1", 90, 138], cable: [146, 14, "manos"], obj: TORRE(150),
+    a: { tr: 10, hd: 14, ...DE_PIE, a1: [176, 60], a2: [178, 62] }, b: { a1: [176, 172], a2: [178, 174] } },
+
+  sentadilla_barra: { hl: ["th1", "glu"], peso: [["barra", "S"]], fijo: PIES, T: 4,
+    a: { tr: 4, hd: 0, ...DE_PIE, m1: [-6, 6], m2: [-5, 6] }, b: { tr: 38, hd: 20, p1: [30, 24], p2: [32, 24], m1: [-6, 6], m2: [-5, 6] } },
+  rumano: { hl: ["th1", "glu"], peso: [["barra", "manos"]], fijo: PIES, T: 4,
+    a: { tr: 0, hd: 0, ...DE_PIE, m1: [2, 34], m2: [3, 34] }, b: { tr: 72, hd: 82, p1: [12, 55], p2: [14, 55], m1: [0, 34], m2: [1, 34] } },
+  bulgara: { hl: ["th1", "glu"], fijo: ["A1", 120, 138], obj: [["r", 40, 106, 36, 6, 3], ["r", 46, 112, 5, 30, 1], ["r", 66, 112, 5, 30, 1]], T: 3.5,
+    a: { tr: 4, hd: 0, p1: [10, 57], p2: [-36, 24], f1: 90, f2: 200, m1: [2, 34], m2: [3, 34] }, b: { tr: 14, p1: [22, 38], p2: [-40, 6] } },
+  prensa: { hl: ["th1", "glu"], peso: [["placa", "A1"]], fijo: ["H", 76, 112], obj: [["l", 82, 120, 48, 90, 7], ["l", 96, 124, 184, 36, 3], ["r", 72, 118, 8, 24, 1]],
+    a: { tr: 312, hd: 330, p1: [24, -16], p2: [24, -15], m1: [10, 26], m2: [10, 26], f1: 45, f2: 45 }, b: { p1: [44, -34], p2: [44, -33] } },
+  curl_femoral: { hl: ["th1"], peso: [["rodillo", "A1"]], fijo: ["H", 96, 106], obj: BANCO,
+    a: { tr: 90, hd: 100, l1: [270, 270], l2: [272, 272], f1: 180, f2: 180, a1: [180, 120], a2: [182, 122] }, b: { l1: [270, 20], l2: [272, 22] } },
+  talones: { hl: ["sh1"], fijo: ["T1", 112, 140], T: 2,
+    a: { tr: 0, hd: 0, l1: [180, 180], l2: [182, 182], f1: 90, f2: 90, a1: [182, 180], a2: [184, 182] }, b: { f1: 150, f2: 150 } },
+
+  peso_muerto: { hl: ["glu", "th1", "lum"], peso: [["barra", "manos"]], fijo: PIES, T: 4,
+    a: { tr: 52, hd: 64, p1: [26, 30], p2: [28, 30], f1: 90, f2: 90, m1: [0, 34], m2: [1, 34] }, b: { tr: 0, hd: 0, ...DE_PIE, m1: [3, 34], m2: [4, 34] } },
+  dominadas: { escala: 0.8, sinSuelo: true, hl: ["dor", "ua1"], fijo: ["W1", 100, 6], obj: [["l", 50, 6, 150, 6, 4]], T: 3.5,
+    a: { tr: 2, hd: 0, l1: [176, 250], l2: [178, 252], f1: 180, f2: 180, m1: [3, -34], m2: [4, -34] }, b: { m1: [6, -10], m2: [7, -10] } },
+  remo_barra: { hl: ["dor"], peso: [["barra", "manos"]], fijo: PIES,
+    a: { tr: 62, hd: 72, p1: [12, 52], p2: [14, 52], f1: 90, f2: 90, m1: [0, 34], m2: [1, 34] }, b: { m1: [-6, 18], m2: [-5, 18] } },
+  remo_manc: { ...kbRemo, peso: [["manc", "W1"]] },
+  face_pull: { hl: ["sho1", "dor"], fijo: ["A1", 84, 138], cable: [146, 34], obj: TORRE(150),
+    a: { tr: -4, hd: 0, ...DE_PIE, m1: [34, 6], m2: [33, 7] }, b: { m1: [12, -4], m2: [12, -3], c1: -1, c2: -1 } },
+  curl: { hl: ["ua1"], peso: [["manc", "W1"]], fijo: PIES, a: { tr: 0, hd: 0, ...DE_PIE, a1: [176, 178], a2: [182, 182] }, b: { a1: [172, 30] } },
+
+  hip_thrust: { hl: ["glu"], fijo: ["S", 66, 108], obj: [["r", 30, 112, 40, 30, 3]], T: 3,
+    a: { tr: 306, hd: 300, p1: [24, 6], p2: [25, 6], f1: 90, f2: 90, a1: [100, 90], a2: [102, 92] }, b: { tr: 270, hd: 290, p1: [18, 31], p2: [19, 31] } },
+  zancadas: { hl: ["th1", "glu"], peso: [["manc", "W1"], ["manc", "W2"]], fijo: ["A1", 122, 138], T: 3.5,
+    a: { tr: 2, hd: 0, p1: [12, 56], p2: [-24, 52], f1: 90, f2: 180, m1: [2, 34], m2: [3, 34] }, b: { p1: [22, 38], p2: [-12, 32] } },
+  piernas_colgado: { escala: 0.8, sinSuelo: true, hl: ["tr"], fijo: ["W1", 100, 6], obj: [["l", 50, 6, 150, 6, 4]], T: 3.5,
+    a: { tr: 0, hd: 0, l1: [180, 180], l2: [182, 182], f1: 160, f2: 160, m1: [2, -35], m2: [3, -35] }, b: { tr: -8, l1: [88, 90], l2: [90, 92], f1: 70, f2: 70 } },
+  plancha: { modo: "hold", hl: ["tr"], a: { tr: 84, hd: 92, l1: [264, 264], l2: [266, 266], f1: 180, f2: 180, a1: [180, 90], a2: [182, 92] }, b: { tr: 86 } },
+  plancha_lateral: { vista: "frente", modo: "hold", hl: ["tr"], a: { x: 100, tr: 72, hd: 72, l1: [252, 252], l2: [254, 254], a1: [180, 90], a2: [0, 0] }, b: { tr: 74 } },
+
+  press_militar: { escala: 0.84, hl: ["sho1", "ua1"], peso: [["barra", "manos"]], fijo: PIES, a: { tr: 0, hd: 0, ...DE_PIE, m1: [9, 4], m2: [10, 4] }, b: { tr: 3, m1: [2, -35], m2: [3, -35] } },
+  press_pecho: { hl: ["dor", "ua1"], fijo: ["H", 86, 106], obj: [["r", 70, 108, 32, 6, 3], ["r", 66, 48, 6, 60, 3], ["r", 84, 114, 5, 28, 1]],
+    a: { tr: 0, hd: 0, l1: [90, 180], l2: [92, 182], f1: 90, f2: 90, m1: [12, 4], m2: [13, 4] }, b: { m1: [34, 4], m2: [34, 5] } },
+  jalon: { hl: ["dor", "ua1"], peso: [["manc", "manos"]], fijo: ["H", 96, 106], cable: [98, 4, "manos"], obj: [["r", 82, 108, 30, 6, 3], ["r", 108, 84, 12, 8, 3], ["r", 92, 114, 5, 28, 1]],
+    a: { tr: -4, hd: 0, l1: [90, 180], l2: [92, 182], f1: 90, f2: 90, m1: [3, -35], m2: [4, -35] }, b: { tr: -12, m1: [8, -6], m2: [9, -6] } },
+  remo_polea: { hl: ["dor"], peso: [["manc", "manos"]], fijo: ["H", 70, 112], cable: [168, 116, "manos"], obj: [["r", 50, 114, 34, 6, 3], ["r", 160, 104, 10, 38, 2], ["l", 144, 112, 148, 136, 4]],
+    a: { tr: 8, hd: 10, p1: [72, 14], p2: [72, 15], k1: -1, f1: 90, f2: 90, m1: [34, 6], m2: [34, 7] }, b: { tr: -6, m1: [8, 22], m2: [9, 22] } },
+  ext_cuadriceps: { hl: ["th1"], peso: [["rodillo", "A1"]], fijo: ["H", 90, 102], obj: [["r", 70, 104, 34, 6, 3], ["r", 66, 50, 6, 56, 3], ["r", 86, 110, 5, 32, 1]],
+    a: { tr: 0, hd: 0, l1: [90, 180], l2: [92, 182], f1: 90, f2: 90, a1: [180, 180], a2: [182, 182] }, b: { l1: [90, 100], l2: [92, 102], f1: 10, f2: 10 } },
+  ext_lumbar: { hl: ["lum"], fijo: ["H", 100, 92], obj: [["c", 104, 98, 6], ["r", 60, 128, 18, 6, 2], ["l", 104, 104, 92, 142, 4]], T: 3.5,
+    a: { tr: 150, hd: 160, l1: [228, 228], l2: [230, 230], f1: 140, f2: 140, a1: [150, 30], a2: [152, 32] }, b: { tr: 48, hd: 60, a1: [80, 330], a2: [82, 332] } },
+});
+for (const d of Object.values(G)) { d.fuerza = true; d.modo ??= "reps"; d.T ??= 3; }
+const FIGURAS_FUERZA = Object.keys(G);
+
+const rad = (a) => (a * Math.PI) / 180;
+const dir = (a) => [Math.sin(rad(a)), -Math.cos(rad(a))];
+const add = (p, a, len) => { const d = dir(a); return [p[0] + d[0] * len, p[1] + d[1] * len]; };
+const lerp = (a, b, t) => a + (b - a) * t;
+function mix(a, b, t) {
+  const o = {};
+  for (const k of Object.keys(a)) {
+    const va = a[k], vb = b[k]; // eslint-disable-line security/detect-object-injection -- pose keys
+    o[k] = Array.isArray(va) ? va.map((v, i) => lerp(v, vb[i], t)) : typeof va === "number" && typeof vb === "number" ? lerp(va, vb, t) : va; // eslint-disable-line security/detect-object-injection
+  }
+  return o;
+}
+
+const ang = (v) => (Math.atan2(v[0], -v[1]) * 180) / Math.PI;
+/** Two-bone IK: the angles [upper, lower] that put the end of a limb at target t (relative to its root). */
+function ik(t, a, b, sign) {
+  const d = Math.min(Math.max(Math.hypot(t[0], t[1]), Math.abs(a - b) + 0.01), a + b - 0.01);
+  const al = (Math.acos((a * a + d * d - b * b) / (2 * a * d)) * 180) / Math.PI;
+  const up = ang(t) + sign * al;
+  const e = dir(up);
+  return [up, ang([t[0] - e[0] * a, t[1] - e[1] * a])];
+}
+
+/** Joint positions of a pose. Returns points and the lowest point's y (for resting on the floor). */
+function joints(p, y) {
+  const vista = p.vista;
+  const H = [p.x, y];
+  const tr = p.tr;
+  const S = add(H, tr, L.tr);
+  const n = dir(tr + 90);
+  const C = [(H[0] + S[0]) / 2 + n[0] * p.cv, (H[1] + S[1]) / 2 + n[1] * p.cv];
+  const hd = p.hd ?? tr;
+  const head = add(S, hd, 13), neck = add(S, hd, 6);
+  const sw = vista ? 9 : 0, hw = vista ? 6 : 0;
+  const S1 = [S[0] + n[0] * sw, S[1] + n[1] * sw], S2 = [S[0] - n[0] * sw, S[1] - n[1] * sw];
+  const H1 = [H[0] + n[0] * hw, H[1] + n[1] * hw], H2 = [H[0] - n[0] * hw, H[1] - n[1] * hw];
+  const a1 = p.m1 ? ik(p.m1, L.ua, L.fa, p.c1 ?? 1) : p.a1, a2 = p.m2 ? ik(p.m2, L.ua, L.fa, p.c2 ?? 1) : p.a2;
+  const l1 = p.p1 ? ik(p.p1, L.th, L.sh, p.k1 ?? -1) : p.l1, l2 = p.p2 ? ik(p.p2, L.th, L.sh, p.k2 ?? -1) : p.l2;
+  const E1 = add(S1, a1[0], L.ua), W1 = add(E1, a1[1], L.fa);
+  const E2 = add(S2, a2[0], L.ua), W2 = add(E2, a2[1], L.fa);
+  const K1 = add(H1, l1[0], L.th), A1 = add(K1, l1[1], L.sh * (p.ls1 || 1));
+  const K2 = add(H2, l2[0], L.th), A2 = add(K2, l2[1], L.sh * (p.ls2 || 1));
+  const T1 = vista ? A1 : add(A1, p.f1 ?? l1[1] - 90, L.ft), T2 = vista ? A2 : add(A2, p.f2 ?? l2[1] - 90, L.ft);
+  const low = Math.max(H[1] + 6, S[1] + 6, head[1] + 7, W1[1] + 3, W2[1] + 3, E1[1] + 3.5, E2[1] + 3.5, K1[1] + 5, K2[1] + 5, A1[1] + 4, A2[1] + 4, T1[1] + 2.5, T2[1] + 2.5);
+  return { H, S, C, head, neck, S1, S2, H1, H2, E1, W1, E2, W2, K1, A1, K2, A2, T1, T2, low, tr };
+}
+/** Where the weights held are: kettlebell, dumbbell or barbell (seen end on), at a hand, both hands or the shoulders. */
+// Also a leg press sled (placa, at the feet) and a machine's ankle pad (rodillo).
+const RADIO = { kb: 6.5, manc: 4.5, barra: 13, placa: 4, rodillo: 4 };
+function pesos(d, j) {
+  return (d.peso || []).map(([tipo, en]) => {
+    if (en === "A1") {
+      const push = ang([j.A1[0] - j.H[0], j.A1[1] - j.H[1]]), shin = ang([j.A1[0] - j.K1[0], j.A1[1] - j.K1[1]]);
+      return tipo === "placa" ? { tipo, c: add(j.A1, push, 5), rot: push, r: 4 } : { tipo, c: add(j.A1, shin + 90, 5), rot: 0, r: 4 };
+    }
+    if (en === "H") return { tipo, c: add(j.H, j.tr + 90, 8), rot: 0, r: RADIO[tipo] }; // eslint-disable-line security/detect-object-injection -- tipo is a weight type
+    const W = en === "manos" ? [(j.W1[0] + j.W2[0]) / 2, (j.W1[1] + j.W2[1]) / 2] : en === "S" ? add(j.S, j.tr - 90, 5) : en === "W2" ? j.W2 : j.W1;
+    const E = en === "W2" ? j.E2 : j.E1;
+    const fore = ang([W[0] - E[0], W[1] - E[1]]);
+    const c = tipo === "kb" ? add(W, fore, 7) : W;
+    return { tipo, c, rot: fore - 180, r: RADIO[tipo] }; // eslint-disable-line security/detect-object-injection -- tipo is a weight type
+  });
+}
+/** Joints of a pose at height y, moved so the figure's pinned joint (fijo) sits where it should. */
+function colocar(d, pose, y) {
+  if (!d.fijo) return joints(pose, y);
+  const [k, fx, fy] = d.fijo;
+  const j0 = joints(pose, 0);
+  return joints({ ...pose, x: pose.x + fx - j0[k][0] }, fy - j0[k][1]); // eslint-disable-line security/detect-object-injection -- k is a joint name
+}
+// Rest a pose on the floor (weights included) unless it fixes its own height or pins a joint.
+function ground(d, p) {
+  if (p.y != null || d.fijo) return p.y ?? 0;
+  const j = joints(p, 0);
+  return FLOOR - Math.max(j.low, ...pesos(d, j).map((w) => w.c[1] + w.r));
+}
+
+function def(id) {
+  const d = P[id] || G[id]; // eslint-disable-line security/detect-object-injection -- id is an exercise id
+  if (!d) return null;
+  if (!d._a && d.fr) {
+    let f = { ...base, vista: d.vista };
+    d._fr = d.fr.map((x) => (f = { ...f, ...x }));
+    d._fy = d._fr.map((x) => ground(d, x));
+    d._a = d._fr[0];
+    d._ya = d._fy[0];
+  } else if (!d._a) {
+    d._a = { ...base, ...d.b, ...d.a, vista: d.vista };
+    d._b = { ...d._a, ...d.b };
+    d._ya = ground(d, d._a);
+    d._yb = ground(d, d._b);
+  }
+  return d;
+}
+
+/* ---------- Markup ---------- */
+const SEGS = [
+  ["ua2", "far", 6], ["fa2", "far", 5], ["th2", "far", 9], ["sh2", "far", 7], ["ft2", "far", 4.5],
+  ["tr", "near", 12], ["neck", "near", 5],
+  ["th1", "near", 9], ["sh1", "near", 7], ["ft1", "near", 4.5], ["ua1", "near", 6], ["fa1", "near", 5],
+];
+// A highlight goes right after the limb it sits on, so nearer limbs still cover it.
+const SOBRE = { th2: "th2", sh2: "sh2", ua2: "ua2", tr: "tr", lum: "tr", dor: "tr", glu: "tr" };
+
+/** An animated figure for a stretch. */
+function figura(id, { clase = "" } = {}) {
+  const d = def(id);
+  if (!d) return html`<svg class="fig ${clase}" viewBox="0 0 200 150" aria-hidden="true"></svg>`;
+  const front = !!d.vista;
+  const segs = SEGS.map(([k, c, w]) => {
+    const width = front && k === "tr" ? 20 : w;
+    const col = front ? COL.near : COL[c]; // eslint-disable-line security/detect-object-injection -- c is near/far
+    return k === "tr"
+      ? html`<path data-k="tr" fill="none" stroke="${col}" stroke-width="${width}" stroke-linecap="round"/>`
+      : html`<line data-k="${k}" stroke="${col}" stroke-width="${width}" stroke-linecap="round"/>`;
+  });
+  // Highlights sit on top of their limb.
+  const hl = d.hl.map((k) => (k === "glu" || k.startsWith("sho")
+    ? html`<circle data-h="${k}" r="${k === "glu" ? 7 : 6}" fill="var(--glow)"/>`
+    : k === "tr" || k === "lum" || k === "dor"
+      ? html`<path data-h="${k}" fill="none" stroke="var(--glow)" stroke-width="${front ? 12 : 7}" stroke-linecap="round"/>`
+      : html`<line data-h="${k}" stroke="var(--glow)" stroke-width="5" stroke-linecap="round"/>`));
+  const b = d._b ? colocar(d, d._b, d._yb) : null;
+  const props = [];
+  if (d.vista !== "arriba" && !d.sinSuelo) props.push(html`<line x1="8" y1="${FLOOR}" x2="192" y2="${FLOOR}" stroke="var(--app-line)" stroke-width="2"/>`);
+  if (d.muro) props.push(html`<rect x="66" y="8" width="68" height="${FLOOR - 8}" rx="3" fill="var(--app-line)" opacity=".45"/>`);
+  // Walls and door frames stand where the hand (or toe) touches them in the stretch.
+  if (d.pared) props.push(html`<rect x="${(b[d.pared][0] + (d.pared === "T1" ? 8 : 3)).toFixed(1)}" y="6" width="7" height="${FLOOR - 6}" rx="2" fill="var(--prop)"/>`);
+  if (d.marco) props.push(html`<rect x="${(b[d.marco][0] + (d.marco === "E1" ? -7 : 2)).toFixed(1)}" y="6" width="5" height="${FLOOR - 6}" rx="2" fill="var(--prop)"/>`);
+  if (d.cojin === "k2") props.push(html`<rect x="${b.K2[0] - 11}" y="${FLOOR - 5}" width="22" height="5" rx="2.5" fill="var(--prop)"/>`);
+  if (d.cojin === "h") props.push(html`<rect x="${b.H[0] - 12}" y="${FLOOR - 7}" width="26" height="7" rx="3" fill="var(--prop)"/>`);
+  for (const o of d.obj || []) {
+    if (o[0] === "r") props.push(html`<rect x="${o[1]}" y="${o[2]}" width="${o[3]}" height="${o[4]}" rx="${o[5] ?? 2}" fill="var(--prop)"/>`);
+    else if (o[0] === "l") props.push(html`<line x1="${o[1]}" y1="${o[2]}" x2="${o[3]}" y2="${o[4]}" stroke="var(--prop)" stroke-width="${o[5] ?? 3}" stroke-linecap="round"/>`);
+    else props.push(html`<circle cx="${o[1]}" cy="${o[2]}" r="${o[3]}" fill="var(--prop)"/>`);
+  }
+  const cable = d.cable ? html`<line data-k="cable" stroke="var(--app-muted)" stroke-width="1.2"/><circle cx="${d.cable[0]}" cy="${d.cable[1]}" r="3.5" fill="none" stroke="var(--app-muted)" stroke-width="1.5"/>` : "";
+  // A barbell's plate goes behind the body, so the lifter stays visible; other weights are held in front.
+  const pesoEls = (d.peso || []).map(([tipo], i) => [tipo, html`<g data-k="${`peso${i}`}" class="peso">${tipo === "kb"
+    ? html`<circle cy="-6.5" r="3.6" fill="none" stroke="var(--peso)" stroke-width="2"/><circle r="6.5" fill="var(--peso)"/>`
+    : tipo === "barra"
+      ? html`<circle r="13" fill="var(--prop)" stroke="var(--peso)" stroke-width="2"/><circle r="2.5" fill="var(--peso)"/>`
+      : tipo === "placa"
+        ? html`<rect x="-15" y="-2.5" width="30" height="5" rx="2" fill="var(--peso)"/>`
+        : tipo === "rodillo"
+          ? html`<circle r="4" fill="var(--prop)" stroke="var(--peso)" stroke-width="1.5"/>`
+          : html`<circle r="4.5" fill="var(--peso)"/><circle r="1.6" fill="var(--prop)"/>`}</g>`]);
+  const detras = pesoEls.filter(([t]) => t === "barra").map(([, e]) => e), delante = pesoEls.filter(([t]) => t !== "barra").map(([, e]) => e);
+  const towel = d.toalla || d.toalla2 ? html`<line data-k="towel" stroke="var(--prop)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="${d.toalla ? "4 3" : "none"}"/>` : "";
+  const vista = d.vista === "arriba" ? html`<text x="194" y="12" text-anchor="end" class="fig-nota">Vista desde arriba</text>` : d.vista ? html`<text x="194" y="12" text-anchor="end" class="fig-nota">De frente</text>` : "";
+  const parts = [];
+  for (const [k] of SEGS) {
+    parts.push(segs.shift());
+    for (const [j, h] of d.hl.entries()) if (SOBRE[h] === k) parts.push(hl[j]); // eslint-disable-line security/detect-object-injection
+    if (k === "neck") parts.push(html`<circle data-k="head" r="7" fill="${COL.head}"/>`);
+  }
+  const rest = hl.filter((_, j) => !SOBRE[d.hl[j]]); // eslint-disable-line security/detect-object-injection
+  // Tall movements (arms overhead, hanging from a bar) are drawn smaller so they fit.
+  const esc = d.escala ? `translate(100 ${FLOOR}) scale(${d.escala}) translate(-100 -${FLOOR})` : null;
+  const el = html`<svg class="fig ${clase}" viewBox="0 0 200 150" data-fig="${id}" aria-hidden="true"><g transform="${esc}">${props}${cable}${detras}${parts}${rest}${delante}${towel}</g>${vista}</svg>`;
+  return el;
+}
+
+/* ---------- Drawing a frame ---------- */
+function split(H, C, S) {
+  const a = [(H[0] + C[0]) / 2, (H[1] + C[1]) / 2], b = [(C[0] + S[0]) / 2, (C[1] + S[1]) / 2], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  return [`M${H[0]} ${H[1]}Q${a[0]} ${a[1]} ${m[0]} ${m[1]}`, `M${m[0]} ${m[1]}Q${b[0]} ${b[1]} ${S[0]} ${S[1]}`];
+}
+const seg = (el, p, q) => { el.setAttribute("x1", p[0].toFixed(1)); el.setAttribute("y1", p[1].toFixed(1)); el.setAttribute("x2", q[0].toFixed(1)); el.setAttribute("y2", q[1].toFixed(1)); };
+
+/** Draws the figure in svg at progress p (0 = start pose, 1 = stretch), with t seconds for breathing. */
+function dibujar(svg, p, t = 0) {
+  const d = def(svg.dataset.fig);
+  if (!d) return;
+  let pose, y, brillo = p;
+  if (d._fr) {
+    // Keyframes: p runs once round the loop.
+    const n = d._fr.length, x = (((p % 1) + 1) % 1) * n, i = Math.floor(x), k = (i + 1) % n, f = ease(x - i);
+    pose = mix(d._fr[i], d._fr[k], f); // eslint-disable-line security/detect-object-injection -- i, k are frame indexes
+    y = lerp(d._fy[i], d._fy[k], f); // eslint-disable-line security/detect-object-injection
+    brillo = 1;
+  } else {
+    pose = mix(d._a, d._b, p);
+    y = lerp(d._ya, d._yb, p);
+  }
+  if (!d.fuerza) pose.tr += Math.sin((t * 2 * Math.PI) / 5) * 1.2 * p;
+  const j = colocar(d, pose, y);
+  if (!svg._els) {
+    svg._els = {};
+    svg.querySelectorAll("[data-k],[data-h]").forEach((e) => { svg._els[e.dataset.k || `h-${e.dataset.h}`] = e; });
+  }
+  const E = svg._els;
+  const [lum, dor] = split(j.H, j.C, j.S);
+  E.tr.setAttribute("d", `M${j.H[0]} ${j.H[1]}Q${j.C[0]} ${j.C[1]} ${j.S[0]} ${j.S[1]}`);
+  seg(E.neck, j.S, j.neck);
+  E.head.setAttribute("cx", j.head[0].toFixed(1)); E.head.setAttribute("cy", j.head[1].toFixed(1));
+  const L2 = { ua1: [j.S1, j.E1], fa1: [j.E1, j.W1], ua2: [j.S2, j.E2], fa2: [j.E2, j.W2], th1: [j.H1, j.K1], sh1: [j.K1, j.A1], ft1: [j.A1, j.T1], th2: [j.H2, j.K2], sh2: [j.K2, j.A2], ft2: [j.A2, j.T2] };
+  for (const [k, [a, b]] of Object.entries(L2)) seg(E[k], a, b); // eslint-disable-line security/detect-object-injection
+  if (E.towel) seg(E.towel, j.W1, d.toalla ? j.T1 : j.W2);
+  for (const [i, w] of pesos(d, j).entries()) E[`peso${i}`].setAttribute("transform", `translate(${w.c[0].toFixed(1)} ${w.c[1].toFixed(1)}) rotate(${w.rot.toFixed(0)})`);
+  if (E.cable) seg(E.cable, d.cable[2] === "manos" ? [(j.W1[0] + j.W2[0]) / 2, (j.W1[1] + j.W2[1]) / 2] : j.W1, d.cable);
+  const glow = (0.3 + 0.7 * brillo).toFixed(2);
+  for (const k of d.hl) {
+    const e = E[`h-${k}`];
+    e.setAttribute("opacity", glow);
+    if (k === "glu") { e.setAttribute("cx", j.H[0].toFixed(1)); e.setAttribute("cy", j.H[1].toFixed(1)); }
+    else if (k === "sho1" || k === "sho2") { const s = k === "sho1" ? j.S1 : j.S2; e.setAttribute("cx", s[0].toFixed(1)); e.setAttribute("cy", s[1].toFixed(1)); }
+    else if (k === "tr") e.setAttribute("d", E.tr.getAttribute("d"));
+    else if (k === "lum") e.setAttribute("d", lum);
+    else if (k === "dor") e.setAttribute("d", dor);
+    else if (k === "neck") seg(e, j.S, j.neck);
+    else seg(e, ...L2[k]); // eslint-disable-line security/detect-object-injection
+  }
+}
+
+/* ---------- Animation ---------- */
+const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+/** Progress of the looping preview at time t (s). */
+function bucle(id, t) {
+  const d = def(id);
+  if (!d) return 0;
+  if (d.fr) return (t / d.T) % 1;
+  if (d.modo === "reps") return (1 - Math.cos((t * 2 * Math.PI) / d.T)) / 2;
+  const c = t % 10;
+  return c < 1 ? 0 : c < 3.5 ? ease((c - 1) / 2.5) : c < 8 ? 1 : 1 - ease((c - 8) / 2);
+}
+/** Progress inside a player step that has run for t seconds. */
+function enPaso(id, t) {
+  const d = def(id);
+  if (!d) return 0;
+  return d.modo === "reps" ? (1 - Math.cos((t * 2 * Math.PI) / d.T)) / 2 : ease(t / 2.5);
+}
+
+const reduce = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const visibles = new Set();
+const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => (e.isIntersecting ? visibles.add(e.target) : visibles.delete(e.target)))) : null;
+let running = false;
+
+/** Starts animating every figure under root. A figure with a _ctl(t) function is driven by it (the player). */
+function animar(root = document) {
+  root.querySelectorAll("svg[data-fig]").forEach((svg) => {
+    if (svg._seen) return;
+    svg._seen = true;
+    svg._off = Math.random() * 6;
+    dibujar(svg, reduce() ? 1 : 0, 0);
+    if (io) io.observe(svg); else visibles.add(svg);
+  });
+  if (running || reduce()) return;
+  running = true;
+  const frame = (ms) => {
+    const t = ms / 1000;
+    for (const svg of visibles) {
+      if (!svg.isConnected) { visibles.delete(svg); io?.unobserve(svg); continue; }
+      if (!svg.getClientRects().length) continue;
+      if (svg._ctl) { const c = svg._ctl(t); dibujar(svg, c.p, c.t); }
+      else dibujar(svg, bucle(svg.dataset.fig, t + svg._off), t);
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+
+// Copia literal de web/html.js y web/figura.js de la app (rama main), para comparar.
+window.mostrarSVG = (id) => {
+  const slot = document.getElementById("svgslot");
+  slot.innerHTML = String(figura(id));
+  animar(slot);
+};
+window.mostrarSVG((()=>{try{return localStorage.getItem("proto3d.ej")}catch{return null}})() === "isquio" ? "isquio_toalla" : "kb_halo");
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const D2R = Math.PI / 180;
+const $ = (id) => document.getElementById(id);
+const stage = $("stage"), canvas = $("c");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- Renderer, light, floor ---------- */
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+} catch (e) {
+  stage.insertAdjacentHTML("beforeend", '<div class="err">WebGL no está disponible en este dispositivo.</div>');
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0c0e);
+scene.fog = new THREE.Fog(0x0b0c0e, 7, 14);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.55;
+
+const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x24282e, 0.55));
+const key = new THREE.DirectionalLight(0xfff1e2, 1.9);
+key.position.set(2.2, 4.5, 3.2);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.radius = 5;
+key.shadow.bias = -0.0003;
+key.shadow.normalBias = 0.01;
+Object.assign(key.shadow.camera, { left: -1.6, right: 1.6, top: 2.4, bottom: -1.2, near: 0.5, far: 12 });
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x9fd8ff, 1.6);
+rim.position.set(-3, 2.5, -3.5);
+scene.add(rim);
+const fill = new THREE.DirectionalLight(0xffffff, 0.35);
+fill.position.set(-2, 1, 3);
+scene.add(fill);
+
+// Floor: a soft pool of light that fades into the page, plus a shadow catcher.
+{
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 256;
+  const g = cv.getContext("2d"), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, "rgba(46,50,58,1)"); gr.addColorStop(0.55, "rgba(28,31,36,.8)"); gr.addColorStop(1, "rgba(11,12,14,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+  pool.rotation.x = -Math.PI / 2; scene.add(pool);
+  const sh = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.ShadowMaterial({ opacity: 0.45 }));
+  sh.rotation.x = -Math.PI / 2; sh.position.y = 0.001; sh.receiveShadow = true; scene.add(sh);
+}
+// Yoga mat for the floor exercise.
+const mat = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.008, 1.9), new THREE.MeshStandardMaterial({ color: 0x1d4f4d, roughness: 0.9 }));
+mat.position.set(0, 0.004, 0.12); mat.receiveShadow = true; scene.add(mat);
+
+/* ---------- Geometry helpers ---------- */
+// Loft: rings [y, rx, rzF, rzB, cz, cx] stitched into one smooth tube. Front (+z) and back (-z) depths differ, and
+// they blend round the sides without a crease, so muscle shape (chest, calf, quads) is part of the surface.
+function loft(rings, seg = 48) {
+  const pos = [], idx = [];
+  for (const [y, rx, rzF, rzB = rzF, cz = 0, cx = 0] of rings)
+    for (let j = 0; j < seg; j++) {
+      const t = (j / seg) * Math.PI * 2, s = Math.sin(t);
+      pos.push(cx + rx * Math.cos(t), y, cz + s * (rzB + (rzF - rzB) * (1 + s) / 2));
+    }
+  for (let i = 0; i < rings.length - 1; i++) {
+    const up = rings[i + 1][0] > rings[i][0];
+    for (let j = 0; j < seg; j++) {
+      const a = i * seg + j, b = i * seg + ((j + 1) % seg), c = a + seg, d = b + seg;
+      if (up) idx.push(a, c, b, b, c, d); else idx.push(a, b, c, b, d, c);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+// Rounded caps on both ends of a ring list.
+function caps(r) {
+  const n = 7;
+  const end = (ring, away) => {
+    const [y, rx, rzF, rzB = rzF, cz = 0, cx = 0] = ring, rr = (rx + (rzF + rzB) / 2) / 2, res = [];
+    for (let k = 1; k <= n; k++) { const a = (k / n) * Math.PI / 2, c = Math.cos(a); res.push([y + away * rr * Math.sin(a) * 0.9, rx * c, rzF * c, rzB * c, cz, cx]); }
+    return res;
+  };
+  const s0 = Math.sign(r[0][0] - r[1][0]), s1 = Math.sign(r[r.length - 1][0] - r[r.length - 2][0]);
+  return [...end(r[0], s0).reverse(), ...r, ...end(r[r.length - 1], s1)];
+}
+// Smooth profile: key rings [y, rx, rzF, rzB, cz] resampled with Catmull-Rom so the outline has no kinks.
+function perfil(keys, n = 28) {
+  const out = [], m = keys.length - 1;
+  for (let k = 0; k <= n; k++) {
+    const u = (k / n) * m, i = Math.min(m - 1, Math.floor(u)), f = u - i;
+    const p0 = keys[Math.max(0, i - 1)], p1 = keys[i], p2 = keys[i + 1], p3 = keys[Math.min(m, i + 2)];
+    out.push(p1.map((_, c) => {
+      const a = p0[c] ?? 0, b = p1[c] ?? 0, cc = p2[c] ?? 0, d = p3[c] ?? 0;
+      return 0.5 * (2 * b + (-a + cc) * f + (2 * a - 5 * b + 4 * cc - d) * f * f + (-a + 3 * b - 3 * cc + d) * f * f * f);
+    }));
+  }
+  return out;
+}
+// A limb hanging down -Y from its joint: keys [t, rx, rzF, rzB, cz] with t from 0 (joint) to 1 (next joint).
+const limb = (L, keys) => loft(caps(perfil(keys.map(([t, ...r]) => [-t * L, ...r]))));
+const tronco = (keys) => loft(caps(perfil(keys)));
+const SPH = new THREE.SphereGeometry(1, 36, 24);
+
+/* ---------- Materials: body clay, muscles that light up ---------- */
+const SKIN = new THREE.Color(0x9aa1ab);
+const bodyMat = () => new THREE.MeshPhysicalMaterial({ color: SKIN.clone(), roughness: 0.52, metalness: 0, clearcoat: 0.15, clearcoatRoughness: 0.7, sheen: 0.5, sheenRoughness: 0.6, sheenColor: new THREE.Color(0xdfe6ef) });
+const skin = bodyMat();
+// Worked muscles are painted on the skin itself: each zone is an ellipsoid fixed to a bone, and the shader blends
+// its colour in with a soft falloff, so the colour fades into the body instead of sitting on it like a patch.
+const MAXZ = 8;
+const U = { uZM: { value: Array.from({ length: MAXZ }, () => new THREE.Matrix4()) }, uZC: { value: Array.from({ length: MAXZ }, () => new THREE.Vector3()) }, uZI: { value: new Array(MAXZ).fill(0) } };
+const pintar = (sh) => {
+  Object.assign(sh.uniforms, U);
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWP;")
+    .replace("#include <project_vertex>", "#include <project_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
+varying vec3 vWP;
+uniform mat4 uZM[${MAXZ}]; uniform vec3 uZC[${MAXZ}]; uniform float uZI[${MAXZ}];
+vec4 zonas() {
+  vec3 c = vec3(0.0); float wsum = 0.0, wmax = 0.0;
+  for (int i = 0; i < ${MAXZ}; i++) {
+    if (uZI[i] <= 0.0) continue;
+    float d = length((uZM[i] * vec4(vWP, 1.0)).xyz);
+    float w = (1.0 - smoothstep(0.1, 1.0, d)) * uZI[i];
+    c += uZC[i] * w; wsum += w; wmax = max(wmax, w);
+  }
+  return vec4(wsum > 0.0 ? c / wsum : c, wmax);
+}`).replace("#include <color_fragment>", "#include <color_fragment>\nvec4 zz = zonas();\ndiffuseColor.rgb = mix(diffuseColor.rgb, zz.rgb, zz.a * 0.95);")
+    .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += zz.rgb * zz.a * 0.3;");
+};
+skin.onBeforeCompile = pintar;
+const musc = () => skin;
+const ZONAS = {};
+let lado = ""; // zones on limbs are per side (isquiosR), so one leg can light up alone
+function zona(parent, nombre, p, sc, r = [0, 0, 0]) {
+  const o = new THREE.Object3D(); o.position.set(...p); o.scale.set(...sc); o.rotation.set(...r.map((v) => v * D2R));
+  parent.add(o); ZONAS[nombre + lado] = o;
+}
+// Clothes: our own colours, no logos. The zones paint through the shirt too, so worked shoulders still show.
+const tela = (c, r = 0.9) => { const m = new THREE.MeshStandardMaterial({ color: c, roughness: r, side: THREE.DoubleSide }); m.onBeforeCompile = pintar; return m; };
+const shirt = tela(0xb8302a);
+const shorts = tela(0xeef0f2);
+const shoe = new THREE.MeshStandardMaterial({ color: 0xf3f4f6, roughness: 0.6 });
+const sole = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+const lace = new THREE.MeshStandardMaterial({ color: 0xb4bac2, roughness: 0.7 });
+// An open tube (sleeve, shirt): rounded on the first ring only, open at the hem.
+const tubo = (rings, cap = false) => loft(cap ? [...caps(rings).slice(0, 7), ...rings] : rings);
+
+function mesh(geo, m, parent, p = [0, 0, 0], s = null, r = null) {
+  const o = new THREE.Mesh(geo, m);
+  o.position.set(...p); if (s) o.scale.set(...s); if (r) o.rotation.set(...r.map((v) => v * D2R));
+  o.castShadow = true; o.receiveShadow = true; parent.add(o); return o;
+}
+const blob = (parent, g, p, s, r) => mesh(SPH, g ? musc(g + lado) : skin, parent, p, s, r);
+const joint = (parent, p) => { const o = new THREE.Object3D(); o.position.set(...p); parent.add(o); return o; };
+
+/* ---------- The mannequin ---------- */
+// Faces +Z, up +Y, its left is +X. Metres; about 1.80 m tall. Each segment is one smooth surface whose
+// outline carries the muscles; worked muscles are painted onto it by the zones.
+const J = {};
+const fig = new THREE.Group(); scene.add(fig);
+J.root = joint(fig, [0, 1.03, 0]);
+// Pelvis, with shorts over the hips and glutes
+mesh(tronco([[-0.14, 0.15, 0.1, 0.11], [-0.08, 0.17, 0.11, 0.12], [-0.01, 0.166, 0.104, 0.11], [0.05, 0.15, 0.098, 0.1], [0.1, 0.142, 0.094, 0.095]]), skin, J.root);
+mesh(tronco([[-0.18, 0.165, 0.112, 0.13], [-0.12, 0.18, 0.12, 0.15], [-0.05, 0.178, 0.118, 0.14], [0.01, 0.17, 0.112, 0.118], [0.05, 0.158, 0.106, 0.104]]), shorts, J.root);
+// Abdomen and chest
+J.spine = joint(J.root, [0, 0.09, 0]);
+mesh(tronco([[-0.02, 0.142, 0.096, 0.094], [0.05, 0.144, 0.1, 0.094], [0.1, 0.148, 0.102, 0.097], [0.16, 0.156, 0.106, 0.1]]), skin, J.spine);
+zona(J.spine, "core", [0, 0.07, 0.04], [0.19, 0.16, 0.13]);
+mesh(tubo(perfil([[-0.04, 0.152, 0.106, 0.104], [0.05, 0.154, 0.11, 0.104], [0.11, 0.158, 0.112, 0.107], [0.18, 0.166, 0.116, 0.11]])), shirt, J.spine);
+mesh(tubo(perfil([[-0.075, 0.172, 0.118, 0.122], [-0.02, 0.166, 0.113, 0.118], [0.04, 0.158, 0.108, 0.11], [0.11, 0.153, 0.106, 0.105]])), shirt, J.root);
+J.chest = joint(J.spine, [0, 0.15, 0]);
+mesh(tronco([[-0.03, 0.155, 0.104, 0.1], [0.05, 0.168, 0.118, 0.108], [0.12, 0.182, 0.128, 0.116], [0.18, 0.186, 0.122, 0.116], [0.225, 0.172, 0.1, 0.106], [0.26, 0.135, 0.074, 0.086], [0.29, 0.072, 0.056, 0.062]]), skin, J.chest);
+zona(J.chest, "trapecio", [0, 0.25, -0.05], [0.2, 0.1, 0.1]);
+mesh(tubo(perfil([[-0.04, 0.166, 0.114, 0.11], [0.05, 0.178, 0.128, 0.118], [0.12, 0.192, 0.138, 0.126], [0.18, 0.196, 0.132, 0.126], [0.225, 0.183, 0.11, 0.116], [0.258, 0.145, 0.084, 0.096], [0.282, 0.082, 0.066, 0.072, -0.004]])), shirt, J.chest);
+// Neck and head
+J.neck = joint(J.chest, [0, 0.28, -0.01]);
+mesh(limb(0.11, [[-0.02, 0.054, 0.054], [0.4, 0.05, 0.05], [1, 0.054, 0.054]]), skin, J.neck, [0, 0.1, 0]);
+J.head = joint(J.neck, [0, 0.09, 0.005]);
+// Mannequin head: one smooth egg with a soft chin, no features.
+mesh(tronco([[0.005, 0.042, 0.05, 0.046, 0.022], [0.04, 0.058, 0.075, 0.06, 0.024], [0.09, 0.073, 0.094, 0.088, 0.012], [0.13, 0.079, 0.096, 0.097, 0.008], [0.16, 0.076, 0.09, 0.093, 0.006]]), skin, J.head);
+// Arms: deltoid, biceps and triceps in the upper arm's outline, the forearm flexors in the forearm's.
+for (const [s, n] of [[1, "L"], [-1, "R"]]) {
+  lado = n;
+  const sh = (J["sh" + n] = joint(J.chest, [s * 0.188, 0.232, -0.005]));
+  mesh(limb(0.29, [[0, 0.06, 0.06, 0.058], [0.14, 0.058, 0.058, 0.056], [0.3, 0.046, 0.046, 0.047], [0.5, 0.042, 0.048, 0.046], [0.75, 0.037, 0.041, 0.039], [1, 0.034, 0.034, 0.033]]), skin, sh);
+  zona(sh, "hombros", [s * 0.015, -0.035, 0], [0.09, 0.13, 0.095]);
+  mesh(tubo([[0.0, 0.07, 0.071, 0.07], [-0.06, 0.068, 0.069, 0.067], [-0.12, 0.064, 0.066, 0.063], [-0.13, 0.064, 0.066, 0.063]], true), shirt, sh);
+  zona(sh, "triceps", [0, -0.15, -0.035], [0.065, 0.15, 0.06]);
+  const el = (J["el" + n] = joint(sh, [0, -0.29, 0]));
+  mesh(limb(0.25, [[0, 0.035, 0.035, 0.034], [0.2, 0.042, 0.04, 0.038], [0.5, 0.034, 0.031, 0.03], [0.85, 0.027, 0.023, 0.023], [1, 0.026, 0.021, 0.021]]), skin, el);
+  const wr = (J["wr" + n] = joint(el, [0, -0.25, 0]));
+  blob(wr, null, [0, -0.045, 0], [0.022, 0.05, 0.042]);
+  blob(wr, null, [s * -0.004, -0.1, 0.006], [0.018, 0.04, 0.038], [12, 0, 0]);
+  blob(wr, null, [s * -0.01, -0.06, 0.04], [0.013, 0.032, 0.013], [-30, 0, 0]);
+}
+// Legs: quads in front and hamstrings behind the thigh, the calf behind the shin.
+for (const [s, n] of [[1, "L"], [-1, "R"]]) {
+  lado = n;
+  const hp = (J["hip" + n] = joint(J.root, [s * 0.092, -0.08, 0]));
+  mesh(limb(0.44, [[0, 0.094, 0.096, 0.098], [0.2, 0.09, 0.1, 0.095], [0.5, 0.077, 0.088, 0.08, 0.005], [0.8, 0.061, 0.066, 0.058], [1, 0.052, 0.054, 0.048]]), skin, hp);
+  mesh(tubo(perfil([[0.03, 0.104, 0.104, 0.11], [-0.08, 0.101, 0.106, 0.104], [-0.19, 0.096, 0.102, 0.098]])), shorts, hp);
+  zona(hp, "isquios", [0, -0.25, -0.05], [0.1, 0.24, 0.085]);
+  const kn = (J["kn" + n] = joint(hp, [0, -0.44, 0]));
+  mesh(limb(0.43, [[0, 0.052, 0.054, 0.05], [0.18, 0.053, 0.05, 0.072], [0.36, 0.049, 0.045, 0.064], [0.62, 0.037, 0.035, 0.038], [0.86, 0.03, 0.03, 0.03], [1, 0.03, 0.03, 0.03]]), skin, kn);
+  zona(kn, "gemelos", [0, -0.14, -0.045], [0.075, 0.16, 0.07]);
+  const an = (J["an" + n] = joint(kn, [0, -0.43, 0]));
+  // Trainer: upper and a pale sole.
+  mesh(SPH, shoe, an, [0, -0.036, 0.05], [0.048, 0.054, 0.128]);
+  mesh(SPH, sole, an, [0, -0.074, 0.05], [0.052, 0.016, 0.134]);
+  for (let k = 0; k < 3; k++) mesh(new THREE.BoxGeometry(0.05, 0.004, 0.008), lace, an, [0, -0.0 + 0.008 * k, 0.09 - 0.025 * k], null, [-20 - 8 * k, 0, 0]);
+  J["toe" + n] = joint(an, [0, -0.085, 0.15]);
+  J["sole" + n] = joint(an, [0, -0.09, 0.1]);
+}
+lado = "";
+fig.scale.setScalar(0.97);
+
+/* ---------- Kettlebell and towel ---------- */
+const iron = new THREE.MeshStandardMaterial({ color: 0x2a2d33, metalness: 0.7, roughness: 0.38 });
+const kb = new THREE.Group(); scene.add(kb);
+{
+  mesh(SPH, iron, kb, [0, 0, 0], [0.09, 0.085, 0.09]);
+  mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.012, 32), iron, kb, [0, -0.08, 0]);
+  const h = new THREE.TorusGeometry(0.058, 0.011, 16, 40, Math.PI);
+  mesh(h, iron, kb, [0, 0.1, 0]);
+  for (const s of [1, -1]) mesh(new THREE.CylinderGeometry(0.011, 0.013, 0.05, 16), iron, kb, [s * 0.058, 0.08, 0]);
+}
+const towelMat = new THREE.MeshStandardMaterial({ color: 0xd9d4c7, roughness: 0.95 });
+const towel = new THREE.Mesh(new THREE.BufferGeometry(), towelMat); towel.castShadow = true; scene.add(towel);
+
+/* ---------- Poses ---------- */
+const q = new THREE.Quaternion(), e = new THREE.Euler();
+const setRot = (o, x = 0, y = 0, z = 0) => o.quaternion.setFromEuler(e.set(x * D2R, y * D2R, z * D2R, "XYZ"));
+const RESET = ["spine", "chest", "neck", "head", "shL", "shR", "elL", "elR", "wrL", "wrR", "hipL", "hipR", "knL", "knR", "anL", "anR"];
+
+// Two-bone IK for an arm: wrist to target t (world), elbow toward pole (world).
+const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), m4 = new THREE.Matrix4();
+function brazo(n, target, pole) {
+  const sh = J["sh" + n], el = J["el" + n], par = sh.parent;
+  par.updateWorldMatrix(true, false);
+  const S = sh.position.clone(), T = par.worldToLocal(target.clone()), P = par.worldToLocal(pole.clone());
+  const a = 0.29, b = 0.25;
+  const dv = T.clone().sub(S), d = Math.min(dv.length(), (a + b) * 0.995), dir = dv.normalize();
+  const cosA = (a * a + d * d - b * b) / (2 * a * d), sinA = Math.sqrt(Math.max(0, 1 - cosA * cosA));
+  const pn = P.clone().sub(S); pn.sub(dir.clone().multiplyScalar(pn.dot(dir))).normalize();
+  // Upper arm toward the pole side; the elbow bends in the plane of shoulder, target and pole.
+  const u = dir.clone().multiplyScalar(cosA).addScaledVector(pn, sinA);
+  // Bend direction, perpendicular to the upper arm and defined even with the arm straight, so it never flips.
+  const z = dir.clone().multiplyScalar(sinA).addScaledVector(pn, -cosA).normalize();
+  const y = u.clone().negate(), x = new THREE.Vector3().crossVectors(y, z);
+  sh.quaternion.setFromRotationMatrix(m4.makeBasis(x, y, z));
+  const cosC = THREE.MathUtils.clamp((a * a + b * b - d * d) / (2 * a * b), -1, 1);
+  el.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -(Math.PI - Math.acos(cosC)));
+}
+const world = (o, p = new THREE.Vector3()) => o.getWorldPosition(p);
+
+let POLO = [0.1, 0.2, -0.6, 0.3, 0.9, 0, 0];
+const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/* Exercise 1: kettlebell halo. Standing, soft knees, the bell circles the head; direction changes every rep. */
+const HALO = {
+  nombre: "Halo con kettlebell", dosis: "3 × 8 por sentido · 8 kg · tronco quieto, costillas abajo; el codo pasa cerca de la cara",
+  musculos: [["Hombros", "hombros", "prim"], ["Trapecio", "trapecio", "sec"], ["Tríceps", "triceps", "sec"], ["Core", "core", "sec"]],
+  target: [0, 0.98, 0], dist: 3.7,
+  vistas: [["Frente", 0, 6], ["¾", -38, 10], ["Lado", -90, 4], ["Espalda", 180, 6], ["Arriba", -25, 58]],
+  T: 3.6,
+  pose(t) {
+    const rep = Math.floor(t / this.T), u = (t % this.T) / this.T;
+    const sentido = rep % 2 ? -1 : 1;
+    // Short pause in front, steady speed round the back.
+    const ph = u < 0.12 ? 0 : ease((u - 0.12) / 0.88) * 0.25 + ((u - 0.12) / 0.88) * 0.75;
+    const phi = sentido * ph * Math.PI * 2;
+    const sn = Math.sin(phi), cs = Math.cos(phi), br = Math.sin(t * 2 * Math.PI / 4.2);
+    fig.position.set(0, 0, 0); setRot(J.root, 0, 0, 0);
+    setRot(J.hipL, -6, -6, 3); setRot(J.hipR, -6, 6, -3);
+    setRot(J.knL, 12); setRot(J.knR, 12); setRot(J.anL, -6, 0, -3); setRot(J.anR, -6, 0, 3);
+    setRot(J.spine, 1 + br * 0.6, -2 * sn, 1.5 * sn);
+    setRot(J.chest, 1 - br * 0.8, -3 * sn, 1.5 * sn);
+    setRot(J.neck, -2, 3 * sn, -1.5 * sn); setRot(J.head, 0, 2 * sn, -1 * sn);
+    J.root.position.set(0, 1.03, 0);
+    fig.updateMatrixWorld(true);
+    const foot = Math.min(world(J.soleL).y, world(J.soleR).y);
+    J.root.position.y -= foot / 0.97;
+    fig.updateMatrixWorld(true);
+    // Path of the grip round the head (figure space, before scale).
+    // The grip travels round the head wide enough to clear it (chest in front, beside the jaw at the sides, behind the back of the head),
+    // so the bell goes round the head, never through it. The handle stays left-right,
+    // so each hand keeps its side and the arms never cross; the bell only tips from bottom-up in front to hanging behind.
+    const up = (1 - cs) / 2;
+    const P = new THREE.Vector3(0.26 * sn, 1.3 + 0.4 * up + 0.16 * sn * sn, 0.06 + (cs > 0 ? 0.25 : 0.32) * cs + 0.06 * sn * sn).multiplyScalar(0.97);
+    const al = Math.PI * up;
+    const b = new THREE.Vector3(0, Math.cos(al), -Math.sin(al));
+    const h = new THREE.Vector3(1, 0, 0);
+    const L = P.clone().addScaledVector(h, 0.085), R = P.clone().addScaledVector(h, -0.085);
+    // Elbows: down and out with the bell in front, forward and up with it behind the head.
+    for (const [n, s, tgt] of [["L", 1, L], ["R", -1, R]]) {
+      const S = world(J["sh" + n]);
+      // o: 1 with the hand on its own side, 0 when it reaches across. Elbows go out round the back of the head
+      // and forward when the arm crosses in front of the forehead, so the forearm never cuts through the head.
+      const o = THREE.MathUtils.clamp((tgt.x * s) / 0.4 + 0.5, 0, 1);
+      brazo(n, tgt, S.add(new THREE.Vector3(s * (POLO[0] + POLO[1] * o), lerp(POLO[2], POLO[3], up), POLO[4] * cs + POLO[5] + POLO[6] * (1 - o) * sn * sn)));
+    }
+    setRot(J.wrL, -35, 0, 0); setRot(J.wrR, -35, 0, 0);
+    // Bottoms-up bell: bell above the grip in front, below it behind the head.
+    const yk = b.clone().negate(), xk = h.clone(), zk = new THREE.Vector3().crossVectors(xk, yk);
+    kb.quaternion.setFromRotationMatrix(m4.makeBasis(xk, yk, zk));
+    kb.position.copy(P).addScaledVector(b, 0.11);
+    kb.visible = true; towel.visible = false; mat.visible = false;
+    const pulso = 0.85 + 0.15 * Math.sin(t * 2 * Math.PI / this.T);
+    luces([["hombrosL", pulso, "prim"], ["hombrosR", pulso, "prim"], ["trapecio", 0.6, "sec"], ["tricepsL", 0.55, "sec"], ["tricepsR", 0.55, "sec"], ["core", 0.2, "sec"]]);
+    return `Rep ${(rep % 8) + 1} · ${sentido > 0 ? "→" : "←"}`;
+  },
+};
+
+/* Exercise 2: hamstrings with a towel. On the back, one leg up with the towel round the sole. 10 s loop: ease in, hold breathing, ease out. */
+const ISQUIO = {
+  nombre: "Isquios con toalla", dosis: "2 × 30 s por lado · tensión, nunca dolor; la rodilla puede ir algo doblada, sin rebotes",
+  musculos: [["Isquios", "isquios", "flex"], ["Gemelos", "gemelos", "flex2"]],
+  target: [0, 0.52, 0.2], dist: 4.4,
+  vistas: [["Lado", -90, 10], ["¾", -48, 24], ["Pies", 0, 22], ["Cabeza", 170, 26], ["Arriba", -90, 70]],
+  pose(t) {
+    const c = t % 10;
+    const p = c < 1 ? 0 : c < 3.5 ? ease((c - 1) / 2.5) : c < 8 ? 1 : 1 - ease((c - 8) / 2);
+    const br = Math.sin(t * 2 * Math.PI / 5); // breathing: a little more range on the out breath
+    const g = p + 0.06 * p * (br * 0.5 + 0.5);
+    fig.position.set(0, 0, 0);
+    J.root.position.set(0, 0.125, 0); setRot(J.root, -90, 0, 0);
+    setRot(J.spine, 0 + br * 0.5); setRot(J.chest, -1 - br * 0.8);
+    setRot(J.neck, -10); setRot(J.head, -6, 0, 0);
+    setRot(J.hipL, 4, 0, 2); setRot(J.knL, 2); setRot(J.anL, 22, 0, -6);
+    setRot(J.hipR, lerp(-48, -82, g), 0, -2); setRot(J.knR, lerp(38, 7, g)); setRot(J.anR, lerp(8, -14, g));
+    fig.updateMatrixWorld(true);
+    const S = world(J.soleR), toe = world(J.toeR);
+    const hold = (n, s) => {
+      const sh = world(J["sh" + n]);
+      const dir = S.clone().add(new THREE.Vector3(s * 0.03, 0, 0)).sub(sh).normalize();
+      const tgt = sh.clone().addScaledVector(dir, 0.47).add(new THREE.Vector3(s * 0.05, 0, 0));
+      brazo(n, tgt, sh.clone().add(new THREE.Vector3(s * 0.6, -0.4, 0.1)));
+      return tgt;
+    };
+    const hl = hold("L", 1), hr = hold("R", -1);
+    setRot(J.wrL, 20, 0, 0); setRot(J.wrR, 20, 0, 0);
+    fig.updateMatrixWorld(true);
+    // Towel: from one hand under the sole (just behind the toes) and back to the other hand.
+    const gl = world(J.wrL).add(new THREE.Vector3(0, 0, 0)), gr = world(J.wrR);
+    const nrm = S.clone().sub(toe).normalize();
+    const under = S.clone().add(toe).multiplyScalar(0.5).addScaledVector(nrm, -0.0);
+    const x = new THREE.Vector3(1, 0, 0);
+    const pts = [gl, gl.clone().lerp(S, 0.5).addScaledVector(x, 0.012), S.clone().addScaledVector(x, 0.05), under.clone().addScaledVector(x, 0.02), under.clone().addScaledVector(x, -0.02), S.clone().addScaledVector(x, -0.05), gr.clone().lerp(S, 0.5).addScaledVector(x, -0.012), gr];
+    towel.geometry.dispose();
+    towel.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, 0.011, 8, false);
+    towel.scale.set(1, 1, 1); towel.visible = true; kb.visible = false; mat.visible = true;
+    luces([["isquiosR", 0.25 + 0.75 * p, "flex"], ["gemelosR", 0.15 + 0.4 * p, "flex2"]]);
+    const s = c < 1 ? "Prepárate" : c < 3.5 ? "Sube despacio" : c < 8 ? `Mantén · ${Math.ceil(8 - c)} s` : "Suelta";
+    return s;
+  },
+};
+
+const COLS = { prim: new THREE.Color(0xff5a4e), sec: new THREE.Color(0xf2b33d), flex: new THREE.Color(0x3fd6cc), flex2: new THREE.Color(0x2a8c86) };
+// Zones to light this frame: [zone, intensity 0–1, colour]. Colours go to the shader in linear space.
+function luces(lista) {
+  fig.updateMatrixWorld(true);
+  for (let i = 0; i < MAXZ; i++) {
+    const z = lista[i];
+    U.uZI.value[i] = z ? z[1] : 0;
+    if (!z) continue;
+    U.uZM.value[i].copy(ZONAS[z[0]].matrixWorld).invert();
+    const c = COLS[z[2]]; U.uZC.value[i].set(c.r, c.g, c.b);
+  }
+}
+
+/* ---------- Camera, views, drag ---------- */
+const EJ = { halo: HALO, isquio: ISQUIO };
+let ej = HALO, az = 0, el = 6, azT = 0, elT = 6, giro = false;
+function vistas() {
+  const box = $("vistas"); box.textContent = "";
+  ej.vistas.forEach(([n, a, e2], i) => {
+    const b = document.createElement("button");
+    b.id = "vista-" + i; b.textContent = n; b.setAttribute("aria-pressed", i === 0);
+    b.onclick = () => { azT = a; elT = e2; setGiro(false); box.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); };
+    box.append(b);
+  });
+  azT = ej.vistas[0][1]; elT = ej.vistas[0][2];
+}
+function chips() {
+  const box = $("chips"); box.textContent = "";
+  const css = { prim: "var(--prim)", sec: "var(--sec)", flex: "var(--flex)", flex2: "var(--flex2)" };
+  for (const [n, , tipo] of ej.musculos) {
+    const c = document.createElement("span"); c.className = "chip";
+    const d = document.createElement("span"); d.className = "dot"; d.style.background = css[tipo];
+    c.append(d, `${n} · ${tipo === "prim" || tipo === "flex" ? "principal" : "secundario"}`);
+    box.append(c);
+  }
+  $("dosis").textContent = ej.dosis;
+}
+function elegir(id) {
+  ej = EJ[id];
+  document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.ej === id));
+  vistas(); chips(); az = azT; el = elT;
+  window.mostrarSVG?.(id === "halo" ? "kb_halo" : "isquio_toalla");
+  try { localStorage.setItem("proto3d.ej", id); } catch { /* sin almacenamiento */ }
+}
+document.querySelectorAll(".seg button").forEach((b) => (b.onclick = () => elegir(b.dataset.ej)));
+
+function setGiro(v) { giro = v; $("b-giro").setAttribute("aria-pressed", v); }
+$("b-giro").onclick = () => setGiro(!giro);
+let drag = null;
+canvas.addEventListener("pointerdown", (ev) => { drag = [ev.clientX, ev.clientY]; canvas.setPointerCapture(ev.pointerId); setGiro(false); });
+canvas.addEventListener("pointermove", (ev) => {
+  if (!drag) return;
+  azT -= (ev.clientX - drag[0]) * 0.4; elT = THREE.MathUtils.clamp(elT + (ev.clientY - drag[1]) * 0.25, -5, 80);
+  drag = [ev.clientX, ev.clientY];
+  $("vistas").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", false));
+});
+const end = () => (drag = null);
+canvas.addEventListener("pointerup", end); canvas.addEventListener("pointercancel", end);
+
+let pausa = reduce, vel = 1, t = reduce ? 5 : 0, last = performance.now();
+$("b-pausa").textContent = pausa ? "Reproducir" : "Pausa";
+$("b-pausa").onclick = () => { pausa = !pausa; $("b-pausa").textContent = pausa ? "Reproducir" : "Pausa"; };
+$("b-vel").onclick = () => { vel = vel === 1 ? 0.5 : 1; $("b-vel").textContent = vel === 1 ? "1×" : "0,5×"; };
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage); resize();
+
+let fase = "";
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!pausa) t += dt * vel;
+  if (giro) azT += dt * 18;
+  let da = ((azT - az + 540) % 360) - 180; az += da * Math.min(1, dt * 5); el += (elT - el) * Math.min(1, dt * 5);
+  for (const k of RESET) J[k].quaternion.identity();
+  const f = ej.pose(t);
+  if (f !== fase) { fase = f; $("fase").textContent = f; }
+  const [tx, ty, tz] = ej.target, d = ej.dist, A = az * D2R, E = el * D2R;
+  cam.position.set(tx + d * Math.sin(A) * Math.cos(E), ty + d * Math.sin(E), tz + d * Math.cos(A) * Math.cos(E));
+  cam.lookAt(tx, ty, tz);
+  renderer.render(scene, cam);
+  requestAnimationFrame(frame);
+}
+let inicio = "halo";
+try { inicio = localStorage.getItem("proto3d.ej") === "isquio" ? "isquio" : "halo"; } catch { /* sin almacenamiento */ }
+elegir(inicio);
+requestAnimationFrame(frame);
+window.__proto = { elegir, setT: (x) => (t = x), setVista: (a, e2) => { azT = az = a; elT = el = e2; }, pausar: () => (pausa = true),
+  choque: () => { const out = []; for (let x = 0; x < 3.6; x += 0.05) { ej.pose(x); fig.updateMatrixWorld(true); kb.updateMatrixWorld(true);
+    const hc = J.head.localToWorld(new THREE.Vector3(0, 0.11, 0.008)), jc = J.head.localToWorld(new THREE.Vector3(0, 0.05, 0.032)), nc = J.neck.localToWorld(new THREE.Vector3(0, 0.05, 0));
+    out.push([+x.toFixed(2), ...[hc, jc, nc].map((c) => +(kb.position.distanceTo(c)).toFixed(3)), kb.position.toArray().map((v) => +v.toFixed(2)), hc.toArray().map((v) => +v.toFixed(2))]); } return out; },
+  polo: (v) => (POLO = v),
+  roce: () => { let worst = [9]; const hb = (pt) => { const l = J.head.worldToLocal(pt.clone()).sub(new THREE.Vector3(0, 0.11, 0.008)); return Math.hypot(l.x / 0.08, l.y / 0.112, l.z / 0.098); };
+    for (let x = 0; x < 3.6; x += 0.03) { ej.pose(x); fig.updateMatrixWorld(true);
+      const pts = [];
+      for (const n of ["L", "R"]) { const e1 = world(J["el" + n]), w1 = world(J["wr" + n]); for (let k = 0; k <= 10; k++) pts.push(["brazo" + n, e1.clone().lerp(w1, k / 10)]); pts.push(["mano" + n, J["wr" + n].localToWorld(new THREE.Vector3(0, -0.08, 0))]); }
+      pts.push(["pesa", kb.position.clone()]);
+      for (const [k, pt] of pts) { const d = hb(pt) - (k === "pesa" ? 1 : 0); if (d < worst[0]) worst = [+d.toFixed(2), k, +x.toFixed(2)]; } }
+    return worst; },
+  codos: (x) => { ej.pose(x); fig.updateMatrixWorld(true); return ["elL", "elR", "wrL", "wrR"].map((k) => world(J[k]).toArray()); } };
+</script>

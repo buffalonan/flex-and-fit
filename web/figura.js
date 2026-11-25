@@ -37,7 +37,7 @@ const P = {
   sentadilla: { hl: ["glu", "sh1"], marco: "W1", a: { x: 96, tr: 10, l1: [150, 192], l2: [152, 194], f1: 90, f2: 90, a1: [85, 85], a2: [87, 87] }, b: { tr: 30, l1: [78, 196], l2: [80, 198], a1: [78, 82], a2: [80, 84] } },
   nov90: { vista: "arriba", modo: "reps", T: 7, hl: ["glu"], a: { x: 100, y: 74, tr: 0, l1: [90, 180], l2: [270, 0], a1: [205, 190], a2: [155, 170] }, b: { l1: [90, 0], l2: [270, 180] } },
   paloma: { hl: ["glu"], cojin: "h", a: { x: 92, tr: 6, l1: [98, 250], l2: [263, 270], f1: 200, f2: 270, a1: [172, 178], a2: [176, 182] }, b: { tr: 62, hd: 90, a1: [110, 100], a2: [112, 102] } },
-  pinza_pie: { hl: ["th1", "lum"], a: { x: 100, tr: 4, l1: [178, 184], l2: [180, 186], f1: 90, f2: 90, a1: [182, 178], a2: [184, 180] }, b: { tr: 160, hd: 178, l1: [172, 188], l2: [174, 190], a1: [175, 180], a2: [177, 182] } },
+  pinza_pie: { hl: ["th1", "lum"], a: { x: 100, tr: 4, l1: [178, 184], l2: [180, 186], f1: 90, f2: 90, a1: [182, 178], a2: [184, 180] }, b: { tr: 146, hd: 166, l1: [172, 188], l2: [174, 190], a1: [168, 176], a2: [170, 178] } },
   estocada_rot: { modo: "reps", T: 6, hl: ["th2", "dor"], a: { x: 92, tr: 55, l1: [88, 180], l2: [245, 252], f1: 90, f2: 0, a1: [165, 180], a2: [160, 178] }, b: { a1: [0, 0], hd: 20 } },
   pinza_sentado: { hl: ["th1"], a: { x: 70, tr: 8, l1: [90, 90], l2: [91, 91], f1: 0, f2: 0, a1: [150, 140], a2: [152, 142] }, b: { tr: 66, hd: 100, a1: [98, 94], a2: [100, 96] } },
   aductor: { vista: "frente", modo: "reps", T: 6, hl: ["th1"], a: { x: 92, tr: 0, l2: [180, 180], ls2: 0.25, l1: [128, 128], a1: [200, 150], a2: [160, 210] }, b: { x: 86, l1: [113, 113] } },
@@ -110,7 +110,7 @@ Object.assign(G, {
   prensa: { hl: ["th1", "glu"], peso: [["placa", "A1"]], fijo: ["H", 76, 112], obj: [["l", 82, 120, 48, 90, 7], ["l", 96, 124, 184, 36, 3], ["r", 72, 118, 8, 24, 1]],
     a: { tr: 312, hd: 330, p1: [24, -16], p2: [24, -15], m1: [10, 26], m2: [10, 26], f1: 45, f2: 45 }, b: { p1: [44, -34], p2: [44, -33] } },
   curl_femoral: { hl: ["th1"], peso: [["rodillo", "A1"]], fijo: ["H", 96, 106], obj: BANCO,
-    a: { tr: 90, hd: 100, l1: [270, 270], l2: [272, 272], f1: 180, f2: 180, a1: [180, 120], a2: [182, 122] }, b: { l1: [270, 20], l2: [272, 22] } },
+    a: { tr: 90, hd: 100, l1: [270, 270], l2: [272, 272], f1: 180, f2: 180, a1: [180, 120], a2: [182, 122] }, b: { l1: [270, 380], l2: [272, 382] } }, // 380 = 20° past vertical: the shin curls up, not down through the floor
   talones: { hl: ["sh1"], fijo: ["T1", 112, 140], T: 2,
     a: { tr: 0, hd: 0, l1: [180, 180], l2: [182, 182], f1: 90, f2: 90, a1: [182, 180], a2: [184, 182] }, b: { f1: 150, f2: 150 } },
 
@@ -319,10 +319,11 @@ function split(H, C, S) {
 }
 const seg = (el, p, q) => { el.setAttribute("x1", p[0].toFixed(1)); el.setAttribute("y1", p[1].toFixed(1)); el.setAttribute("x2", q[0].toFixed(1)); el.setAttribute("y2", q[1].toFixed(1)); };
 
-/** Draws the figure in svg at progress p (0 = start pose, 1 = stretch), with t seconds for breathing. */
-export function dibujar(svg, p, t = 0) {
-  const d = def(svg.dataset.fig);
-  if (!d) return;
+/** The pose of figure id at progress p and time t: its definition, joint positions (2D, SVG units) and weights.
+ * The SVG draws it; figura3d.js turns it into the 3D mannequin's pose. */
+export function estado(id, p, t = 0) {
+  const d = def(id);
+  if (!d) return null;
   let pose, y, brillo = p;
   if (d._fr) {
     // Keyframes: p runs once round the loop.
@@ -336,6 +337,14 @@ export function dibujar(svg, p, t = 0) {
   }
   if (!d.fuerza) pose.tr += Math.sin((t * 2 * Math.PI) / 5) * 1.2 * p;
   const j = colocar(d, pose, y);
+  return { d, j, pose, brillo, pesos: pesos(d, j), FLOOR };
+}
+
+/** Draws the figure in svg at progress p (0 = start pose, 1 = stretch), with t seconds for breathing. */
+export function dibujar(svg, p, t = 0) {
+  const e = estado(svg.dataset.fig, p, t);
+  if (!e) return;
+  const { d, j, brillo } = e;
   if (!svg._els) {
     svg._els = {};
     svg.querySelectorAll("[data-k],[data-h]").forEach((e) => { svg._els[e.dataset.k || `h-${e.dataset.h}`] = e; });
