@@ -60,6 +60,8 @@ test("every exercise, plan and workout has its translation", async ({ page }) =>
       for (const p of [...d.PH, d.SUAVE]) [p.name, p.goal, ...(p.adv || []), ...p.items.map((i) => i[2]).filter(Boolean)].forEach((s) => t(s));
       for (const w of d.GYM) [w.n, w.sub, w.maquinas, ...w.notas, ...w.ej.flatMap((e) => [e.n, ...(e.c || [])])].forEach((s) => t(s));
       d.TESTS.forEach(([, l]) => t(l));
+      d.CARDIO.forEach((c) => t(c.n));
+      Object.values(d.CAMPOS_CARDIO).forEach((c) => t(c.l));
       Object.values(NOMBRES).forEach((s) => t(s));
       return [...faltan];
     });
@@ -117,6 +119,14 @@ for (const idioma of ["en", "de", "ca"]) {
     await expect(page.locator("#registro")).toBeVisible();
     await page.locator("#regFilas [data-ck]").first().click();
     await revisar("logger");
+    // Cardio on the treadmill, with all its fields.
+    await page.locator("#regCardio [data-cardio-add]").click();
+    await page.locator('#cardioTipos [data-tipo="cinta"]').click();
+    await page.locator("#cardioGuardar").click();
+    await revisar("cardio form, with its error");
+    for (const [k, v] of [["min", "12"], ["km", "1.2"], ["kmh", "6"], ["incl", "5"], ["kcal", "90"]]) await page.fill(`#cardioCampos input[data-campo="${k}"]`, v);
+    await page.locator("#cardioGuardar").click();
+    await revisar("logger with cardio");
     for (let i = 0; i < 5; i++) await page.locator("#regSig").click();
     await revisar("logger, circuit");
     await page.locator("#regSig").click();

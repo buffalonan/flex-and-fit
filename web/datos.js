@@ -285,3 +285,24 @@ export function resumenGym(w) {
   }
   return { series, p, s };
 }
+
+/* ---------- Cardio ---------- */
+// Cardio machines, logged on the fly before or after the weights of a gym session. Each one asks only for what its
+// display shows; everything but the minutes is optional. Kept apart from the sets: never in the volume, the records,
+// the progression or the sets per muscle. Saved on the session as `cardio: [{ tipo, momento, min, km, kmh, incl,
+// nivel, kcal }]` (momento "antes" | "despues"). A new machine only needs a line here and its name in the dictionaries.
+export const CAMPOS_CARDIO = {
+  km: { l: "Distancia", u: "km", step: 0.01, max: 200 },
+  kmh: { l: "Velocidad", u: "km/h", step: 0.1, max: 40 },
+  incl: { l: "Inclinación", u: "%", step: 0.5, max: 40 },
+  nivel: { l: "Nivel", u: "", step: 1, max: 40 },
+  kcal: { l: "Calorías", u: "kcal", step: 1, max: 5000 },
+};
+export const CARDIO = [
+  { id: "eliptica", n: "Elíptica", campos: ["km", "nivel", "kcal"] },
+  { id: "cinta", n: "Cinta", campos: ["km", "kmh", "incl", "kcal"] },
+  { id: "bici", n: "Bici estática", campos: ["km", "nivel", "kcal"] },
+  { id: "remo", n: "Remo", campos: ["km", "nivel", "kcal"] },
+  { id: "escaladora", n: "Escaladora", campos: ["nivel", "kcal"] },
+  { id: "otro", n: "Otro cardio", campos: ["km", "kcal"] },
+];
