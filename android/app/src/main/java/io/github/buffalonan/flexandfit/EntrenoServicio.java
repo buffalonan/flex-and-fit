@@ -26,12 +26,13 @@ public class EntrenoServicio extends Service {
             getSystemService(NotificationManager.class).createNotificationChannel(c);
         }
         String titulo = intent != null && intent.getStringExtra("titulo") != null ? intent.getStringExtra("titulo") : "Entreno";
+        String cabecera = intent != null && intent.getStringExtra("cabecera") != null ? intent.getStringExtra("cabecera") : "Entreno en curso";
         long inicio = intent != null ? intent.getLongExtra("inicio", System.currentTimeMillis()) : System.currentTimeMillis();
         Intent abrir = new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pi = PendingIntent.getActivity(this, 0, abrir, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification n = new NotificationCompat.Builder(this, CANAL)
                 .setSmallIcon(R.drawable.ic_stat_entreno)
-                .setContentTitle("Entreno en curso")
+                .setContentTitle(cabecera)
                 .setContentText(titulo)
                 .setWhen(inicio)
                 .setUsesChronometer(true)

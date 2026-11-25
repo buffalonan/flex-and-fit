@@ -2,6 +2,7 @@
 // worked muscles coloured. Strength: primary red, secondary amber. Flexibility: teal, brighter with more minutes.
 // Shapes are the left half of each figure, mirrored for the right half.
 import { html } from "./html.js";
+import { t } from "./i18n.js";
 
 const F = {
   head: "E50,15,8.5,10.5", cuello: "M45 24 L55 24 L56 32 L44 32Z",
@@ -70,7 +71,7 @@ function figura(map, d, modo, dx) {
  * datos: for "f" { p: {musculo: series}, s: {...} }; for "x" { musculo: minutos }.
  * etiquetas: [{ m, t }] labels with dotted leaders, at most three per side.
  */
-export function maniqui(datos, modo, { etiquetas = [], titulo = "Maniquí con los músculos trabajados" } = {}) {
+export function maniqui(datos, modo, { etiquetas = [], titulo = t("Maniquí con los músculos trabajados") } = {}) {
   const con = etiquetas.length > 0;
   const lados = { F: [], B: [] };
   for (const e of etiquetas) {
