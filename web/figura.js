@@ -6,7 +6,8 @@
 // vista "frente" or "arriba" (front or top view: limbs split left and right of the trunk).
 // Strength figures (GYM below) add: m1/m2 a hand's target [dx, dy] from its shoulder and p1/p2 an ankle's target from its
 // hip, solved with two-bone IK (c1/c2, k1/k2 flip the elbow or knee); fijo [joint, x, y] pins a joint (feet on the floor,
-// hands on a bar, hips on a bench); peso the weight held; obj fixed furniture; cable a pulley anchor; fr keyframes
+// hands on a bar, hips on a bench); peso the weight held; obj fixed furniture; cable a pulley anchor [x, y, to] (to: "manos" the point between
+// the hands, "cuerda" a rope whose ends are in each hand, else the near hand); fr keyframes
 // for movements that aren't a simple back and forth (modo "ciclo").
 import { html } from "./html.js";
 
@@ -98,7 +99,7 @@ Object.assign(G, {
     a: { x: 100, tr: 0, l1: [175, 180], l2: [185, 180], a1: [168, 172], a2: [192, 188] }, b: { a1: [90, 98], a2: [270, 262] } },
   fondos: { hl: ["ua1", "dor"], fijo: ["W1", 100, 72], obj: [["l", 70, 72, 140, 72, 4], ["r", 132, 72, 5, 70, 1], ["r", 72, 72, 5, 70, 1]],
     a: { tr: 10, hd: 12, l1: [172, 268], l2: [174, 270], f1: 180, f2: 180, m1: [-3, 34], m2: [-2, 34] }, b: { tr: 24, hd: 30, m1: [8, 20], m2: [9, 20] } },
-  triceps_polea: { hl: ["ua1"], fijo: ["A1", 90, 138], cable: [146, 14, "manos"], obj: TORRE(150),
+  triceps_polea: { hl: ["ua1"], fijo: ["A1", 90, 138], cable: [146, 14, "cuerda"], obj: TORRE(150),
     a: { tr: 10, hd: 14, ...DE_PIE, a1: [176, 60], a2: [178, 62] }, b: { a1: [176, 172], a2: [178, 174] } },
 
   sentadilla_barra: { hl: ["th1", "glu"], peso: [["barra", "S"]], fijo: PIES, T: 4,
@@ -121,7 +122,7 @@ Object.assign(G, {
   remo_barra: { hl: ["dor"], peso: [["barra", "manos"]], fijo: PIES,
     a: { tr: 62, hd: 72, p1: [12, 52], p2: [14, 52], f1: 90, f2: 90, m1: [0, 34], m2: [1, 34] }, b: { m1: [-6, 18], m2: [-5, 18] } },
   remo_manc: { ...kbRemo, peso: [["manc", "W1"]] },
-  face_pull: { hl: ["sho1", "dor"], fijo: ["A1", 84, 138], cable: [146, 34], obj: TORRE(150),
+  face_pull: { hl: ["sho1", "dor"], fijo: ["A1", 84, 138], cable: [146, 34, "cuerda"], obj: TORRE(150),
     a: { tr: -4, hd: 0, ...DE_PIE, m1: [34, 6], m2: [33, 7] }, b: { m1: [12, -4], m2: [12, -3], c1: -1, c2: -1 } },
   curl: { hl: ["ua1"], peso: [["manc", "W1"]], fijo: PIES, a: { tr: 0, hd: 0, ...DE_PIE, a1: [176, 178], a2: [182, 182] }, b: { a1: [172, 30] } },
 
@@ -285,7 +286,8 @@ export function figura(id, { clase = "" } = {}) {
     else if (o[0] === "l") props.push(html`<line x1="${o[1]}" y1="${o[2]}" x2="${o[3]}" y2="${o[4]}" stroke="var(--prop)" stroke-width="${o[5] ?? 3}" stroke-linecap="round"/>`);
     else props.push(html`<circle cx="${o[1]}" cy="${o[2]}" r="${o[3]}" fill="var(--prop)"/>`);
   }
-  const cable = d.cable ? html`<line data-k="cable" stroke="var(--app-muted)" stroke-width="1.2"/><circle cx="${d.cable[0]}" cy="${d.cable[1]}" r="3.5" fill="none" stroke="var(--app-muted)" stroke-width="1.5"/>` : "";
+  const cuerda = d.cable?.[2] === "cuerda" ? html`<line data-k="cuerda1" stroke="var(--prop)" stroke-width="2" stroke-linecap="round"/><line data-k="cuerda2" stroke="var(--prop)" stroke-width="2" stroke-linecap="round"/>` : "";
+  const cable = d.cable ? html`${cuerda}<line data-k="cable" stroke="var(--app-muted)" stroke-width="1.2"/><circle cx="${d.cable[0]}" cy="${d.cable[1]}" r="3.5" fill="none" stroke="var(--app-muted)" stroke-width="1.5"/>` : "";
   // A barbell's plate goes behind the body, so the lifter stays visible; other weights are held in front.
   const pesoEls = (d.peso || []).map(([tipo], i) => [tipo, html`<g data-k="${`peso${i}`}" class="peso">${tipo === "kb"
     ? html`<circle cy="-6.5" r="3.6" fill="none" stroke="var(--peso)" stroke-width="2"/><circle r="6.5" fill="var(--peso)"/>`
@@ -316,6 +318,11 @@ export function figura(id, { clase = "" } = {}) {
 function split(H, C, S) {
   const a = [(H[0] + C[0]) / 2, (H[1] + C[1]) / 2], b = [(C[0] + S[0]) / 2, (C[1] + S[1]) / 2], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   return [`M${H[0]} ${H[1]}Q${a[0]} ${a[1]} ${m[0]} ${m[1]}`, `M${m[0]} ${m[1]}Q${b[0]} ${b[1]} ${S[0]} ${S[1]}`];
+}
+/** Where a rope held in both hands meets the cable: 8 units from between the hands towards the pulley. */
+export function nudo(mid, polea, len = 8) {
+  const dx = polea[0] - mid[0], dy = polea[1] - mid[1], d = Math.hypot(dx, dy), f = d < 1e-6 ? 0 : Math.min(len, d / 2) / d;
+  return [mid[0] + dx * f, mid[1] + dy * f];
 }
 const seg = (el, p, q) => { el.setAttribute("x1", p[0].toFixed(1)); el.setAttribute("y1", p[1].toFixed(1)); el.setAttribute("x2", q[0].toFixed(1)); el.setAttribute("y2", q[1].toFixed(1)); };
 
@@ -358,7 +365,13 @@ export function dibujar(svg, p, t = 0) {
   for (const [k, [a, b]] of Object.entries(L2)) seg(E[k], a, b); // eslint-disable-line security/detect-object-injection
   if (E.towel) seg(E.towel, j.W1, d.toalla ? j.T1 : j.W2);
   for (const [i, w] of pesos(d, j).entries()) E[`peso${i}`].setAttribute("transform", `translate(${w.c[0].toFixed(1)} ${w.c[1].toFixed(1)}) rotate(${w.rot.toFixed(0)})`);
-  if (E.cable) seg(E.cable, d.cable[2] === "manos" ? [(j.W1[0] + j.W2[0]) / 2, (j.W1[1] + j.W2[1]) / 2] : j.W1, d.cable);
+  if (E.cable) {
+    const mid = [(j.W1[0] + j.W2[0]) / 2, (j.W1[1] + j.W2[1]) / 2];
+    if (E.cuerda1) {
+      const k = nudo(mid, d.cable);
+      seg(E.cuerda1, j.W1, k); seg(E.cuerda2, j.W2, k); seg(E.cable, k, d.cable);
+    } else seg(E.cable, d.cable[2] === "manos" ? mid : j.W1, d.cable);
+  }
   const glow = (0.3 + 0.7 * brillo).toFixed(2);
   for (const k of d.hl) {
     const e = E[`h-${k}`];

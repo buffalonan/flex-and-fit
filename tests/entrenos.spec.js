@@ -466,7 +466,7 @@ test("the stretching player shows the 3D figure in its ring, turned by dragging"
   await expect(page.locator("#repFig .f3d-vistas")).toHaveCount(0);
 });
 
-test("every 3D figure keeps its joints, stays on the floor and holds what the 2D figure holds", async ({ page }) => {
+test("every 3D figure keeps its joints, stays on the floor, holds what the 2D figure holds and holds the cable with both hands", async ({ page }) => {
   await abrirApp(page);
   const problemas = await page.evaluate(async () => {
     const { revisar } = await import("./figura3d.js");
@@ -477,4 +477,32 @@ test("every 3D figure keeps its joints, stays on the floor and holds what the 2D
   });
   expect(problemas.n).toBeGreaterThan(60);
   expect(problemas.r).toEqual({});
+});
+
+test("a cable held with a rope reaches both hands in the 2D figure (face pull, triceps)", async ({ page }) => {
+  await abrirApp(page);
+  const r = await page.evaluate(async () => {
+    const { figura, dibujar, estado } = await import("./figura.js");
+    const out = {};
+    for (const id of ["face_pull", "triceps_polea"]) {
+      const t = document.createElement("div");
+      t.innerHTML = String(figura(id));
+      const svg = t.firstElementChild;
+      document.body.append(svg);
+      const lejos = [];
+      for (const p of [0, 0.5, 1]) {
+        dibujar(svg, p);
+        const { j } = estado(id, p);
+        const fin = (k, n) => [Number(svg.querySelector(`[data-k="${k}"]`).getAttribute(`x${n}`)), Number(svg.querySelector(`[data-k="${k}"]`).getAttribute(`y${n}`))];
+        const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+        // Each end of the rope is in a hand, and the cable starts where the rope's two halves meet.
+        lejos.push(d(fin("cuerda1", 1), j.W1), d(fin("cuerda2", 1), j.W2), d(fin("cuerda1", 2), fin("cable", 1)), d(fin("cuerda2", 2), fin("cable", 1)));
+      }
+      svg.remove();
+      out[id] = Math.max(...lejos);
+    }
+    return out;
+  });
+  expect(r.face_pull).toBeLessThan(0.2);
+  expect(r.triceps_polea).toBeLessThan(0.2);
 });
