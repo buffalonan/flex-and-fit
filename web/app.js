@@ -1443,7 +1443,9 @@ setInterval(() => leerReloj(), 2 * 60 * 1000);
 
 /* ---------- Actualizaciones (GitHub releases) ---------- */
 // Only in the Android app: on start and on resume (at most every 6 hours, or from Perfil) it reads the repo's releases;
-// when one is newer than the installed app it offers it, downloads the APK and opens Android's installer.
+// when one is newer than the installed app it offers it and opens the APK's link in the browser, which downloads it
+// and hands it to Android's installer. The app itself never downloads or installs APKs: an app that does
+// (REQUEST_INSTALL_PACKAGES) is what Google Play Protect blocked as harmful.
 const actualizador = native && window.Capacitor.isPluginAvailable?.("Actualizar") ? window.Capacitor.registerPlugin("Actualizar") : null;
 // { comprobada (ms), release (the newer one found then), ignorada (versionCode the user said "Ahora no" to) }
 const ACT = "flexfit.actualizacion";
@@ -1454,7 +1456,6 @@ let instalada = null; // { codigo, nombre }
 let nueva = null; // the newest release, when newer than the installed app
 let actEstado = { texto: "", error: false };
 let actOcupado = false;
-let esperandoPermiso = false;
 async function versionInstalada() {
   if (instalada) return instalada;
   try { instalada = await actualizador.version(); } catch (e) { /* older app */ }
@@ -1485,7 +1486,7 @@ async function buscarActualizacion({ forzar = false } = {}) {
   if (nueva && !forzar && !yo.depuracion && act.ignorada !== nueva.codigo && !sesion && $("continuarPanel").hidden) {
     const v = { yo: yo.nombre || yo.codigo, nueva: nueva.version, fecha: nueva.fecha ? new Date(nueva.fecha).toLocaleDateString(locale, { day: "numeric", month: "long" }) : "" };
     $("actTexto").textContent = `${v.fecha ? t("Tienes la {yo} y en GitHub está la {nueva}, del {fecha}.", v) : t("Tienes la {yo} y en GitHub está la {nueva}.", v)} `
-      + t("Se descarga, Android te pide confirmar la instalación y la app se abre de nuevo con tus datos.");
+      + t("Chrome la descarga; abre el archivo y confirma la instalación. Se instala encima de esta y conserva tus datos.");
     $("actPanel").hidden = false;
   }
 }
@@ -1501,49 +1502,20 @@ function renderActualizar() {
   $("actInstalar").disabled = actOcupado;
   $("actBuscar").disabled = actOcupado;
 }
-// The plugin's errors, by code (its own messages are in Spanish only).
-const ERRORES_ACT = {
-  url: "Solo descargo las versiones publicadas en GitHub.",
-  apk: "El archivo descargado no es una APK válida de Flex & Fit.",
-  version: "Ya tienes esta versión o una más nueva.",
-  firma: "La versión nueva está firmada con otra clave: Android no la instalaría encima. Desinstala la app y descárgala de GitHub.",
-  red: "No se pudo descargar. Comprueba la conexión y vuelve a intentarlo.",
-  "sin-descarga": "Primero hay que descargar la versión nueva.",
-  instalador: "No se pudo abrir el instalador.",
-};
-const errorActualizar = (e, otro) => t(Object.hasOwn(ERRORES_ACT, e?.code) ? ERRORES_ACT[e.code] : otro);
-async function abrirInstalador() {
-  const r = await actualizador.instalar();
-  esperandoPermiso = r?.estado === "permiso";
-  actEstado = esperandoPermiso
-    ? { texto: t("Activa «Permitir de esta fuente» para Flex & Fit y vuelve a la app: el instalador se abrirá solo."), error: false }
-    : { texto: t("Confirma la instalación en la ventana de Android."), error: false };
-}
 async function instalarActualizacion() {
   if (!nueva || actOcupado) return;
   $("actPanel").hidden = true;
   show("perfil");
   $("actCard").scrollIntoView({ block: "center" });
   actOcupado = true;
-  const barra = $("actProgreso");
-  barra.hidden = false;
-  barra.removeAttribute("value");
-  actEstado = { texto: t("Descargando la {v}…", { v: nueva.version }), error: false };
   renderActualizar();
-  const oyente = await actualizador.addListener?.("progreso", ({ bytes, total }) => {
-    const tam = total > 0 ? total : nueva?.bytes;
-    if (tam > 0) { barra.value = Math.min(1, bytes / tam); actEstado.texto = `${t("Descargando la {v}…", { v: nueva.version })} ${Math.round((100 * bytes) / tam)} %`; renderActualizar(); }
-  });
   try {
-    await actualizador.descargar({ url: nueva.url });
-    barra.value = 1;
-    await abrirInstalador();
+    await actualizador.abrir({ url: nueva.url });
+    actEstado = { texto: t("Chrome está descargando la {v}. Cuando acabe, toca el aviso de descarga y luego Instalar.", { v: nueva.version }), error: false };
   } catch (e) {
-    actEstado = { texto: errorActualizar(e, "No se pudo descargar la versión nueva."), error: true };
+    actEstado = { texto: t(e?.code === "url" ? "Solo abro las versiones publicadas en GitHub." : "No se pudo abrir el navegador."), error: true };
   } finally {
-    oyente?.remove?.();
     actOcupado = false;
-    barra.hidden = true;
     renderActualizar();
   }
 }
@@ -1551,19 +1523,7 @@ $("actBuscar").addEventListener("click", () => buscarActualizacion({ forzar: tru
 $("actInstalar").addEventListener("click", instalarActualizacion);
 $("actSi").addEventListener("click", instalarActualizacion);
 $("actNo").addEventListener("click", () => { $("actPanel").hidden = true; if (nueva) { act.ignorada = nueva.codigo; saveAct(); } });
-capApp?.addListener("resume", async () => {
-  // Back from "Instalar apps desconocidas": open the installer if it's allowed now.
-  if (esperandoPermiso) {
-    esperandoPermiso = false;
-    try {
-      if ((await actualizador.permiso()).puede) await abrirInstalador();
-      else actEstado = { texto: t("Sin permiso para instalar: pulsa «Descargar e instalar» cuando quieras volver a intentarlo."), error: true };
-    } catch (e) { actEstado = { texto: errorActualizar(e, "No se pudo abrir el instalador."), error: true }; }
-    renderActualizar();
-    return;
-  }
-  buscarActualizacion();
-});
+capApp?.addListener("resume", () => buscarActualizacion());
 
 /* ---------- Sync ---------- */
 const ERRORES = { "sin-conexion": "No encuentro el Mac. Se sincronizará cuando esté encendido y a tu alcance.", clave: "La clave no coincide con la del Mac.", "sin-servidor": "Sin servidor: los datos se quedan solo en este dispositivo." };
