@@ -685,4 +685,16 @@ export default {
   "de Health Connect": "aus Health Connect",
   "Sin peso todavía.": "Noch kein Gewicht.",
   "Escribe tu peso en kg, entre 20 y 400.": "Gib dein Gewicht in kg ein, zwischen 20 und 400.",
+  /* ---------- Editing a session ---------- */
+  "✎ Editar la sesión": "✎ Einheit bearbeiten",
+  "Editar la sesión": "Einheit bearbeiten",
+  "Añadir un ejercicio": "Übung hinzufügen",
+  "CANCELAR": "ABBRECHEN",
+  "GUARDAR": "SPEICHERN",
+  "Ejercicio {i}": "Übung {i}",
+  "Quitar {x}": "{x} entfernen",
+  "Quitar": "Entfernen",
+  "Quitar la serie {n}": "Satz {n} entfernen",
+  "+ Añadir una serie": "+ Satz hinzufügen",
+  "Elige un ejercicio…": "Übung wählen…",
 };

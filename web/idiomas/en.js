@@ -685,4 +685,16 @@ export default {
   "de Health Connect": "from Health Connect",
   "Sin peso todavía.": "No weight yet.",
   "Escribe tu peso en kg, entre 20 y 400.": "Type your weight in kg, between 20 and 400.",
+  /* ---------- Editing a session ---------- */
+  "✎ Editar la sesión": "✎ Edit session",
+  "Editar la sesión": "Edit session",
+  "Añadir un ejercicio": "Add an exercise",
+  "CANCELAR": "CANCEL",
+  "GUARDAR": "SAVE",
+  "Ejercicio {i}": "Exercise {i}",
+  "Quitar {x}": "Remove {x}",
+  "Quitar": "Remove",
+  "Quitar la serie {n}": "Remove set {n}",
+  "+ Añadir una serie": "+ Add a set",
+  "Elige un ejercicio…": "Pick an exercise…",
 };

@@ -685,4 +685,16 @@ export default {
   "de Health Connect": "de Health Connect",
   "Sin peso todavía.": "Encara no hi ha pes.",
   "Escribe tu peso en kg, entre 20 y 400.": "Escriu el teu pes en kg, entre 20 i 400.",
+  /* ---------- Editing a session ---------- */
+  "✎ Editar la sesión": "✎ Editar la sessió",
+  "Editar la sesión": "Editar la sessió",
+  "Añadir un ejercicio": "Afegir un exercici",
+  "CANCELAR": "CANCEL·LAR",
+  "GUARDAR": "DESAR",
+  "Ejercicio {i}": "Exercici {i}",
+  "Quitar {x}": "Treure {x}",
+  "Quitar": "Treure",
+  "Quitar la serie {n}": "Treure la sèrie {n}",
+  "+ Añadir una serie": "+ Afegir una sèrie",
+  "Elige un ejercicio…": "Tria un exercici…",
 };

@@ -250,3 +250,15 @@ body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; 
 .esf { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .esf button { min-height: 48px; border-radius: 12px; border: 1px solid var(--app-line); background: var(--card2); color: var(--fg); font: 600 1.25rem var(--display); }
 .esf button[aria-pressed="true"] { background: var(--prim); border-color: var(--prim); color: #fff; }
+
+/* Editing a session of the history (#editar) */
+.ed-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ed-ej { gap: 8px; }
+.ed-cab { display: flex; gap: 8px; align-items: center; }
+.ed-cab select { flex: 1; min-width: 0; min-height: 44px; font-weight: 600; }
+.ed-cab .del { background: transparent; color: var(--app-muted); border: 1px solid var(--app-line); padding: 8px 12px; min-height: 44px; flex: none; }
+.ed-ej .sets .ck.quita, .ed-ej .sets tr.done .ck.quita { width: 44px; background: transparent; color: var(--app-muted); }
+.ed-ej .btn.ghost { min-height: 44px; }
+.ed-hecho { align-self: flex-start; min-height: 44px; margin-top: 4px; }
+.ed-hecho[aria-pressed="true"] { color: var(--ok); }
+#sesEditar { align-self: flex-start; }
