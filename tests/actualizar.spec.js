@@ -8,31 +8,26 @@ const release = (n, extra = {}) => ({
   assets: [{ name: "flex-and-fit.apk", size: 4_000_000, browser_download_url: URL_APK(n) }], ...extra,
 });
 
-async function abrirComoAndroid(page, { instalada = 40, releases = [release(42), release(41)], permiso = true, idioma } = {}) {
+async function abrirComoAndroid(page, { instalada = 40, releases = [release(42), release(41)], falla, idioma } = {}) {
   await page.route("https://api.github.com/**", (r) => r.fulfill({ json: releases }));
-  await page.addInitScript(({ instalada, permiso, idioma }) => {
+  await page.addInitScript(({ instalada, falla, idioma }) => {
     if (!localStorage.getItem("flexfit.ajustes")) localStorage.setItem("flexfit.ajustes", JSON.stringify({ servidor: "", ...(idioma ? { idioma } : {}) }));
     const get = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (tipo, ...r) { return /webgl/.test(tipo) ? null : get.call(this, tipo, ...r); };
-    window.__act = { descargas: [], instalar: 0, permiso, oyentes: {}, app: {} };
+    window.__act = { abiertas: [], app: {} };
     const plugins = {
       App: { addListener(n, f) { (window.__act.app[n] ||= []).push(f); }, exitApp() {} },
       Descubrir: { buscar: async () => ({ direcciones: [] }) },
       Actualizar: {
         version: async () => ({ codigo: instalada, nombre: `1.${instalada}`, depuracion: false }),
-        addListener: async (n, f) => { window.__act.oyentes[n] = f; return { remove() { delete window.__act.oyentes[n]; } }; },
-        descargar: async ({ url }) => {
-          window.__act.descargas.push(url);
-          window.__act.oyentes.progreso?.({ bytes: 1_000_000, total: 4_000_000 });
-          await new Promise((r) => (window.__act.terminar = r));
-          return { codigo: 42, nombre: "1.42" };
+        abrir: async ({ url }) => {
+          window.__act.abiertas.push(url);
+          if (falla) throw Object.assign(new Error("x"), { code: falla });
         },
-        permiso: async () => ({ puede: window.__act.permiso }),
-        instalar: async () => { window.__act.instalar++; return { estado: window.__act.permiso ? "abierto" : "permiso" }; },
       },
     };
     window.Capacitor = { isNativePlatform: () => true, isPluginAvailable: (n) => n in plugins, registerPlugin: (n) => plugins[n] };
-  }, { instalada, permiso, idioma });
+  }, { instalada, falla, idioma });
   await page.goto("/");
 }
 
@@ -53,30 +48,23 @@ test("picks the newest app release with its APK, and only this repo's downloads"
   expect(r).toMatchObject({ codigo: 45, version: "1.45", url: URL_APK(45) });
 });
 
-test("offers a newer version on start, downloads it and opens Android's installer", async ({ page }) => {
+test("offers a newer version on start and opens its APK in the browser (the app installs nothing itself)", async ({ page }) => {
   await abrirComoAndroid(page);
   await expect(page.locator("#actPanel")).toBeVisible();
   await expect(page.locator("#actTexto")).toContainText("Tienes la 1.40 y en GitHub está la 1.42");
+  await expect(page.locator("#actTexto")).toContainText("Chrome la descarga");
   await page.click("#actSi");
   await expect(page.locator("#perfil")).toBeVisible();
-  await expect(page.locator("#actEstado")).toContainText("Descargando la 1.42… 25 %");
-  await expect(page.locator("#actProgreso")).toBeVisible();
-  expect(await page.evaluate(() => window.__act.descargas)).toEqual([URL_APK(42)]);
-  await page.evaluate(() => window.__act.terminar());
-  await expect(page.locator("#actEstado")).toContainText("Confirma la instalación");
-  await expect(page.locator("#actProgreso")).toBeHidden();
-  expect(await page.evaluate(() => window.__act.instalar)).toBe(1);
+  await expect(page.locator("#actEstado")).toContainText("Chrome está descargando la 1.42");
+  expect(await page.evaluate(() => window.__act.abiertas)).toEqual([URL_APK(42)]);
 });
 
-test("without permission to install, it opens the settings and installs on return", async ({ page }) => {
-  await abrirComoAndroid(page, { permiso: false });
+test("if the browser can't be opened, it says so and lets you try again", async ({ page }) => {
+  await abrirComoAndroid(page, { falla: "navegador" });
   await page.click("#actSi");
-  await page.evaluate(() => window.__act.terminar());
-  await expect(page.locator("#actEstado")).toContainText("Permitir de esta fuente");
-  // The user allows it in Android's settings and comes back to the app.
-  await page.evaluate(() => { window.__act.permiso = true; window.__act.app.resume.forEach((f) => f()); });
-  await expect(page.locator("#actEstado")).toContainText("Confirma la instalación");
-  expect(await page.evaluate(() => window.__act.instalar)).toBe(2);
+  await expect(page.locator("#actEstado")).toContainText("No se pudo abrir el navegador.");
+  await expect(page.locator("#actEstado")).toHaveClass(/error/);
+  await expect(page.locator("#actInstalar")).toBeEnabled();
 });
 
 test("'Ahora no' doesn't ask again for that version, but Perfil still offers it", async ({ page }) => {
@@ -109,16 +97,19 @@ test("the web has no updater", async ({ page }) => {
 
 for (const idioma of ["en", "de", "ca"]) {
   test(`the updater's texts are translated (${idioma})`, async ({ page }) => {
-    await abrirComoAndroid(page, { idioma, permiso: false });
+    await abrirComoAndroid(page, { idioma });
     await expect(page.locator("#actPanel")).toBeVisible();
-    await expect(page.locator("#actTexto")).not.toContainText("Tienes la");
+    await expect(page.locator("#actTexto")).not.toContainText(/Tienes la|Chrome la descarga/);
     await page.click("#actSi");
-    await page.evaluate(() => window.__act.terminar());
-    await expect(page.locator("#actEstado")).not.toHaveText(/Permitir de esta fuente|Versión instalada/);
-    await page.evaluate(() => { window.__act.app.resume.forEach((f) => f()); });
-    await expect(page.locator("#actEstado")).not.toContainText("Sin permiso");
+    await expect(page.locator("#actEstado")).not.toHaveText(/Chrome está|Versión instalada/);
     await page.click("#actBuscar");
     await expect(page.locator("#actEstado")).not.toHaveText(/Buscando/);
     expect(await page.evaluate(async () => [...(await import("./i18n.js")).faltan])).toEqual([]);
   });
 }
+
+// Google Play Protect blocked the APK as harmful while the app could install APKs itself.
+test("the Android app doesn't ask to install other apps", () => {
+  const manifest = require("node:fs").readFileSync(require("node:path").join(__dirname, "../android/app/src/main/AndroidManifest.xml"), "utf8");
+  expect(manifest).not.toContain("REQUEST_INSTALL_PACKAGES");
+});

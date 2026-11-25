@@ -1,9 +1,9 @@
 // Updates for the Android app: every merge to main publishes a release `app-v1.<n>` with flex-and-fit.apk
 // (android.yml), and the app's versionCode is that same <n>. This reads the public releases of the repo and says
-// whether one is newer than the installed app; the "Actualizar" plugin (ActualizarPlugin.java) downloads and installs it.
+// whether one is newer than the installed app; the "Actualizar" plugin (ActualizarPlugin.java) opens its APK link in the browser.
 export const REPO = "buffalonan/flex-and-fit";
 export const API = `https://api.github.com/repos/${REPO}/releases?per_page=10`;
-// The only place the plugin downloads from (it checks this too).
+// The only place the plugin opens links to (it checks this too).
 export const DESCARGAS = `https://github.com/${REPO}/releases/download/`;
 
 export function numero(tag) {
