@@ -12,7 +12,7 @@ const unsanitized = {
 };
 
 module.exports = [
-  { ignores: ["node_modules/", "playwright-report/", "test-results/", "www/", "_site/", "android/", "data/", "prototypes/"] },
+  { ignores: ["node_modules/", "playwright-report/", "test-results/", "www/", "_site/", "android/", "data/", "prototypes/", "web/vendor/"] },
   js.configs.recommended,
   { rules: { "no-unused-vars": ["error", { caughtErrors: "none" }] } },
   {

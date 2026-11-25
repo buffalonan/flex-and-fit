@@ -4,69 +4,141 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Flex &amp; Fit</title>
-<meta name="theme-color" content="#23725f">
+<meta name="theme-color" content="#0b0c0e">
+<script>
+  // Under a proxy's sub-path, /fitness must become /fitness/ before anything loads: every URL here is relative.
+  if (/^https?:$/.test(location.protocol) && !/(\/|\.html)$/.test(location.pathname)) location.replace(location.pathname + "/" + location.search + location.hash);
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<script>
-  // Apply a saved light/dark choice before the page paints.
-  try { const t = JSON.parse(localStorage.getItem("flexfit.ajustes") || "null")?.tema; if (t) document.documentElement.dataset.theme = t; } catch (e) { /* no storage */ }
-</script>
+<link rel="preload" href="fonts/barlow-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="top">
   <div class="brand">
-    <img src="icon.svg" alt="" width="36" height="36">
+    <img src="icon.svg" alt="" width="32" height="32">
     <h1>Flex &amp; Fit</h1>
   </div>
   <button type="button" id="syncPill" class="pill" data-estado="local" aria-live="polite">Solo en este dispositivo</button>
 </header>
 
 <main>
-  <section id="hoy" class="screen" aria-labelledby="hoyTitle">
-    <h2 id="hoyTitle">Hoy</h2>
-    <p class="lede" id="hoyFecha"></p>
-    <div class="stats" id="semana"></div>
+  <section id="entrenos" class="screen" aria-labelledby="entTitle">
+    <div class="head">
+      <div><p class="sub" id="hoyFecha"></p><h2 id="entTitle">Entrenos</h2></div>
+      <span class="sub" id="planPos"></span>
+    </div>
+    <div class="seg" role="radiogroup" aria-label="Tipo de entreno">
+      <label><input type="radio" name="filtro" value="todos" checked><span>Todos</span></label>
+      <label><input type="radio" name="filtro" value="fuerza"><span>Fuerza</span></label>
+      <label><input type="radio" name="filtro" value="flex"><span>Flex</span></label>
+    </div>
+    <div id="hoyCard"></div>
+    <div class="grupo" id="grupoFuerza">
+      <h3 class="eyebrow">Fuerza</h3>
+      <div class="cards" id="listaFuerza"></div>
+    </div>
+    <div class="grupo" id="grupoPlantillas">
+      <h3 class="eyebrow">Fuerza · plantillas profesionales</h3>
+      <div class="cards" id="listaPlantillas"></div>
+    </div>
+    <div class="grupo" id="grupoFlex">
+      <h3 class="eyebrow">Flexibilidad · plan de 6 meses</h3>
+      <div class="cards" id="listaFlex"></div>
+    </div>
+  </section>
 
-    <form class="card" id="nueva" autocomplete="off">
-      <h3>Apuntar una sesión</h3>
-      <div class="seg" role="radiogroup" aria-label="Tipo de sesión">
-        <label><input type="radio" name="tipo" value="flexibilidad" checked><span>Flexibilidad</span></label>
-        <label><input type="radio" name="tipo" value="gimnasio"><span>Gimnasio</span></label>
+  <section id="detalle" class="screen" aria-labelledby="detTitle" hidden>
+    <button type="button" class="back" id="detVolver">‹ Entrenos</button>
+    <div>
+      <h2 id="detTitle"></h2>
+      <p class="sub" id="detSub"></p>
+    </div>
+    <ul class="notas" id="detNotas"></ul>
+    <div class="panel-man" id="detMan"></div>
+    <div class="stats" id="detStats"></div>
+    <ol class="ejercicios" id="detLista"></ol>
+    <p class="sub" id="detMaquinas"></p>
+    <div class="avance" id="detAvance"></div>
+    <button type="button" class="btn-go" id="detEmpezar">EMPEZAR</button>
+  </section>
+
+  <section id="progreso" class="screen" aria-labelledby="progTitle" hidden>
+    <h2 id="progTitle">Progreso</h2>
+    <div class="stats" id="semana"></div>
+    <div class="card">
+      <div class="hd"><h3>Constancia</h3><span class="sub" id="racha"></span></div>
+      <div class="cal-dias" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="cal" id="calendario"></div>
+      <div class="chips"><span class="chip f">■ Fuerza</span><span class="chip x">■ Flex</span></div>
+    </div>
+    <div class="card">
+      <div class="hd"><h3>Test: dedos al suelo</h3><span class="sub">cm hasta el suelo</span></div>
+      <div id="testGrafica"></div>
+    </div>
+    <form class="card" id="testForm" autocomplete="off">
+      <div class="hd"><h3>Test mensual</h3>
+        <label class="sub">Fase <select name="fase" id="testFase"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
       </div>
-      <div class="row">
-        <label class="f">Fecha <input type="date" name="fecha" required></label>
-        <label class="f">Minutos <input type="number" name="duracionMin" min="1" max="600" inputmode="numeric"></label>
-      </div>
-      <label class="f">Notas <textarea name="notas" rows="2" maxlength="2000"></textarea></label>
-      <button type="submit" class="btn-main">Guardar sesión</button>
-      <p class="toast" id="nuevaOk" hidden>Guardada</p>
+      <p class="sub">El último domingo de cada fase, después de calentar. Dedos al suelo y manos a la espalda: negativo si pasas.</p>
+      <div class="tests" id="testCampos"></div>
+      <button type="submit" class="btn-main">Guardar test</button>
+      <p class="status" id="testOk"></p>
     </form>
-    <p class="hint">Pronto: el plan de flexibilidad de 6 meses con sus animaciones, y el registro de series y pesos del gimnasio.</p>
   </section>
 
   <section id="historial" class="screen" aria-labelledby="histTitle" hidden>
     <h2 id="histTitle">Historial</h2>
+    <details class="card" id="nuevaBox">
+      <summary>Apuntar una sesión a mano</summary>
+      <form id="nueva" autocomplete="off">
+        <div class="seg" role="radiogroup" aria-label="Tipo de sesión">
+          <label><input type="radio" name="tipo" value="flexibilidad" checked><span>Flexibilidad</span></label>
+          <label><input type="radio" name="tipo" value="gimnasio"><span>Gimnasio</span></label>
+        </div>
+        <div class="row">
+          <label class="f">Fecha <input type="date" name="fecha" required></label>
+          <label class="f">Minutos <input type="number" name="duracionMin" min="1" max="600" inputmode="numeric"></label>
+        </div>
+        <label class="f">Notas <textarea name="notas" rows="2" maxlength="2000"></textarea></label>
+        <button type="submit" class="btn-main">Guardar sesión</button>
+        <p class="toast" id="nuevaOk" hidden>Guardada</p>
+      </form>
+    </details>
     <ul class="list" id="lista"></ul>
     <p class="empty" id="vacio">Todavía no hay sesiones.</p>
   </section>
 
-  <section id="ajustes" class="screen" aria-labelledby="ajTitle" hidden>
-    <h2 id="ajTitle">Ajustes</h2>
-    <form class="card" id="servidorForm" autocomplete="off">
+  <section id="perfil" class="screen" aria-labelledby="perTitle" hidden>
+    <h2 id="perTitle">Perfil</h2>
+    <form class="card" id="planCard">
+      <h3>Plan de flexibilidad</h3>
+      <label class="f">Fecha de inicio <input type="date" id="planInicio"></label>
+      <p class="sub" id="planEstado"></p>
+    </form>
+    <p class="card sub" id="demoNota" hidden>Esto es una demo: lo que apuntes se queda solo en este navegador.</p>
+    <form class="card" id="servidorCard" autocomplete="off">
       <h3>Base de datos en el Mac</h3>
-      <p class="hint">Los datos se guardan primero en este dispositivo y se copian al Mac cuando lo encuentra (en casa o por Tailscale).</p>
-      <label class="f">Dirección del servidor <input type="url" name="servidor" id="servidor" placeholder="http://ferrans-macbook-air:3334" spellcheck="false"></label>
+      <p class="sub">Los datos se guardan primero en este dispositivo y se copian al Mac cuando lo encuentra (en casa o por Tailscale). La app busca el Mac sola en la wifi de casa y aprende su dirección de Tailscale la primera vez que conecta.</p>
+      <button type="button" class="btn" id="buscarMac" hidden>Buscar el Mac en esta wifi</button>
+      <label class="f">Dirección del servidor <input type="url" name="servidor" id="servidor" placeholder="http://nombre-del-mac:3334" spellcheck="false"></label>
+      <p class="sub" id="direcciones"></p>
       <label class="f">Clave (si la pusiste en el Mac) <input type="password" name="token" id="token" autocomplete="off"></label>
-      <div class="row">
-        <button type="submit" class="btn-main">Guardar y sincronizar</button>
-      </div>
+      <button type="submit" class="btn-main">Guardar y sincronizar</button>
       <p class="status" id="syncEstado"></p>
     </form>
 
+    <div class="card" id="relojCard" hidden>
+      <h3>Reloj · Health Connect</h3>
+      <p class="sub">La app lee de Health Connect los entrenos de tu Coros (hora, frecuencia cardiaca y calorías) y los une a la sesión que apuntas aquí por la hora o por el día. Las series y los kg siguen siendo cosa tuya. En la app de COROS activa la sincronización con Health Connect (Perfil → Ajustes → Apps de terceros).</p>
+      <button type="button" class="btn" id="relojBoton">Conectar Health Connect</button>
+      <p class="status" id="relojEstado"></p>
+    </div>
+
     <div class="card">
       <h3>Copia de seguridad</h3>
-      <p class="hint">Descarga todos tus datos en un archivo JSON, o importa una copia. También acepta el JSON copiado del plan de flexibilidad de 6 meses.</p>
+      <p class="sub">Descarga todos tus datos en un archivo JSON, o importa una copia. También acepta el JSON copiado del plan de flexibilidad de 6 meses.</p>
       <div class="row">
         <button type="button" class="btn" id="exportar">Exportar JSON</button>
         <label class="btn" for="importar">Importar JSON</label>
@@ -74,23 +146,75 @@
       </div>
       <p class="status" id="copiaEstado"></p>
     </div>
-
-    <div class="card">
-      <h3>Apariencia</h3>
-      <div class="seg" role="radiogroup" aria-label="Tema">
-        <label><input type="radio" name="tema" value=""><span>Automático</span></label>
-        <label><input type="radio" name="tema" value="light"><span>Claro</span></label>
-        <label><input type="radio" name="tema" value="dark"><span>Oscuro</span></label>
-      </div>
-    </div>
-    <p class="hint" id="version"></p>
+    <p class="sub" id="version"></p>
   </section>
 </main>
 
+<!-- Stretching player: full screen, advances on its own. -->
+<section id="reproductor" class="full" aria-label="Sesión de estiramientos" hidden>
+  <div class="full-top"><span class="sub" id="repCuenta"></span><span class="sub num" id="repReloj">0:00</span><span class="sub num fc" id="repFc" hidden></span><button type="button" class="x" id="repSalir" aria-label="Salir">✕</button></div>
+  <h2 id="repTitulo"></h2>
+  <p class="sub" id="repSerie"></p>
+  <div class="side" id="repLado"><span data-lado="izq">Lado izquierdo</span><span data-lado="der">Lado derecho</span></div>
+  <div class="ring">
+    <svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="90" fill="none" stroke="var(--card2)" stroke-width="8"/><circle id="repArco" cx="100" cy="100" r="90" fill="none" stroke="var(--flex3)" stroke-width="8" stroke-linecap="round" stroke-dasharray="565.5" stroke-dashoffset="0" transform="rotate(-90 100 100)"/></svg>
+    <div class="ring-fig" id="repFig"></div>
+    <div class="ring-txt"><span class="num" id="repTiempo">0:00</span></div>
+  </div>
+  <div class="cue"><b id="repCueT">Siente</b><span id="repCue"></span></div>
+  <div class="next" id="repSig"></div>
+  <div class="full-btns"><button type="button" class="btn-sec" id="repPausa">PAUSA</button><button type="button" class="btn-go x" id="repSaltar">SALTAR</button></div>
+</section>
+
+<!-- Gym logger: one page per exercise (or per circuit). -->
+<section id="registro" class="full" aria-label="Registro de series" hidden>
+  <div class="full-top"><span class="sub" id="regCuenta"></span><span class="sub num" id="regReloj">0:00</span><span class="sub num fc" id="regFc" hidden></span><button type="button" class="x" id="regSalir" aria-label="Salir">✕</button></div>
+  <h2 id="regTitulo"></h2>
+  <div class="reg-fig" id="regFig" hidden></div>
+  <div class="chips" id="regMusc"></div>
+  <table class="sets"><thead><tr><th>SERIE</th><th>ANTERIOR</th><th>KG</th><th id="regColReps">REPS</th><th><span class="sr">Hecha</span>✓</th></tr></thead><tbody id="regFilas"></tbody></table>
+  <div class="rest" id="regDescanso" hidden><span class="num" id="regDescT">0:00</span><div class="bar"><i id="regDescBar"></i></div>
+    <button type="button" class="mini" id="regMenos">−15 s</button><button type="button" class="mini" id="regMas">+15 s</button><button type="button" class="mini" id="regFinDesc">Saltar</button></div>
+  <p class="sub" id="regNota"></p>
+  <div class="full-btns"><button type="button" class="btn-sec" id="regAnt">ANTERIOR</button><button type="button" class="btn-go" id="regSig">SIGUIENTE</button></div>
+</section>
+
+<!-- One exercise of a workout, opened from its detail before starting. -->
+<section id="ficha" class="full" aria-labelledby="fichaTitulo" hidden>
+  <div class="full-top"><span class="sub" id="fichaCuenta"></span><button type="button" class="x" id="fichaSalir" aria-label="Cerrar">✕</button></div>
+  <h2 id="fichaTitulo"></h2>
+  <p class="dosis-grande" id="fichaDosis"></p>
+  <div class="ficha-fig" id="fichaFig"></div>
+  <div class="ficha-cuerpo" id="fichaCuerpo"></div>
+  <div class="full-btns"><button type="button" class="btn-sec" id="fichaAnt">‹ ANTERIOR</button><button type="button" class="btn-sec" id="fichaSig">SIGUIENTE ›</button></div>
+  <button type="button" class="btn-go" id="fichaEmpezar">EMPEZAR EL ENTRENO</button>
+</section>
+
+<!-- Leaving a session halfway. -->
+<div class="salir" id="salirPanel" hidden>
+  <div class="card">
+    <h3>¿Terminar la sesión?</h3>
+    <button type="button" class="btn-main" id="salirGuardar">Guardar lo hecho</button>
+    <button type="button" class="btn" id="salirSeguir">Seguir</button>
+    <button type="button" class="btn ghost" id="salirDescartar">Descartar</button>
+  </div>
+</div>
+
+<!-- Summary at the end. -->
+<section id="resumen" class="full" aria-labelledby="resTitulo" hidden>
+  <p class="sub" id="resFecha"></p>
+  <h2 id="resTitulo"></h2>
+  <div class="panel-man" id="resMan"></div>
+  <div class="stats" id="resStats"></div>
+  <p class="sub" id="resNota"></p>
+  <button type="button" class="btn-go" id="resListo">LISTO</button>
+</section>
+
 <nav class="tabs" aria-label="Secciones">
-  <button type="button" data-tab="hoy" aria-current="page">Hoy</button>
-  <button type="button" data-tab="historial">Historial</button>
-  <button type="button" data-tab="ajustes">Ajustes</button>
+  <button type="button" data-tab="entrenos" aria-current="page"><i aria-hidden="true"></i>Entrenos</button>
+  <button type="button" data-tab="progreso"><i aria-hidden="true"></i>Progreso</button>
+  <button type="button" data-tab="historial"><i aria-hidden="true"></i>Historial</button>
+  <button type="button" data-tab="perfil"><i aria-hidden="true"></i>Perfil</button>
 </nav>
 
 <script type="module" src="app.js"></script>

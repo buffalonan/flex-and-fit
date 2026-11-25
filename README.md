@@ -1,6 +1,9 @@
 # Flex & Fit
 
-Registro de entrenamientos de gimnasio y sesiones de flexibilidad: una web que sirve el Mac y una app Android para el móvil. Los datos se guardan en una base de datos en el Mac (Docker), con copias semanales.
+Entrenos de gimnasio y de flexibilidad: una web que sirve el Mac y una app Android para el móvil. Los datos se guardan en una base de datos en el Mac (Docker), con copias semanales.
+
+- **Entrenos:** tus cuatro rutinas de gimnasio y el plan de flexibilidad de 6 meses, cada uno con su maniquí de músculos. Los estiramientos llevan figuras animadas y un reproductor que avanza solo; el gimnasio, una tabla de series con el descanso automático.
+- **Progreso:** calendario de constancia y el test mensual del plan.
 
 Agentes de IA y revisores: empezad por [AGENTS.md](AGENTS.md).
 
@@ -8,8 +11,8 @@ Agentes de IA y revisores: empezad por [AGENTS.md](AGENTS.md).
 
 - **El móvil guarda todo primero en local** (IndexedDB), así que en el gimnasio se puede apuntar sin red.
 - **El Mac es la base de datos central:** un contenedor Docker con SQLite y una pequeña API (`server/`), que además sirve la web en `http://<mac>:3334`.
-- **Sincronización:** la app envía lo pendiente y recibe lo nuevo cuando encuentra el Mac, en casa o por Tailscale (`http://ferrans-macbook-air:3334`). Si el Mac está dormido, lo reintenta más tarde.
-- **Copias semanales** de la base de datos en `~/Documents/fitness-backups/weekly/` y en Google Drive (`Backups/Fitness`), las 12 más recientes, igual que Ghostfolio. Además, Ajustes → Exportar JSON descarga una copia completa.
+- **Sincronización:** la app envía lo pendiente y recibe lo nuevo cuando encuentra el Mac, en casa o por Tailscale. Si el Mac está dormido, lo reintenta más tarde.
+- **Copias semanales** de la base de datos en `~/Documents/fitness-backups/weekly/` y en Google Drive (`Backups/Fitness`), las 12 más recientes. Además, Perfil → Exportar JSON descarga una copia completa.
 
 ## Releases
 
@@ -31,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/buffalonan/flex-and-fit/main/script
 
 Crea `~/flex-and-fit` con `docker-compose.yml` y `.env` (carpetas de las copias y clave opcional), arranca el contenedor e instala un job de launchd que lo actualiza cada hora. Los datos viven en el volumen Docker `flexfit-data`.
 
-En la app del móvil, Ajustes → Dirección del servidor: `http://ferrans-macbook-air:3334`. Si pones `SYNC_TOKEN` en `.env`, escribe la misma clave en Ajustes.
+En casa, la app del móvil encuentra el Mac sola (el Mac se anuncia por Bonjour en la wifi) y aprende también su dirección de Tailscale para cuando estés fuera. Si hace falta, Perfil → Buscar el Mac en esta wifi, o escribe en Perfil → Dirección del servidor la que muestra `install.sh` al terminar. Las direcciones se guardan solo en el móvil. Si pones `SYNC_TOKEN` en `.env`, escribe la misma clave en Perfil.
 
 ## Puesta en marcha del repo (una vez)
 

@@ -2,29 +2,45 @@ const { test, expect, _android } = require("@playwright/test");
 
 const PKG = "io.github.buffalonan.flexandfit";
 
-test("the app opens, saves a session with no Mac in reach and keeps it", async () => {
+test("the app opens, has no server set until you type one, and saves a session on the phone", async () => {
   const [device] = await _android.devices();
   expect(device, "no emulator found by adb").toBeTruthy();
   try {
+    // A freshly booted emulator can still have its screen off or locked; then the WebView has no size and
+    // nothing in it counts as visible. Wake and unlock it first.
+    await device.shell("input keyevent KEYCODE_WAKEUP");
+    await device.shell("wm dismiss-keyguard");
     await device.shell(`am start -W -n ${PKG}/.MainActivity`);
     // Debug builds let Playwright drive the app's WebView like a browser tab.
     const page = await (await device.webView({ pkg: PKG }, { timeout: 60_000 })).page();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
 
-    await expect(page.locator("#hoy")).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => page.evaluate(() => window.innerWidth), { message: "the WebView has no size (screen off?)", timeout: 30_000 }).toBeGreaterThan(0);
+    await expect(page.locator("#entrenos")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("#listaFuerza .wcard")).toHaveCount(5);
+    await expect(page.locator("#listaPlantillas .wcard")).toHaveCount(3);
     expect(await page.evaluate(() => window.Capacitor.isNativePlatform())).toBe(true);
     // Native HTTP lets the app reach the Mac's plain-http server from the app's https origin.
     expect(await page.evaluate(() => window.Capacitor.isPluginAvailable("CapacitorHttp"))).toBe(true);
 
     const notas = `emulador-${Date.now()}`;
+    await page.click('.tabs button[data-tab="historial"]');
+    await page.click("#nuevaBox summary");
     await page.fill('#nueva textarea[name="notas"]', notas);
     await page.click('#nueva button[type="submit"]');
     await expect(page.locator("#nuevaOk")).toBeVisible();
-    // The emulator can't reach the Mac, so the session waits on the phone.
-    await expect(page.locator("#syncPill")).toHaveText(/sin subir/, { timeout: 30_000 });
-    await page.click('.tabs button[data-tab="historial"]');
+    // A fresh install has no server address (it's typed in Perfil), so the session stays on the phone.
+    await expect(page.locator("#syncPill")).toHaveText("Solo en este dispositivo");
+    expect(await page.inputValue("#servidor")).toBe("");
     await expect(page.locator("#lista")).toContainText(notas);
+    // The stretching player opens on the phone.
+    await page.click('.tabs button[data-tab="entrenos"]');
+    await page.click('#hoyCard .wcard');
+    await page.click("#detEmpezar");
+    await expect(page.locator("#reproductor")).toBeVisible();
+    await page.click("#repSalir");
+    await page.click("#salirDescartar");
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);

@@ -12,6 +12,7 @@ services:
     environment:
       BACKUP_DIRS: /backups/local,/backups/drive
       SYNC_TOKEN: ${SYNC_TOKEN:-}
+      DIRECCIONES: ${DIRECCIONES:-}
     volumes:
       - flexfit-data:/data
       - ${BACKUP_DIR:?set BACKUP_DIR in .env}:/backups/local

@@ -9,8 +9,8 @@ const { createServer } = require("./server");
 
 let dir, db, server, base;
 
-async function start(token = "") {
-  server = createServer({ db, webDir: path.join(__dirname, "..", "web"), token, version: "test" });
+async function start(token = "", direcciones = []) {
+  server = createServer({ db, webDir: path.join(__dirname, "..", "web"), token, version: "test", direcciones });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${server.address().port}`;
 }
@@ -77,6 +77,15 @@ test("a token, when set, is required", async () => {
   assert.equal(salud.token, true);
 });
 
+test("/api/salud tells the app the Mac's other addresses, only well-formed ones", async () => {
+  // Documentation addresses (RFC 5737), never the owner's.
+  await start("", ["http://192.0.2.10:3334/", " http://198.51.100.7:3334", "ftp://192.0.2.1", "no es una url", "http://192.0.2.10:3334",
+    "http://192.0.2.10/fitness/"]);
+  const salud = await (await fetch(`${base}/api/salud`)).json();
+  // A proxy's sub-path is kept (the app appends /api/... to it).
+  assert.deepEqual(salud.direcciones, ["http://192.0.2.10:3334", "http://198.51.100.7:3334", "http://192.0.2.10/fitness"]);
+});
+
 test("serves the web app and nothing outside it", async () => {
   await start();
   const page = await fetch(`${base}/`);
@@ -99,4 +108,17 @@ test("weekly backups: one per week per folder, newest twelve kept", () => {
   const copy = store.open(path.join(a, files.at(-1)));
   assert.equal(copy.count(), 1);
   copy.close();
+});
+
+test("the public web app holds no default server address", () => {
+  // The repo and the Pages demo are public: the phone's server address is typed by the owner, never shipped.
+  const web = path.join(__dirname, "..", "web");
+  const texts = fs.readdirSync(web, { recursive: true }).filter((f) => /\.(html|js|css|json|webmanifest|svg)$/.test(f));
+  assert.ok(texts.includes("app.js"));
+  for (const f of texts) {
+    const text = fs.readFileSync(path.join(web, f), "utf8");
+    const hosts = (text.match(/https?:\/\/[\w.-]+:\d+/g) || []).filter((u) => !/^https?:\/\/(nombre-del-mac|localhost):/.test(u));
+    assert.deepEqual(hosts, [], `${f} has a host:port address`);
+    assert.doesNotMatch(text, /\b100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+\b/, `${f} has a Tailscale IP`);
+  }
 });
