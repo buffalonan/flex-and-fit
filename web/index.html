@@ -73,6 +73,8 @@
       <div class="cal" id="calendario"></div>
       <div class="chips"><span class="chip f">■ Fuerza</span><span class="chip x">■ Flex</span></div>
     </div>
+    <div class="card" id="musSemana"></div>
+    <div class="card" id="records"></div>
     <div class="card">
       <div class="hd"><h3>Test: dedos al suelo</h3><span class="sub">cm hasta el suelo</span></div>
       <div id="testGrafica"></div>
@@ -192,6 +194,7 @@
   <table class="sets"><thead><tr><th>SERIE</th><th>ANTERIOR</th><th>KG</th><th id="regColReps">REPS</th><th><span class="sr">Hecha</span>✓</th></tr></thead><tbody id="regFilas"></tbody></table>
   <div class="rest" id="regDescanso" hidden><span class="num" id="regDescT">0:00</span><div class="bar"><i id="regDescBar"></i></div>
     <button type="button" class="mini" id="regMenos">−15 s</button><button type="button" class="mini" id="regMas">+15 s</button><button type="button" class="mini" id="regFinDesc">Saltar</button></div>
+  <p class="sube" id="regSube" hidden></p>
   <p class="sub" id="regNota"></p>
   <div class="full-btns"><button type="button" class="btn-sec" id="regAnt">ANTERIOR</button><button type="button" class="btn-go" id="regSig">SIGUIENTE</button></div>
 </section>
@@ -235,6 +238,11 @@
   <div class="panel-man" id="resMan"></div>
   <div class="stats" id="resStats"></div>
   <p class="sub" id="resNota"></p>
+  <div class="card" id="resRecords" hidden></div>
+  <div class="card esfuerzo" id="resEsfuerzo" role="group" aria-labelledby="resEsfTit">
+    <div class="hd"><h3 id="resEsfTit">¿Cuánto te ha costado?</h3><span class="sub">1 muy fácil · 10 al límite</span></div>
+    <div class="esf" id="resEsf"></div>
+  </div>
   <button type="button" class="btn-go" id="resListo">LISTO</button>
 </section>
 

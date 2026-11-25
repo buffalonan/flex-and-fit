@@ -228,3 +228,19 @@ body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; 
 .barras .b i { display: block; height: 100%; background: var(--prim); border-radius: 99px; }
 .fc-graf { touch-action: pan-y; }
 #sesNotas p { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Records, progression, sets per muscle, effort. */
+.recs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.recs li { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; align-items: baseline; }
+.recs .n { min-width: 0; overflow-wrap: anywhere; }
+.recs .v { font-size: 1.15rem; color: var(--ok); }
+.recs .sub { grid-column: 1 / -1; font-size: .8rem; }
+.chip.rec { align-self: flex-start; }
+.sube { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--card2); color: var(--ok); font-size: .9rem; }
+.barras.musc .b { position: relative; overflow: visible; }
+.barras.musc .b i { background: var(--heat2); }
+.barras.musc li.en-rango .b i { background: var(--prim); }
+.barras.musc .marca { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--fg); opacity: .5; border-radius: 1px; }
+.esf { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.esf button { min-height: 48px; border-radius: 12px; border: 1px solid var(--app-line); background: var(--card2); color: var(--fg); font: 600 1.25rem var(--display); }
+.esf button[aria-pressed="true"] { background: var(--prim); border-color: var(--prim); color: #fff; }
