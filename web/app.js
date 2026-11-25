@@ -298,7 +298,7 @@ async function terminar() {
       return { kg: v.kg, [e.seg ? "seg" : "reps"]: v.n, hecho: v.hecho };
     }) }));
     const hechas = Object.values(s.valores).filter((v) => v.hecho);
-    const vol = s.filas.reduce((a, f) => { const v = s.valores[f.k]; return a + (v.hecho && v.kg && !w.ej[f.e].seg ? v.kg * v.n * (w.ej[f.e].porLado ? 2 : 1) : 0); }, 0);
+    const vol = s.filas.reduce((a, f) => { const v = s.valores[f.k]; return a + (v.hecho && v.kg > 0 && !w.ej[f.e].seg ? v.kg * v.n * (w.ej[f.e].porLado ? 2 : 1) : 0); }, 0);
     datos = { tipo: "gimnasio", fecha, rutina: w.id, nombre: w.n, duracionMin: min, notas: "", volumenKg: Math.round(vol), ejercicios };
     const p = {}, sec = {};
     for (const f of s.filas) if (s.valores[f.k].hecho) { for (const m of w.ej[f.e].p) p[m] = (p[m] || 0) + 1; for (const m of w.ej[f.e].s) sec[m] = (sec[m] || 0) + 1; }
@@ -455,11 +455,13 @@ function pagina(n) {
   $("regMusc").innerHTML = html`${[...ms].map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${[...ss].filter((m) => !ms.has(m)).map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}`;
   const timed = pg.ej.every((i) => w.ej[i].seg);
   $("regColReps").textContent = timed ? "SEG" : pg.ej.every((i) => w.ej[i].porLado) ? "REPS/LADO" : "REPS";
+  // Kg can be negative (assisted pull-ups on the machine), so the kg field has no min and no inputmode="decimal",
+  // whose keyboard on Android has no minus key. Negative kg add nothing to the volume.
   $("regFilas").innerHTML = html`${pg.filas.map((f) => {
     const e = w.ej[f.e], v = s.valores[f.k];
     const nombre = f.ronda ? `${f.lbl} · ${e.n}${e.lado ? (e.lado === "izq" ? " izq." : " der.") : ""}` : f.lbl;
     return html`<tr data-k="${f.k}" class="${v.hecho ? "done" : ""}"><td class="${f.ronda ? "lbl" : "num"}">${nombre}</td><td class="prev">${v.prev}</td>
-      <td><input type="number" inputmode="decimal" step="0.5" min="0" data-c="kg" value="${v.kg ?? ""}" aria-label="Kg, serie ${f.lbl}" placeholder="${e.kg == null ? "—" : ""}"></td>
+      <td><input type="number" step="0.5" data-c="kg" value="${v.kg ?? ""}" aria-label="Kg, serie ${f.lbl}" placeholder="${e.kg == null ? "—" : ""}"></td>
       <td><input type="number" inputmode="numeric" min="0" data-c="n" value="${v.n ?? ""}" aria-label="${e.seg ? "Segundos" : "Repeticiones"}, serie ${f.lbl}"></td>
       <td><button type="button" class="ck" data-ck="${f.k}" aria-pressed="${v.hecho}" aria-label="Serie ${f.lbl} hecha">✓</button></td></tr>`;
   })}`;
