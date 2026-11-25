@@ -81,6 +81,59 @@ function ultimasSeries(w, i) {
   return otra ? { series: de(otra).series, otra: true } : null;
 }
 
+/* ---------- Records and progression (own rules: Epley's public formula, double progression) ---------- */
+// Estimated one-rep max (Epley) from a set with weight and 1–12 reps; with more reps it says little, so 0.
+const e1rm = (kg, reps) => (kg > 0 && reps >= 1 && reps <= 12 ? (reps === 1 ? kg : kg * (1 + reps / 30)) : 0);
+// An exercise's best in some sessions: heaviest kg, best estimated 1RM (rounded to the kg) and its set, and, with no
+// weight, most reps or seconds. Negative kg (assisted) count for neither. → null if no set of it was ticked there.
+function mejorDe(lista, n, seg) {
+  let hay = false, kg = 0, rm = 0, reps = 0, set = null, fecha = null;
+  for (const x of lista) for (const e of x.ejercicios || []) {
+    if (e?.n !== n) continue;
+    for (const y of e.series || []) {
+      if (!y?.hecho) continue;
+      hay = true;
+      const k = Number(y.kg) || 0, r = Number(seg ? y.seg : y.reps) || 0;
+      if (k > 0) {
+        kg = Math.max(kg, k);
+        const m = seg ? 0 : Math.round(e1rm(k, r));
+        if (m > rm) { rm = m; set = { kg: k, reps: r }; fecha = x.fecha; }
+      } else if (k === 0 && r > reps) { reps = r; if (!rm) fecha = x.fecha; }
+    }
+  }
+  return hay ? { kg, rm, reps, set, fecha } : null;
+}
+const gimnasio = (x) => x.tipo === "gimnasio";
+// What session `s` beat, per exercise, against every gym session before it (none the first time an exercise is done).
+function records(s) {
+  const antes = sesiones.filter((x) => gimnasio(x) && x.id !== s.id && cuando(x) < cuando(s));
+  const out = [];
+  for (const n of new Set((s.ejercicios || []).map((e) => e?.n).filter(Boolean))) {
+    const seg = !!defGym(s.rutina, n)?.seg;
+    const a = mejorDe([s], n, seg), b = mejorDe(antes, n, seg);
+    if (!a || !b) continue;
+    if (a.rm && b.rm && a.rm > b.rm) out.push({ n, t: "1RM estimado", v: kgTxt(a.rm), antes: kgTxt(b.rm) });
+    else if (a.kg && b.kg && a.kg > b.kg) out.push({ n, t: "Peso máximo", v: kgTxt(a.kg), antes: kgTxt(b.kg) });
+    else if (!a.kg && !b.kg && a.reps && b.reps && a.reps > b.reps) {
+      out.push({ n, t: seg ? "Mejor tiempo" : "Más repeticiones", v: seg ? mmss(a.reps) : `${a.reps}`, antes: seg ? mmss(b.reps) : `${b.reps}` });
+    }
+  }
+  return out;
+}
+// Double progression: when last time in this workout every set was ticked at the target reps (or time) or more, this
+// time goes up a step: +2.5 kg (assisted: 2.5 kg less help), or with no weight one rep more (5 s for a timed hold).
+// → { kg: delta } | { n: delta } with its text, or null.
+function subida(e, u) {
+  if (!u || u.otra) return null;
+  const hechas = (u.series || []).slice(0, e.series);
+  const meta = e.seg || e.reps;
+  if (hechas.length < e.series || !meta || !hechas.every((y) => y?.hecho && Number(e.seg ? y.seg : y.reps) >= meta)) return null;
+  const kgs = hechas.map((y) => Number(y.kg) || 0);
+  const vars = { ej: t(e.n), dosis: `${e.series} × ${e.seg ? mmss(meta) : meta}` };
+  if (kgs.some((k) => k !== 0)) return { kg: 2.5, texto: t("{ej}: +{kg} kg, la última vez completaste {dosis}.", { ...vars, kg: num(2.5) }) };
+  return e.seg ? { n: 5, texto: t("{ej}: +5 s, la última vez completaste {dosis}.", vars) } : { n: 1, texto: t("{ej}: +1 rep, la última vez completaste {dosis}.", vars) };
+}
+
 /* ---------- Screens ---------- */
 const TABS = ["entrenos", "progreso", "historial", "perfil"];
 let pantalla = "entrenos";
@@ -243,9 +296,11 @@ function verFicha(i) {
     if (FIG_FUERZA[e.n]) en3d($("fichaFig").querySelector(".fig3d"), FIG_FUERZA[e.n], { musculos: e });
     $("fichaDosis").textContent = `${dosisGym(e)} · ${e.kg ? `${num(e.kg)} kg` : t(e.elige ? "peso a elegir" : "peso corporal")}`;
     const ult = ultimasSeries(w, i)?.series.filter((x) => x?.hecho) || [];
+    const rec = mejorDe(sesiones.filter(gimnasio), e.n, !!e.seg);
     $("fichaCuerpo").innerHTML = html`<p class="zona">${t("Descanso entre series:")} <b>${mmss(e.desc)}</b>${e.bloque ? html` · ${t("en circuito, {n} rondas", { n: w.bloques[e.bloque].rondas })}` : ""}</p>
       <h3>${t("Músculos")}</h3><p class="chips">${e.p.map((m) => html`<span class="chip f">${M(m)}</span>`)}${e.s.map((m) => html`<span class="chip">${M(m)}</span>`)}</p>
       ${e.c ? html`<h3>${t("Cómo hacerlo")}</h3><ol class="pasos">${e.c.map((c) => html`<li>${t(c)}</li>`)}</ol>` : ""}
+      ${rec ? html`<h3>${t("Tu récord")}</h3><p class="sub">${rec.rm ? t("{set} · 1RM estimado {kg}", { set: `${kgTxt(rec.set.kg)} × ${rec.set.reps}`, kg: kgTxt(rec.rm) }) : rec.kg ? t("Peso máximo {kg}", { kg: kgTxt(rec.kg) }) : e.seg ? mmss(rec.reps) : t("{n} reps", { n: rec.reps })}${rec.fecha ? ` · ${fechaCorta(rec.fecha)}` : ""}</p>` : ""}
       ${ult.length ? html`<h3>${t("La última vez")}</h3><p class="sub">${ult.map((x) => `${x.kg ? `${num(x.kg)} kg × ` : ""}${x.seg ? mmss(x.seg) : x.reps}`).join(" · ")}</p>` : ""}`;
   }
   $("ficha").hidden = false;
@@ -436,6 +491,11 @@ async function terminar() {
   $("resTitulo").textContent = titulo(datos.rutina);
   $("resMan").innerHTML = html`${man}`;
   $("resStats").innerHTML = html`${stats}`;
+  const recs = s.tipo === "flex" ? [] : records({ ...datos, id: resumenId });
+  $("resRecords").innerHTML = html`<div class="hd"><h3>${t("Récords")}</h3><span class="sub">${tn(recs.length, "{n} nuevo", "{n} nuevos")}</span></div>
+    <ul class="recs">${recs.map((r) => html`<li><span class="n">${t(r.n)}</span><span class="v num">${r.v}</span><span class="sub">${t("{que} · antes {v}", { que: t(r.t), v: r.antes })}</span></li>`)}</ul>`;
+  $("resRecords").hidden = !recs.length;
+  pintarEsfuerzo(null);
   $("resumen").classList.toggle("flex", s.tipo === "flex");
   $("resumen").hidden = false;
   rellenarResumen();
@@ -454,6 +514,22 @@ function rellenarResumen() {
       : !estadoSalud.permiso ? t("Conecta Health Connect en Perfil para ver aquí la FC y las calorías de tu Coros.")
         : t("Aparecerán cuando tu Coros sincronice el entreno con el teléfono.");
 }
+// How hard it felt, 1–10, saved on the session (the summary's buttons; tap again to change it).
+function pintarEsfuerzo(v) {
+  $("resEsf").innerHTML = html`${Array.from({ length: 10 }, (_, i) => html`<button type="button" data-esf="${i + 1}" aria-pressed="${v === i + 1}">${i + 1}</button>`)}`;
+}
+$("resEsf").addEventListener("click", async (e) => {
+  const v = Number(e.target.closest("[data-esf]")?.dataset.esf);
+  if (!v || !resumenId) return;
+  pintarEsfuerzo(v);
+  const id = resumenId;
+  const x = sesiones.find((y) => y.id === id) || (await store.all("sesiones")).find((y) => y.id === id);
+  if (!x) return;
+  const data = { ...x };
+  delete data.id;
+  delete data._actualizado;
+  await store.put("sesiones", id, { ...data, esfuerzo: v });
+});
 function cerrarResumen() { resumenId = null; $("resumen").hidden = true; document.body.classList.remove("en-sesion"); show("historial"); }
 $("resListo").addEventListener("click", cerrarResumen);
 
@@ -593,6 +669,19 @@ function empezarGym(id, previo = null) {
     const n = ps && !u.otra && ps[c] != null ? ps[c] : e.seg || e.reps;
     valores[f.k] = { kg, n, hecho: false, prev: ps ? `${ps.kg ? `${num(ps.kg)}×` : ""}${ps[c] ?? ""}${e.seg ? " s" : ""}` : "—" };
   }
+  // Last time every set was done at the target: one step up (not when coming back to a session already under way).
+  const subidas = {};
+  for (const [ei, e] of w.ej.entries()) {
+    const sube = subida(e, ult[ei]);
+    if (!sube) continue;
+    subidas[ei] = sube.texto;
+    for (const f of filas) {
+      if (f.e !== ei) continue;
+      const v = valores[f.k];
+      if (sube.kg && v.kg != null) v.kg = v.kg < 0 ? Math.min(0, v.kg + sube.kg) : Math.round((v.kg + sube.kg) * 2) / 2;
+      if (sube.n && v.n != null) v.n += sube.n;
+    }
+  }
   let pag = 0, desc = null;
   if (previo) {
     for (const f of filas) {
@@ -602,7 +691,7 @@ function empezarGym(id, previo = null) {
     pag = Math.max(0, Math.min(Number(previo.pag) || 0, paginas.length - 1));
     if (previo.desc?.fin > Date.now()) desc = previo.desc;
   }
-  sesion = { tipo: "gym", paginas, filas, valores, pag, desc };
+  sesion = { tipo: "gym", paginas, filas, valores, pag, desc, subidas };
   entrar(id, previo?.inicio);
   $("registro").hidden = false;
   pagina(pag);
@@ -636,6 +725,9 @@ function pagina(n) {
   // Notes are matched to the exercise in Spanish, then shown translated.
   const nota = w.notas.find((x) => pg.ej.some((i) => x.toLowerCase().startsWith(w.ej[i].n.toLowerCase().split(" ").slice(0, 2).join(" "))));
   $("regNota").textContent = nota ? t(nota) : "";
+  const sube = pg.ej.map((i) => s.subidas[i]).filter(Boolean);
+  $("regSube").textContent = sube.length ? `${t("Subimos un paso.")} ${sube.join(" ")}` : "";
+  $("regSube").hidden = !sube.length;
   $("regAnt").disabled = n === 0;
   $("regSig").textContent = t(n === s.paginas.length - 1 ? "TERMINAR" : "SIGUIENTE");
   guardarEnCurso();
@@ -718,12 +810,49 @@ async function renderProgreso() {
   while (porDia[iso(d)]) { racha++; d.setDate(d.getDate() - 1); }
   $("racha").textContent = tn(racha, "{n} día seguido", "{n} días seguidos");
 
+  semanaMusculos(ses.filter(gimnasio));
+  tablaRecords();
+
   const tests = await store.all("tests");
   grafica(tests);
   if (!$("testForm").contains(document.activeElement)) {
     $("testFase").value = String(enPlan(inicioPlan, iso(hoy)).fase.n);
     camposTest(tests);
   }
+}
+// Sets per muscle this week (Monday on), from the sets ticked: primary muscles full, as in the workout's mannequin.
+// The 10–20 band is a common guide for building muscle, shown as a reference only.
+function semanaMusculos(ses) {
+  const p = {}, sec = {};
+  for (const x of ses) for (const e of x.ejercicios || []) {
+    const def = defGym(x.rutina, e?.n);
+    const n = (e?.series || []).filter((y) => y?.hecho).length;
+    if (!def || !n) continue;
+    for (const m of def.p) p[m] = (p[m] || 0) + n;
+    for (const m of def.s) sec[m] = (sec[m] || 0) + n;
+  }
+  const filas = Object.entries(p).sort((a, b) => b[1] - a[1]);
+  $("musSemana").innerHTML = html`<div class="hd"><h3>${t("Series por músculo")}</h3><span class="sub">${t("esta semana")}</span></div>
+    ${filas.length ? html`${maniqui({ p, s: sec }, "f", { titulo: t("Músculos trabajados esta semana"), etiquetas: etiquetasTop(p, 6, (v) => tn(v, "{n} serie", "{n} series")) })}
+      <ul class="barras musc">${filas.map(([m, v]) => html`<li class="${v >= 10 ? "en-rango" : ""}"><span class="n">${M(m)}</span><span class="v num">${v}</span><span class="b"><i style="${`width:${Math.min(100, (v / 20) * 100).toFixed(1)}%`}"></i><em class="marca" aria-hidden="true"></em></span></li>`)}</ul>
+      <p class="sub">${t("Series en que el músculo es el principal. La raya marca 10: entre 10 y 20 por semana es una guía habitual para ganar músculo.")}</p>`
+    : html`<p class="sub">${t("Aún no hay series de fuerza esta semana.")}</p>`}`;
+}
+// Each exercise's best: the set with the best estimated 1RM, or most reps / longest hold with no weight. Newest first.
+function tablaRecords() {
+  const gs = sesiones.filter(gimnasio);
+  const nombres = [];
+  for (const x of gs) for (const e of x.ejercicios || []) if (e?.n && !nombres.includes(e.n) && e.series?.some((y) => y?.hecho)) nombres.push(e.n);
+  const filas = nombres.map((n) => {
+    const seg = !!defGym(null, n)?.seg, b = mejorDe(gs, n, seg);
+    if (!b || !(b.rm || b.kg || b.reps)) return null;
+    const v = b.rm ? kgTxt(b.rm) : b.kg ? kgTxt(b.kg) : seg ? mmss(b.reps) : t("{n} reps", { n: b.reps });
+    const det = b.rm ? t("1RM est. · {set}", { set: `${kgTxt(b.set.kg)} × ${b.set.reps}` }) : t(b.kg ? "peso máximo" : seg ? "mejor tiempo" : "peso corporal");
+    return { n, v, det, fecha: b.fecha };
+  }).filter(Boolean);
+  $("records").innerHTML = html`<div class="hd"><h3>${t("Récords")}</h3><span class="sub">${t("1RM estimado (Epley)")}</span></div>
+    ${filas.length ? html`<ul class="recs">${filas.map((f) => html`<li><span class="n">${t(f.n)}</span><span class="v num">${f.v}</span><span class="sub">${f.det}${f.fecha ? ` · ${fechaCorta(f.fecha)}` : ""}</span></li>`)}</ul>`
+    : html`<p class="sub">${t("Tus mejores marcas aparecerán cuando registres series en el gimnasio.")}</p>`}`;
 }
 function camposTest(tests) {
   const f = Number($("testFase").value);
@@ -931,6 +1060,7 @@ function renderSesion() {
   $("sesSub").textContent = `${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")}${ini && fin ? ` · ${hora(ini)}–${hora(fin)}` : ""}`;
   const min = s.duracionMin || (r ? Math.round((r.fin - r.inicio) / 60000) : null);
   const ejs = Array.isArray(s.ejercicios) ? s.ejercicios : [];
+  const esf = s.esfuerzo ? stat(s.esfuerzo, t("Esfuerzo"), "/10") : "";
   const reloj = r ? html`${stat(r.fcMedia || "—", t("FC media"), r.fcMedia ? t("ppm") : "")}${stat(r.fcMax || "—", t("FC máxima"), r.fcMax ? t("ppm") : "")}${stat(r.kcal || "—", t("Calorías"), r.kcal ? "kcal" : "")}` : "";
   let man = "", lista;
   const vol = [];
@@ -948,18 +1078,22 @@ function renderSesion() {
     if (hechas) man = html`${maniqui({ p, s: sec }, "f", { titulo: t("Músculos trabajados"), etiquetas: etiquetasTop(p, 4, (v) => tn(v, "{n} serie", "{n} series")) })}
       <div class="leyenda"><span><i style="background:var(--prim)"></i>${t("Principales")}</span><span><i style="background:var(--sec)"></i>${t("Secundarios")}</span></div>`;
     const volTotal = s.volumenKg ?? Math.round(vol.reduce((a, [, v]) => a + v, 0));
-    $("sesStats").innerHTML = html`${stat(hechas, t("Series"))}${stat(num(volTotal), t("Volumen"), "kg")}${stat(min || "—", t("Duración"), min ? "min" : "")}${reloj}`;
+    $("sesStats").innerHTML = html`${stat(hechas, t("Series"))}${stat(num(volTotal), t("Volumen"), "kg")}${stat(min || "—", t("Duración"), min ? "min" : "")}${esf}${reloj}`;
     const vistos = {};
+    const recs = Object.fromEntries(records(s).map((x) => [x.n, x]));
     lista = ejs.filter((e) => e?.n).map((e) => {
       const def = defGym(s.rutina, e.n), fig = FIG_FUERZA[e.n];
       const series = e.series || [];
       const n = series.filter((x) => x?.hecho).length;
       const v = volSeries(series, def);
       // The chart once per exercise, under its first row (a side plank per side shares it).
-      const graf = vistos[e.n] ? "" : grafProgresion(s, e.n, !!def?.seg);
+      const primera = !vistos[e.n];
+      const graf = primera ? grafProgresion(s, e.n, !!def?.seg) : "";
       vistos[e.n] = true;
+      const rec = primera && recs[e.n];
       return html`<li class="ej g ses">${fig ? html`<span class="th">${figura(fig)}</span>` : ""}<div class="meta">
         <span class="name">${t(e.n)}${def?.lado ? lado(def) : ""}</span>
+        ${rec ? html`<span class="chip ok rec">${t("Récord")} · ${t(rec.t)} ${rec.v}</span>` : ""}
         <span class="dosis">${t("{n}/{total} series", { n, total: series.length })}${v ? ` · ${num(Math.round(v))} kg` : ""}${def?.porLado ? ` · ${t("por lado")}` : ""}</span>
         <span class="series">${series.map((x, i) => html`<span class="${`serie${x?.hecho ? " ok" : ""}`}"><i>${i + 1}</i>${x?.kg != null && x.kg !== "" ? kgTxt(x.kg) : t("PC")} × ${x?.seg != null ? mmss(x.seg) : x?.reps ?? "—"}</span>`)}</span>
         ${graf}</div></li>`;
@@ -977,7 +1111,7 @@ function renderSesion() {
     }
     if (hechos) man = html`${maniqui(musc, "x", { titulo: t("Músculos estirados"), etiquetas: etiquetasTop(musc, 4, fmtMin) })}
       <div class="leyenda"><span><i style="background:var(--flex1)"></i>&lt; 1 min</span><span><i style="background:var(--flex2)"></i>1–3 min</span><span><i style="background:var(--flex3)"></i>3+ min</span></div>`;
-    $("sesStats").innerHTML = html`${ejs.length ? stat(`${hechos}/${ejs.length}`, t("Ejercicios")) : ""}${ejs.length ? stat(Math.round(seg / 60), t("Estirando"), "min") : ""}${stat(min || "—", t("Duración"), min ? "min" : "")}${reloj}`;
+    $("sesStats").innerHTML = html`${ejs.length ? stat(`${hechos}/${ejs.length}`, t("Ejercicios")) : ""}${ejs.length ? stat(Math.round(seg / 60), t("Estirando"), "min") : ""}${stat(min || "—", t("Duración"), min ? "min" : "")}${esf}${reloj}`;
     lista = ejs.filter((e) => EX[e?.id]).map((e) => html`<li class="${`ej ses${e.hecho ? "" : " saltado"}`}"><span class="th">${figura(e.id)}</span><div class="meta">
       <span class="name">${t(EX[e.id].n)}</span><span class="dosis">${tDosis(e.dosis || "")}</span><span class="zona">${t(e.hecho ? "Hecho ✓" : "Saltado")}</span></div></li>`);
   }
