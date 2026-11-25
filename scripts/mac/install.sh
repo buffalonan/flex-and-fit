@@ -1,7 +1,7 @@
 #!/bin/sh
-# Installs Flex & Fit on the Mac, next to Ghostfolio in Docker (colima), in ~/flex-and-fit:
+# Installs Flex & Fit on the Mac in Docker (colima), in ~/flex-and-fit:
 #   curl -fsSL https://raw.githubusercontent.com/buffalonan/flex-and-fit/main/scripts/mac/install.sh | sh
-# Safe to run again: it keeps an existing .env and only refreshes the compose file and the update job.
+# Safe to run again: it keeps an existing .env and only refreshes the compose file, the update job and the Bonjour announcement.
 set -eu
 
 DIR="$HOME/flex-and-fit"
@@ -48,6 +48,25 @@ PL
 launchctl unload "$PLIST" 2> /dev/null || true
 launchctl load "$PLIST"
 
+# Bonjour: announces Flex & Fit on the home Wi-Fi as _flexandfit._tcp, so the Android app finds the Mac on its own.
+BONJOUR="io.github.buffalonan.flexandfit.bonjour"
+BPLIST="$HOME/Library/LaunchAgents/$BONJOUR.plist"
+cat > "$BPLIST" <<PL
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>$BONJOUR</string>
+  <key>ProgramArguments</key><array><string>/usr/bin/dns-sd</string><string>-R</string><string>Flex y Fit</string><string>_flexandfit._tcp</string><string>local</string><string>3334</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/dev/null</string>
+  <key>StandardErrorPath</key><string>/dev/null</string>
+</dict></plist>
+PL
+launchctl unload "$BPLIST" 2> /dev/null || true
+launchctl load "$BPLIST"
+
 ip="$(tailscale ip -4 2> /dev/null | head -1 || true)"
 echo "Listo. Abre http://localhost:3334 en el Mac."
-echo "En el móvil (Ajustes de la app): http://$(scutil --get LocalHostName 2> /dev/null | tr 'A-Z' 'a-z'):3334${ip:+ o http://$ip:3334}"
+echo "En el móvil, la app encuentra el Mac sola en la wifi de casa (o pulsa Perfil → Buscar el Mac en esta wifi)."
+echo "Si hace falta escribirla: http://$(scutil --get LocalHostName 2> /dev/null | tr 'A-Z' 'a-z'):3334${ip:+ o http://$ip:3334}"
