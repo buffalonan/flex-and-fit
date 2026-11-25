@@ -95,7 +95,7 @@ const shirt = tela(0xb8302a), shorts = tela(0xeef0f2);
 const std = (color, roughness = 0.6, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
 const shoe = std(0xf3f4f6), sole = std(0xffffff, 0.8), lace = std(0xb4bac2, 0.7);
 const iron = std(0x2a2d33, 0.38, 0.7), steel = std(0xb9bec6, 0.3, 0.85), plate = std(0x1d1f23, 0.6, 0.3);
-const propMat = std(0x4a5160, 0.7), padMat = std(0x1c1e22, 0.8), towelMat = std(0xd9d4c7, 0.95), matMat = std(0x1d4f4d, 0.9), wallMat = new THREE.MeshStandardMaterial({ color: 0x3a404b, roughness: 0.95, transparent: true, opacity: 0.45, depthWrite: false }), cableMat = std(0x8b909a, 0.5);
+const propMat = std(0x4a5160, 0.7), padMat = std(0x1c1e22, 0.8), towelMat = std(0xd9d4c7, 0.95), matMat = std(0x1d4f4d, 0.9), wallMat = new THREE.MeshStandardMaterial({ color: 0x3a404b, roughness: 0.95, transparent: true, opacity: 0.45, depthWrite: false }), cableMat = std(0x8b909a, 0.5), ropeMat = std(0xc9b991, 0.9);
 
 function mesh(geo, m, parent, p = [0, 0, 0], s = null, r = null) {
   const o = new THREE.Mesh(geo, m);
@@ -403,6 +403,12 @@ function pesas() {
   w.g = g;
   return w;
 }
+const CUERDA3 = 0.12; // m from the hands to the rope's knot on the cable
+/** The rope's knot: from the point between the hands, len towards the pulley (never past it). */
+function nudo(mid, polea, len) {
+  const v = polea.clone().sub(mid), d = v.length();
+  return d < 1e-6 ? mid.clone() : mid.clone().addScaledVector(v, Math.min(len, d * 0.5) / d);
+}
 function colocarPesas(d, e, w, dy = 0) {
   for (const o of [w.kb, ...w.manc, w.barra, w.asa, w.placa, w.rodillo]) o.visible = false;
   const m = mapa(d, dy), L = lado2(d), j = e.j;
@@ -510,8 +516,9 @@ function iniciar() {
   const w = pesas(); scene.add(w.g);
   const towel = new THREE.Mesh(new THREE.BufferGeometry(), towelMat); towel.castShadow = true; scene.add(towel);
   const cable = new THREE.Mesh(new THREE.BufferGeometry(), cableMat); scene.add(cable);
+  const cuerda = new THREE.Mesh(new THREE.BufferGeometry(), ropeMat); cuerda.castShadow = true; scene.add(cuerda);
   const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
-  R = { renderer, canvas, scene, cam, fig, w, pool, mat, towel, cable, props: null };
+  R = { renderer, canvas, scene, cam, fig, w, pool, mat, towel, cable, cuerda, props: null };
   return R;
 }
 
@@ -548,9 +555,19 @@ function pose(st, p, t) {
     R.towel.geometry.dispose();
     R.towel.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.011, 6, false);
   }
+  // A rope ("cuerda") hangs from the cable by its middle and each hand holds one end.
   R.cable.visible = !!d.cable;
+  R.cuerda.visible = d.cable?.[2] === "cuerda";
   if (d.cable) {
-    const m = mapa(d, st.dy), a = m(d.cable), b = d.cable[2] === "manos" ? world(J.manoL).add(world(J.manoR)).multiplyScalar(0.5) : world(J["mano" + L[1]]);
+    const m = mapa(d, st.dy), a = m(d.cable), ml = world(J.manoL), mr = world(J.manoR), mid = ml.clone().add(mr).multiplyScalar(0.5);
+    let b = d.cable[2] === "manos" ? mid : world(J["mano" + L[1]]);
+    if (R.cuerda.visible) {
+      const k = nudo(mid, a, CUERDA3);
+      b = k;
+      const ruta = new THREE.CurvePath(); ruta.add(new THREE.LineCurve3(ml, k)); ruta.add(new THREE.LineCurve3(k, mr));
+      R.cuerda.geometry.dispose();
+      R.cuerda.geometry = new THREE.TubeGeometry(ruta, 24, 0.01, 6, false);
+    }
     R.cable.geometry.dispose();
     R.cable.geometry = new THREE.TubeGeometry(new THREE.LineCurve3(a, b), 1, 0.004, 5, false);
   }
@@ -686,7 +703,7 @@ function dibujar3d(st, t) {
 export function revisar(id) {
   if (!R) {
     const fig = maniqui(), w = pesas(), scene = new THREE.Scene(); scene.add(fig, w.g);
-    R = { fig, w, scene, towel: new THREE.Mesh(), cable: new THREE.Mesh(), mat: new THREE.Mesh(), props: null, sinWebGL: true };
+    R = { fig, w, scene, towel: new THREE.Mesh(), cable: new THREE.Mesh(), cuerda: new THREE.Mesh(), mat: new THREE.Mesh(), props: null, sinWebGL: true };
   }
   const st = preparar(id), malos = [];
   for (let i = 0; i <= 20; i++) {
@@ -694,6 +711,16 @@ export function revisar(id) {
     pose(st, p, 0);
     const pts = ["head", "manoL", "manoR", "toeL", "toeR", "talonL", "talonR", "knL", "knR", "root", "elL", "elR"].map((k) => [k, world(J[k])]); // eslint-disable-line security/detect-object-injection
     for (const [k, v] of pts) if (![v.x, v.y, v.z].every(Number.isFinite)) malos.push(`${k} NaN en p=${p}`);
+    // Both hands hold the cable: its end (or the rope's ends) can't be in the air away from a hand.
+    const cab = st.d.cable;
+    if (cab) {
+      const ml = world(J.manoL), mr = world(J.manoR);
+      const ends = cab[2] === "cuerda" ? [R.cuerda.geometry.parameters.path.getPoint(0), R.cuerda.geometry.parameters.path.getPoint(1)] : [R.cable.geometry.parameters.path.v2];
+      for (const [k, v] of [["manoL", ml], ["manoR", mr]]) {
+        const lejos = Math.min(...ends.map((e) => e.distanceTo(v)));
+        if (lejos > 0.12) malos.push(`${k} suelta del cable (${lejos.toFixed(2)} m) en p=${p}`);
+      }
+    }
     const bajo = Math.min(...pts.map(([, v]) => v.y));
     if (bajo < -0.06) malos.push(`bajo el suelo ${bajo.toFixed(2)} m en p=${p}`);
     if (!ESPECIAL[id] && !st.lift) { // eslint-disable-line security/detect-object-injection
