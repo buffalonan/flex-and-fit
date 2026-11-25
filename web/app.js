@@ -8,6 +8,8 @@ import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, pasos, resumenFlex, resumenGy
 import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
 import { importar as importarReloj } from "./reloj.js";
+import { ultimaRelease, codigoDe } from "./actualizar.js";
+import { t, tn, dosis as tDosis, num, locale, idioma, IDIOMAS, traducirPagina } from "./i18n.js";
 // The 3D figure (figura3d.js and Three.js, ~700 KB) loads the first time a sheet needs it; until then, and wherever
 // WebGL isn't available, the SVG figure stays.
 let modulo3d = null;
@@ -20,6 +22,9 @@ function en3d(host, id, opts = {}) {
 }
 
 const $ = (id) => document.getElementById(id);
+// index.html is written in Spanish: its static texts change to the chosen language before anything is rendered.
+traducirPagina();
+document.querySelectorAll(".cal-dias span").forEach((sp, i) => (sp.textContent = new Date(2024, 0, 1 + i).toLocaleDateString(locale, { weekday: "narrow" })));
 /* eslint-disable security/detect-object-injection -- lookups below use ids and keys from this app's own data */
 
 const native = !!window.Capacitor?.isNativePlatform?.();
@@ -31,24 +36,27 @@ const demo = location.hostname === "buffalonan.github.io";
 const defaultServer = () => (native || demo || location.protocol === "file:" ? "" : new URL(".", location.href).href.replace(/\/+$/, ""));
 
 const KEY = "flexfit.ajustes";
-let ajustes = { servidor: null, servidores: [], token: "", tab: "entrenos", filtro: "todos" };
+let ajustes = { servidor: null, servidores: [], token: "", tab: "entrenos", filtro: "todos", idioma: "es" };
 try { ajustes = { ...ajustes, ...JSON.parse(localStorage.getItem(KEY) || "null") }; } catch (e) { /* no storage */ }
 const saveAjustes = () => { try { localStorage.setItem(KEY, JSON.stringify(ajustes)); } catch (e) { /* no storage */ } };
 const servidor = () => (ajustes.servidor ?? defaultServer()).trim();
 
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const parse = (s) => { const [a, b, c] = s.split("-").map(Number); return new Date(a, b - 1, c); };
-const fechaLarga = (s) => parse(s).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+const fechaLarga = (s) => parse(s).toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
 const mmss = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 // A gym exercise's sets and reps (or time), per side when it's done one arm at a time.
-const dosisGym = (e) => `${e.series} ${e.series === 1 ? "serie" : "series"} · ${e.seg ? mmss(e.seg) : `${e.reps} reps`}${e.porLado ? " /lado" : ""}`;
+const dosisGym = (e) => `${tn(e.series, "{n} serie", "{n} series")} · ${e.seg ? mmss(e.seg) : t("{n} reps", { n: e.reps })}${e.porLado ? ` ${t("/lado")}` : ""}`;
 const fmtMin = (m) => (m < 1 ? `${Math.round(m * 60)} s` : `${Math.round(m)} min`);
-const haceDias = (f) => { const n = Math.round((parse(iso(new Date())) - parse(f)) / 864e5); return n <= 0 ? "Hoy" : n === 1 ? "Ayer" : `Hace ${n} días`; };
+const haceDias = (f) => { const n = Math.round((parse(iso(new Date())) - parse(f)) / 864e5); return n <= 0 ? t("Hoy") : n === 1 ? t("Ayer") : t("Hace {n} días", { n }); };
+// A muscle's name, and a side ("izq"/"der") after an exercise's name.
+const M = (m) => t(NOMBRES[m]);
+const lado = (e) => (e.lado ? ` (${t(e.lado === "izq" ? "izquierda" : "derecha")})` : "");
 const vibrar = (p) => { try { navigator.vibrate?.(p); } catch (e) { /* not supported */ } };
 
 const rutinaFlex = (id) => RUTINAS_FLEX.find((r) => r.id === id);
 const gym = (id) => GYM.find((w) => w.id === id);
-const titulo = (id) => { const r = rutinaFlex(id); return r ? (r.n ? `Fase ${r.n} · ${r.name}` : r.name) : gym(id)?.n || id; };
+const titulo = (id) => { const r = rutinaFlex(id), w = gym(id); return r ? (r.n ? t("Fase {n} · {nombre}", { n: r.n, nombre: t(r.name) }) : t(r.name)) : w ? t(w.n) : id; };
 
 /* ---------- Data the screens share ---------- */
 let sesiones = [];
@@ -121,9 +129,9 @@ function subida(e, u) {
   const meta = e.seg || e.reps;
   if (hechas.length < e.series || !meta || !hechas.every((y) => y?.hecho && Number(e.seg ? y.seg : y.reps) >= meta)) return null;
   const kgs = hechas.map((y) => Number(y.kg) || 0);
-  const que = `la última vez completaste ${e.series} × ${e.seg ? mmss(meta) : meta}`;
-  if (kgs.some((k) => k !== 0)) return { kg: 2.5, texto: `${e.n}: +2,5 kg, ${que}.` };
-  return e.seg ? { n: 5, texto: `${e.n}: +5 s, ${que}.` } : { n: 1, texto: `${e.n}: +1 rep, ${que}.` };
+  const vars = { ej: t(e.n), dosis: `${e.series} × ${e.seg ? mmss(meta) : meta}` };
+  if (kgs.some((k) => k !== 0)) return { kg: 2.5, texto: t("{ej}: +{kg} kg, la última vez completaste {dosis}.", { ...vars, kg: num(2.5) }) };
+  return e.seg ? { n: 5, texto: t("{ej}: +5 s, la última vez completaste {dosis}.", vars) } : { n: 1, texto: t("{ej}: +1 rep, la última vez completaste {dosis}.", vars) };
 }
 
 /* ---------- Screens ---------- */
@@ -142,7 +150,8 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
 
 const capApp = native ? window.Capacitor.registerPlugin("App") : null;
 capApp?.addListener("backButton", () => {
-  if (!$("continuarPanel").hidden) $("continuarPanel").hidden = true;
+  if (!$("actPanel").hidden) $("actPanel").hidden = true;
+  else if (!$("continuarPanel").hidden) $("continuarPanel").hidden = true;
   else if (!$("salirPanel").hidden) cerrarSalir();
   else if (!$("ficha").hidden) cerrarFicha();
   else if (sesion) pedirSalir();
@@ -154,18 +163,18 @@ capApp?.addListener("backButton", () => {
 capApp?.addListener("resume", () => sync());
 
 /* ---------- Entrenos ---------- */
-function miniFlex(r) { return maniqui(resumenFlex(r).musc, "x", { titulo: `Músculos de ${titulo(r.id)}` }); }
-function miniGym(w) { const g = resumenGym(w); return maniqui(g, "f", { titulo: `Músculos de ${w.n}` }); }
+function miniFlex(r) { return maniqui(resumenFlex(r).musc, "x", { titulo: t("Músculos de {x}", { x: titulo(r.id) }) }); }
+function miniGym(w) { const g = resumenGym(w); return maniqui(g, "f", { titulo: t("Músculos de {x}", { x: titulo(w.id) }) }); }
 
 function tarjeta(id, { hoy = false } = {}) {
   const r = rutinaFlex(id), w = gym(id);
   const u = ultima(id);
   const chips = [];
-  if (hoy) chips.push(html`<span class="chip x">HOY · FLEX</span>`);
-  if (hoy && u?.fecha === iso(new Date())) chips.push(html`<span class="chip ok">Hecha ✓</span>`);
+  if (hoy) chips.push(html`<span class="chip x">${t("HOY · FLEX")}</span>`);
+  if (hoy && u?.fecha === iso(new Date())) chips.push(html`<span class="chip ok">${t("Hecha ✓")}</span>`);
   if (!hoy && u) chips.push(html`<span class="chip">${haceDias(u.fecha)}</span>`);
-  if (r && !hoy && r.weeks) chips.push(html`<span class="chip">Semanas ${r.weeks[0]}–${r.weeks[1]}</span>`);
-  const sub = r ? `${r.items.length} ejercicios · ${r.min}` : `${w.ej.length} ejercicios · ${resumenGym(w).series} series`;
+  if (r && !hoy && r.weeks) chips.push(html`<span class="chip">${t("Semanas {a}–{b}", { a: r.weeks[0], b: r.weeks[1] })}</span>`);
+  const sub = r ? `${tn(r.items.length, "{n} ejercicio", "{n} ejercicios")} · ${r.min}` : `${tn(w.ej.length, "{n} ejercicio", "{n} ejercicios")} · ${tn(resumenGym(w).series, "{n} serie", "{n} series")}`;
   return html`<button type="button" class="wcard${hoy ? " hoy" : ""}" data-abrir="${id}">
     <span class="mini">${r ? miniFlex(r) : miniGym(w)}</span>
     <span class="meta">${chips.length && hoy ? html`<span class="chips">${chips}</span>` : ""}<span class="name">${titulo(id)}</span><span class="sub">${sub}</span>
@@ -176,9 +185,9 @@ function tarjeta(id, { hoy = false } = {}) {
 function renderEntrenos() {
   const hoy = iso(new Date());
   const ep = enPlan(inicioPlan, hoy);
-  $("hoyFecha").textContent = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
-  $("planPos").textContent = `Semana ${Math.min(ep.semana, 26)} · F${ep.fase.n}`;
-  $("hoyCard").innerHTML = html`${tarjeta(ep.rutina, { hoy: true })}${ep.test ? html`<p class="sub">Hoy toca el test mensual: apúntalo en Progreso.</p>` : ""}`;
+  $("hoyFecha").textContent = new Date().toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
+  $("planPos").textContent = t("Semana {s} · F{f}", { s: Math.min(ep.semana, 26), f: ep.fase.n });
+  $("hoyCard").innerHTML = html`${tarjeta(ep.rutina, { hoy: true })}${ep.test ? html`<p class="sub">${t("Hoy toca el test mensual: apúntalo en Progreso.")}</p>` : ""}`;
   $("listaFuerza").innerHTML = html`${GYM.filter((w) => !w.fuente).map((w) => tarjeta(w.id))}`;
   $("listaPlantillas").innerHTML = html`${GYM.filter((w) => w.fuente).map((w) => tarjeta(w.id))}`;
   $("listaFlex").innerHTML = html`${RUTINAS_FLEX.map((r) => tarjeta(r.id))}`;
@@ -201,7 +210,7 @@ function etiquetasTop(valores, n, texto) {
 }
 const stat = (v, l, u = "") => html`<div class="stat"><b>${v}${u ? html`<small>${u}</small>` : ""}</b><span>${l}</span></div>`;
 // The watch's numbers in the summary: filled in when its workout arrives from Health Connect (see rellenarResumen).
-const statsReloj = () => html`<div class="stat"><b id="resFc">—</b><span>FC media · reloj</span></div><div class="stat"><b id="resKcal">—</b><span>Calorías · reloj</span></div>`;
+const statsReloj = () => html`<div class="stat"><b id="resFc">—</b><span>${t("FC media · reloj")}</span></div><div class="stat"><b id="resKcal">—</b><span>${t("Calorías · reloj")}</span></div>`;
 
 function abrir(id) {
   abierto = id;
@@ -209,42 +218,43 @@ function abrir(id) {
   $("detalle").classList.toggle("flex", !!r);
   $("detTitle").textContent = titulo(id);
   const u = ultima(id);
+  const vez = u ? ` · ${t("última vez {cuando}", { cuando: haceDias(u.fecha).toLowerCase() })}` : "";
   if (r) {
     const { seg, musc } = resumenFlex(r);
-    $("detSub").textContent = `${r.items.length} ejercicios · ${r.min} · intensidad ${r.int}${u ? ` · última vez ${haceDias(u.fecha).toLowerCase()}` : ""}`;
-    $("detNotas").innerHTML = html`<li>${r.goal}</li>`;
+    $("detSub").textContent = t("{n} ejercicios · {min} · intensidad {int}", { n: r.items.length, min: r.min, int: r.int }) + vez;
+    $("detNotas").innerHTML = html`<li>${t(r.goal)}</li>`;
     $("detMan").innerHTML = html`${maniqui(musc, "x", { etiquetas: etiquetasTop(musc, 6, fmtMin) })}
       <div class="leyenda"><span><i style="background:var(--flex1)"></i>&lt; 1 min</span><span><i style="background:var(--flex2)"></i>1–3 min</span><span><i style="background:var(--flex3)"></i>3+ min</span></div>`;
-    $("detStats").innerHTML = html`${stat(r.items.length, "Ejercicios")}${stat(Math.round(seg / 60), "Estirando", "min")}${stat(r.int.replace(" / 10", ""), "Intensidad", "/10")}`;
+    $("detStats").innerHTML = html`${stat(r.items.length, t("Ejercicios"))}${stat(Math.round(seg / 60), t("Estirando"), "min")}${stat(r.int.replace(" / 10", ""), t("Intensidad"), "/10")}`;
     $("detLista").innerHTML = html`${r.items.map(([ex, dosis, extra], i) => html`<li class="ej" data-i="${i}">
       <span class="th">${figura(ex)}</span>
-      <div class="meta"><span class="name">${EX[ex].n}</span><span class="dosis">${dosis}</span>
-        <span class="zona">Lo notas en: ${EX[ex].z}</span>
-        ${extra ? html`<span class="extra">${extra}</span>` : ""}</div>
-      <button type="button" class="ver" aria-label="${`Ver ${EX[ex].n}`}">›</button></li>`)}`;
-    $("detMaquinas").textContent = "Tensión, nunca dolor. Entra despacio, sin rebotes, y respira lento.";
-    $("detAvance").innerHTML = html`${r.adv ? html`<b>Pasa a la siguiente fase cuando:</b><ul>${r.adv.map((a) => html`<li>${a}</li>`)}</ul>` : ""}`;
+      <div class="meta"><span class="name">${t(EX[ex].n)}</span><span class="dosis">${tDosis(dosis)}</span>
+        <span class="zona">${t("Lo notas en:")} ${t(EX[ex].z)}</span>
+        ${extra ? html`<span class="extra">${t(extra)}</span>` : ""}</div>
+      <button type="button" class="ver" aria-label="${t("Ver {x}", { x: t(EX[ex].n) })}">›</button></li>`)}`;
+    $("detMaquinas").textContent = t("Tensión, nunca dolor. Entra despacio, sin rebotes, y respira lento.");
+    $("detAvance").innerHTML = html`${r.adv ? html`<b>${t("Pasa a la siguiente fase cuando:")}</b><ul>${r.adv.map((a) => html`<li>${t(a)}</li>`)}</ul>` : ""}`;
   } else {
     const g = resumenGym(w);
-    $("detSub").textContent = `${w.sub} · ${g.series} series${u ? ` · última vez ${haceDias(u.fecha).toLowerCase()}` : ""}`;
-    $("detNotas").innerHTML = html`${w.notas.map((n) => html`<li>${n}</li>`)}`;
-    $("detMan").innerHTML = html`${maniqui(g, "f", { etiquetas: etiquetasTop(g.p, 6, (v) => `${v} series`) })}
-      <div class="leyenda"><span><i style="background:var(--prim)"></i>Músculos principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
+    $("detSub").textContent = `${t(w.sub)} · ${tn(g.series, "{n} serie", "{n} series")}${vez}`;
+    $("detNotas").innerHTML = html`${w.notas.map((n) => html`<li>${t(n)}</li>`)}`;
+    $("detMan").innerHTML = html`${maniqui(g, "f", { etiquetas: etiquetasTop(g.p, 6, (v) => tn(v, "{n} serie", "{n} series")) })}
+      <div class="leyenda"><span><i style="background:var(--prim)"></i>${t("Músculos principales")}</span><span><i style="background:var(--sec)"></i>${t("Secundarios")}</span></div>`;
     const vol = w.ej.reduce((a, e) => a + (e.kg && e.reps ? e.kg * e.reps * e.series * (e.porLado ? 2 : 1) : 0), 0);
-    $("detStats").innerHTML = html`${stat(g.series, "Series")}${stat(w.ej.length, "Ejercicios")}${stat(vol.toLocaleString("es-ES"), "Volumen", "kg")}`;
-    const fila = (e, i) => html`<li class="ej g" data-i="${i}">${FIG_FUERZA[e.n] ? html`<span class="th">${figura(FIG_FUERZA[e.n])}</span>` : ""}<div class="meta"><span class="name">${e.n}${e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : ""}</span>
-      <span class="dosis">${dosisGym(e)}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : ""} · Descanso ${mmss(e.desc)}</span>
-      <span class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</span></div>
-      <button type="button" class="ver" aria-label="${`Ver ${e.n}`}">›</button></li>`;
+    $("detStats").innerHTML = html`${stat(g.series, t("Series"))}${stat(w.ej.length, t("Ejercicios"))}${stat(num(vol), t("Volumen"), "kg")}`;
+    const fila = (e, i) => html`<li class="ej g" data-i="${i}">${FIG_FUERZA[e.n] ? html`<span class="th">${figura(FIG_FUERZA[e.n])}</span>` : ""}<div class="meta"><span class="name">${t(e.n)}${lado(e)}</span>
+      <span class="dosis">${dosisGym(e)}${e.kg ? ` · ${num(e.kg)} kg` : ""} · ${t("Descanso")} ${mmss(e.desc)}</span>
+      <span class="chips">${e.p.map((m) => html`<span class="chip f">${M(m)}</span>`)}${e.s.map((m) => html`<span class="chip">${M(m)}</span>`)}</span></div>
+      <button type="button" class="ver" aria-label="${t("Ver {x}", { x: t(e.n) })}">›</button></li>`;
     const out = [];
     for (const [i, e] of w.ej.entries()) {
       if (!e.bloque) { out.push(fila(e, i)); continue; }
       if (w.ej[i - 1]?.bloque === e.bloque) continue;
       const items = w.ej.map((x, j) => [x, j]).filter(([x]) => x.bloque === e.bloque);
-      out.push(html`<li class="bloque"><b>Repite ${w.bloques[e.bloque].rondas} veces</b><ol class="ejercicios">${items.map(([x, j]) => fila(x, j))}</ol></li>`);
+      out.push(html`<li class="bloque"><b>${t("Repite {n} veces", { n: w.bloques[e.bloque].rondas })}</b><ol class="ejercicios">${items.map(([x, j]) => fila(x, j))}</ol></li>`);
     }
     $("detLista").innerHTML = html`${out}`;
-    $("detMaquinas").innerHTML = html`Material: ${w.maquinas}.${w.fuente ? html`<br>Fuente: <a href="${w.fuente.url}" target="_blank" rel="noopener">${w.fuente.n}</a>` : ""}`;
+    $("detMaquinas").innerHTML = html`${t("Material:")} ${t(w.maquinas)}.${w.fuente ? html`<br>${t("Fuente:")} <a href="${w.fuente.url}" target="_blank" rel="noopener">${w.fuente.n}</a>` : ""}`;
     $("detAvance").innerHTML = "";
   }
   for (const t of TABS) $(t).hidden = true;
@@ -257,42 +267,41 @@ $("detVolver").addEventListener("click", () => show("entrenos"));
 
 /* ---------- Exercise sheet: one exercise of the open workout, before starting (tap a row in the detail) ---------- */
 let ficha = null; // index of the exercise shown
-const lado = (e) => (e.lado ? ` (${e.lado === "izq" ? "izquierda" : "derecha"})` : "");
 function verFicha(i) {
   const r = rutinaFlex(abierto), w = gym(abierto);
   const total = r ? r.items.length : w.ej.length;
   if (i < 0 || i >= total) return;
   ficha = i;
   $("ficha").classList.toggle("gym", !r);
-  $("fichaCuenta").textContent = `Ejercicio ${i + 1} de ${total}`;
+  $("fichaCuenta").textContent = t("Ejercicio {i} de {n}", { i: i + 1, n: total });
   $("fichaAnt").disabled = i === 0;
   $("fichaSig").disabled = i === total - 1;
   if (r) {
     const [ex, dosis, extra] = r.items[i];
     const e = EX[ex];
-    $("fichaTitulo").textContent = e.n;
+    $("fichaTitulo").textContent = t(e.n);
     $("fichaFig").innerHTML = html`<div class="fig3d">${figura(ex, { clase: "grande" })}</div>`;
     en3d($("fichaFig").querySelector(".fig3d"), ex, { musculos: e });
-    $("fichaDosis").textContent = dosis;
-    $("fichaCuerpo").innerHTML = html`<p class="zona">Lo notas en: <b>${e.z}</b></p>
-      ${extra ? html`<p class="extra">${extra}</p>` : ""}
-      <h3>Cómo hacerlo</h3><ol class="pasos">${e.c.map((c) => html`<li>${c}</li>`)}</ol>
-      <p class="sub">Tensión, nunca dolor. Entra despacio, sin rebotes, y respira lento.</p>`;
+    $("fichaDosis").textContent = tDosis(dosis);
+    $("fichaCuerpo").innerHTML = html`<p class="zona">${t("Lo notas en:")} <b>${t(e.z)}</b></p>
+      ${extra ? html`<p class="extra">${t(extra)}</p>` : ""}
+      <h3>${t("Cómo hacerlo")}</h3><ol class="pasos">${e.c.map((c) => html`<li>${t(c)}</li>`)}</ol>
+      <p class="sub">${t("Tensión, nunca dolor. Entra despacio, sin rebotes, y respira lento.")}</p>`;
   } else {
     const e = w.ej[i];
     const p = Object.fromEntries(e.p.map((m) => [m, e.series])), sec = Object.fromEntries(e.s.map((m) => [m, e.series]));
-    $("fichaTitulo").textContent = `${e.n}${lado(e)}`;
-    $("fichaFig").innerHTML = html`${FIG_FUERZA[e.n] ? html`<div class="fig3d">${figura(FIG_FUERZA[e.n], { clase: "grande" })}</div>` : ""}${maniqui({ p, s: sec }, "f", { titulo: `Músculos de ${e.n}` })}
-      <div class="leyenda"><span><i style="background:var(--prim)"></i>Principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
+    $("fichaTitulo").textContent = `${t(e.n)}${lado(e)}`;
+    $("fichaFig").innerHTML = html`${FIG_FUERZA[e.n] ? html`<div class="fig3d">${figura(FIG_FUERZA[e.n], { clase: "grande" })}</div>` : ""}${maniqui({ p, s: sec }, "f", { titulo: t("Músculos de {x}", { x: t(e.n) }) })}
+      <div class="leyenda"><span><i style="background:var(--prim)"></i>${t("Principales")}</span><span><i style="background:var(--sec)"></i>${t("Secundarios")}</span></div>`;
     if (FIG_FUERZA[e.n]) en3d($("fichaFig").querySelector(".fig3d"), FIG_FUERZA[e.n], { musculos: e });
-    $("fichaDosis").textContent = `${dosisGym(e)}${e.kg ? ` · ${String(e.kg).replace(".", ",")} kg` : e.elige ? " · peso a elegir" : " · peso corporal"}`;
+    $("fichaDosis").textContent = `${dosisGym(e)} · ${e.kg ? `${num(e.kg)} kg` : t(e.elige ? "peso a elegir" : "peso corporal")}`;
     const ult = ultimasSeries(w, i)?.series.filter((x) => x?.hecho) || [];
     const rec = mejorDe(sesiones.filter(gimnasio), e.n, !!e.seg);
-    $("fichaCuerpo").innerHTML = html`<p class="zona">Descanso entre series: <b>${mmss(e.desc)}</b>${e.bloque ? html` · en circuito, ${w.bloques[e.bloque].rondas} rondas` : ""}</p>
-      <h3>Músculos</h3><p class="chips">${e.p.map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${e.s.map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}</p>
-      ${e.c ? html`<h3>Cómo hacerlo</h3><ol class="pasos">${e.c.map((c) => html`<li>${c}</li>`)}</ol>` : ""}
-      ${rec ? html`<h3>Tu récord</h3><p class="sub">${rec.rm ? `${kgTxt(rec.set.kg)} × ${rec.set.reps} · 1RM estimado ${kgTxt(rec.rm)}` : rec.kg ? `Peso máximo ${kgTxt(rec.kg)}` : e.seg ? mmss(rec.reps) : `${rec.reps} reps`}${rec.fecha ? ` · ${fechaCorta(rec.fecha)}` : ""}</p>` : ""}
-      ${ult.length ? html`<h3>La última vez</h3><p class="sub">${ult.map((x) => `${x.kg ? `${String(x.kg).replace(".", ",")} kg × ` : ""}${x.seg ? mmss(x.seg) : x.reps}`).join(" · ")}</p>` : ""}`;
+    $("fichaCuerpo").innerHTML = html`<p class="zona">${t("Descanso entre series:")} <b>${mmss(e.desc)}</b>${e.bloque ? html` · ${t("en circuito, {n} rondas", { n: w.bloques[e.bloque].rondas })}` : ""}</p>
+      <h3>${t("Músculos")}</h3><p class="chips">${e.p.map((m) => html`<span class="chip f">${M(m)}</span>`)}${e.s.map((m) => html`<span class="chip">${M(m)}</span>`)}</p>
+      ${e.c ? html`<h3>${t("Cómo hacerlo")}</h3><ol class="pasos">${e.c.map((c) => html`<li>${t(c)}</li>`)}</ol>` : ""}
+      ${rec ? html`<h3>${t("Tu récord")}</h3><p class="sub">${rec.rm ? t("{set} · 1RM estimado {kg}", { set: `${kgTxt(rec.set.kg)} × ${rec.set.reps}`, kg: kgTxt(rec.rm) }) : rec.kg ? t("Peso máximo {kg}", { kg: kgTxt(rec.kg) }) : e.seg ? mmss(rec.reps) : t("{n} reps", { n: rec.reps })}${rec.fecha ? ` · ${fechaCorta(rec.fecha)}` : ""}</p>` : ""}
+      ${ult.length ? html`<h3>${t("La última vez")}</h3><p class="sub">${ult.map((x) => `${x.kg ? `${num(x.kg)} kg × ` : ""}${x.seg ? mmss(x.seg) : x.reps}`).join(" · ")}</p>` : ""}`;
   }
   $("ficha").hidden = false;
   $("ficha").scrollTo?.(0, 0);
@@ -335,7 +344,7 @@ function entrar(id, inicio = Date.now()) {
   pantallaEncendida(true);
   fcEnVivo();
   sesion.timerFc = setInterval(fcEnVivo, 30000);
-  entreno?.empezar({ titulo: titulo(id), inicio }).catch(() => {});
+  entreno?.empezar({ titulo: titulo(id), inicio, cabecera: t("Entreno en curso") }).catch(() => {});
   guardarEnCurso();
 }
 
@@ -370,11 +379,11 @@ function ofrecerContinuar() {
   if (!d || sesion) return;
   pendienteEnCurso = d;
   const ini = new Date(d.inicio);
-  const cuando = iso(ini) === iso(new Date()) ? "hoy" : ini.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  const cuando = iso(ini) === iso(new Date()) ? t("hoy") : ini.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
   let hecho;
-  if (d.tipo === "gym") { const n = Object.values(d.valores).filter((v) => v?.hecho).length; hecho = `${n} ${n === 1 ? "serie hecha" : "series hechas"}`; }
-  else { const n = new Set(d.hechos).size; hecho = `${n} de ${rutinaFlex(d.rutina).items.length} posturas`; }
-  $("contTexto").textContent = `${titulo(d.rutina)}, empezado ${cuando} a las ${ini.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })} · ${hecho}.`;
+  if (d.tipo === "gym") { const n = Object.values(d.valores).filter((v) => v?.hecho).length; hecho = tn(n, "{n} serie hecha", "{n} series hechas"); }
+  else { const n = new Set(d.hechos).size; hecho = t("{n} de {total} posturas", { n, total: rutinaFlex(d.rutina).items.length }); }
+  $("contTexto").textContent = t("{titulo}, empezado {cuando} a las {hora} · {hecho}.", { titulo: titulo(d.rutina), cuando, hora: ini.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }), hecho });
   $("continuarPanel").hidden = false;
 }
 function retomar() {
@@ -449,7 +458,7 @@ async function terminar() {
     for (const [i, [id]] of r.items.entries()) if (s.hechos.has(i)) { for (const m of EX[id].p) musc[m] = (musc[m] || 0) + s.seg[i] / 60; for (const m of EX[id].s) musc[m] = (musc[m] || 0) + s.seg[i] / 120; }
     man = maniqui(musc, "x");
     const estirando = Object.values(s.seg).reduce((a, b) => a + b, 0) / 60;
-    stats = html`${stat(mmss((Date.now() - s.inicio) / 1000), "Duración")}${stat(`${hechos}/${r.items.length}`, "Ejercicios")}${stat(Math.round(estirando), "Estirando", "min")}${statsReloj()}`;
+    stats = html`${stat(mmss((Date.now() - s.inicio) / 1000), t("Duración"))}${stat(`${hechos}/${r.items.length}`, t("Ejercicios"))}${stat(Math.round(estirando), t("Estirando"), "min")}${statsReloj()}`;
     // The plan starts with the first session done in the app, unless a start date was set.
     if (!inicioPlan && r.n) await store.put("ajustes", "plan-flexibilidad", { plan: "flexibilidad-6m-v1", inicio: fecha });
     // One plan session per day, with the same id the plan's JSON import uses. A second one that day keeps the first's start.
@@ -469,8 +478,8 @@ async function terminar() {
     datos = { tipo: "gimnasio", fecha, inicio: s.inicio, fin: Date.now(), rutina: w.id, nombre: w.n, duracionMin: min, notas: "", volumenKg: Math.round(vol), ejercicios };
     const p = {}, sec = {};
     for (const f of s.filas) if (s.valores[f.k].hecho) { for (const m of w.ej[f.e].p) p[m] = (p[m] || 0) + 1; for (const m of w.ej[f.e].s) sec[m] = (sec[m] || 0) + 1; }
-    man = maniqui({ p, s: sec }, "f", { etiquetas: etiquetasTop(p, 4, (v) => `${v} series`) });
-    stats = html`${stat(hechas.length, "Series")}${stat(Math.round(vol).toLocaleString("es-ES"), "Volumen", "kg")}${stat(mmss((Date.now() - s.inicio) / 1000), "Duración")}${statsReloj()}`;
+    man = maniqui({ p, s: sec }, "f", { etiquetas: etiquetasTop(p, 4, (v) => tn(v, "{n} serie", "{n} series")) });
+    stats = html`${stat(hechas.length, t("Series"))}${stat(num(Math.round(vol)), t("Volumen"), "kg")}${stat(mmss((Date.now() - s.inicio) / 1000), t("Duración"))}${statsReloj()}`;
     resumenId = store.newId();
     await store.put("sesiones", resumenId, datos);
   }
@@ -478,13 +487,13 @@ async function terminar() {
   borrarEnCurso();
   salirSesion();
   document.body.classList.add("en-sesion");
-  $("resFecha").textContent = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  $("resFecha").textContent = new Date().toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
   $("resTitulo").textContent = titulo(datos.rutina);
   $("resMan").innerHTML = html`${man}`;
   $("resStats").innerHTML = html`${stats}`;
   const recs = s.tipo === "flex" ? [] : records({ ...datos, id: resumenId });
-  $("resRecords").innerHTML = html`<div class="hd"><h3>Récords</h3><span class="sub">${recs.length === 1 ? "1 nuevo" : `${recs.length} nuevos`}</span></div>
-    <ul class="recs">${recs.map((r) => html`<li><span class="n">${r.n}</span><span class="v num">${r.v}</span><span class="sub">${r.t} · antes ${r.antes}</span></li>`)}</ul>`;
+  $("resRecords").innerHTML = html`<div class="hd"><h3>${t("Récords")}</h3><span class="sub">${tn(recs.length, "{n} nuevo", "{n} nuevos")}</span></div>
+    <ul class="recs">${recs.map((r) => html`<li><span class="n">${t(r.n)}</span><span class="v num">${r.v}</span><span class="sub">${t("{que} · antes {v}", { que: t(r.t), v: r.antes })}</span></li>`)}</ul>`;
   $("resRecords").hidden = !recs.length;
   pintarEsfuerzo(null);
   $("resumen").classList.toggle("flex", s.tipo === "flex");
@@ -500,10 +509,10 @@ function rellenarResumen() {
   const r = sesiones.find((x) => x.id === resumenId)?.reloj;
   $("resFc").textContent = r?.fcMedia ? `${r.fcMedia}` : "—";
   $("resKcal").textContent = r?.kcal ? `${r.kcal}` : "—";
-  $("resNota").textContent = r ? (r.fcMax ? `Del reloj: FC máxima ${r.fcMax} ppm.` : "Datos del reloj vía Health Connect.")
-    : !hc ? "FC media y kcal llegan de tu Coros a través de Health Connect, en la app de Android."
-      : !estadoSalud.permiso ? "Conecta Health Connect en Perfil para ver aquí la FC y las calorías de tu Coros."
-        : "Aparecerán cuando tu Coros sincronice el entreno con el teléfono.";
+  $("resNota").textContent = r ? (r.fcMax ? t("Del reloj: FC máxima {n} ppm.", { n: r.fcMax }) : t("Datos del reloj vía Health Connect."))
+    : !hc ? t("FC media y kcal llegan de tu Coros a través de Health Connect, en la app de Android.")
+      : !estadoSalud.permiso ? t("Conecta Health Connect en Perfil para ver aquí la FC y las calorías de tu Coros.")
+        : t("Aparecerán cuando tu Coros sincronice el entreno con el teléfono.");
 }
 // How hard it felt, 1–10, saved on the session (the summary's buttons; tap again to change it).
 function pintarEsfuerzo(v) {
@@ -532,9 +541,9 @@ function construirPasos(r) {
     const ps = pasos(it, i);
     for (const [k, p] of ps.entries()) {
       const prev = ps[k - 1];
-      if (k === 0) out.push({ ...p, tipo: "prep", seg: 5, texto: "Prepárate" });
-      else if (p.lado && prev.lado !== p.lado) out.push({ ...p, tipo: "prep", seg: 4, texto: "Cambia de lado" });
-      else out.push({ ...p, tipo: "prep", seg: 3, texto: "Suelta y respira" });
+      if (k === 0) out.push({ ...p, tipo: "prep", seg: 5, texto: t("Prepárate") });
+      else if (p.lado && prev.lado !== p.lado) out.push({ ...p, tipo: "prep", seg: 4, texto: t("Cambia de lado") });
+      else out.push({ ...p, tipo: "prep", seg: 3, texto: t("Suelta y respira") });
       out.push({ ...p, tipo: "work" });
     }
   }
@@ -556,7 +565,7 @@ function empezarFlex(id, previo = null) {
     sesion.pausa = Date.now();
   }
   entrar(id, previo?.inicio);
-  $("repPausa").textContent = sesion.pausa ? "SEGUIR" : "PAUSA";
+  $("repPausa").textContent = t(sesion.pausa ? "SEGUIR" : "PAUSA");
   $("reproductor").hidden = false;
   window.scrollTo(0, 0);
   irA(i);
@@ -575,9 +584,9 @@ function irA(i) {
   if (s.pausa) s.pausa = s.t0;
   const p = s.pasos[i];
   const ex = EX[p.ex];
-  $("repCuenta").textContent = `Postura ${p.i + 1} de ${r.items.length}`;
-  $("repTitulo").textContent = ex.n;
-  $("repSerie").textContent = p.tipo === "prep" ? p.texto : [p.texto, p.reps ? `${p.reps} repeticiones` : ""].filter(Boolean).join(" · ");
+  $("repCuenta").textContent = t("Postura {i} de {n}", { i: p.i + 1, n: r.items.length });
+  $("repTitulo").textContent = t(ex.n);
+  $("repSerie").textContent = p.tipo === "prep" ? p.texto : [p.texto, p.reps ? t("{n} repeticiones", { n: p.reps }) : ""].filter(Boolean).join(" · ");
   $("repLado").hidden = !p.lado;
   $("repLado").querySelectorAll("span").forEach((sp) => sp.classList.toggle("on", sp.dataset.lado === p.lado));
   if ($("repFig").dataset.ex !== p.ex) {
@@ -593,10 +602,10 @@ function irA(i) {
     animar($("repFig"));
     en3d($("repFig"), p.ex, { ctl, compacto: true, musculos: ex });
   }
-  $("repCueT").textContent = p.tipo === "prep" ? "Cómo" : "Siente";
-  $("repCue").textContent = p.tipo === "prep" ? ex.c[0] : `${ex.z}. Tensión, nunca dolor: respira lento y suelta un poco más al exhalar.`;
+  $("repCueT").textContent = t(p.tipo === "prep" ? "Cómo" : "Siente");
+  $("repCue").textContent = p.tipo === "prep" ? t(ex.c[0]) : `${t(ex.z)}. ${t("Tensión, nunca dolor: respira lento y suelta un poco más al exhalar.")}`;
   const sig = s.pasos.slice(i + 1).find((q) => q.tipo === "work" && q.i !== p.i);
-  $("repSig").innerHTML = html`${sig ? html`<span class="th">${figura(sig.ex)}</span><span>Después: <b>${EX[sig.ex].n}</b> · ${r.items[sig.i][1]}</span>` : html`<span>Es la última postura.</span>`}`;
+  $("repSig").innerHTML = html`${sig ? html`<span class="th">${figura(sig.ex)}</span><span>${t("Después:")} <b>${t(EX[sig.ex].n)}</b> · ${tDosis(r.items[sig.i][1])}</span>` : html`<span>${t("Es la última postura.")}</span>`}`;
   animar($("repSig"));
   if (p.tipo === "work" && !s.pausa) { vibrar(p.lado ? [120, 80, 120] : 150); pitido(p.lado === "der" ? 990 : 880); }
   guardarEnCurso();
@@ -619,7 +628,7 @@ function tick() {
 function pausar() {
   const s = sesion;
   if (s.pausa) { s.pausado += Date.now() - s.pausa; s.pausa = null; } else s.pausa = Date.now();
-  $("repPausa").textContent = s.pausa ? "SEGUIR" : "PAUSA";
+  $("repPausa").textContent = t(s.pausa ? "SEGUIR" : "PAUSA");
 }
 $("repPausa").addEventListener("click", pausar);
 // Skipping goes to the next exercise (a work step skipped halfway doesn't count as done).
@@ -641,13 +650,13 @@ function empezarGym(id, previo = null) {
     if (!e.bloque) {
       const fs = Array.from({ length: e.series }, (_, si) => ({ e: ei, si, k: `${ei}-${si}`, lbl: String(si + 1) }));
       filas.push(...fs);
-      paginas.push({ titulo: e.n, filas: fs, ej: [ei] });
+      paginas.push({ titulo: t(e.n), filas: fs, ej: [ei] });
     } else if (w.ej[ei - 1]?.bloque !== e.bloque) {
       const idx = w.ej.map((x, j) => [x, j]).filter(([x]) => x.bloque === e.bloque).map(([, j]) => j);
       const fs = [];
       for (let ro = 0; ro < w.bloques[e.bloque].rondas; ro++) for (const j of idx) fs.push({ e: j, si: ro, k: `${j}-${ro}`, lbl: `R${ro + 1}`, ronda: true });
       filas.push(...fs);
-      paginas.push({ titulo: `Circuito · ${w.bloques[e.bloque].rondas} vueltas`, filas: fs, ej: idx });
+      paginas.push({ titulo: t("Circuito · {n} vueltas", { n: w.bloques[e.bloque].rondas }), filas: fs, ej: idx });
     }
   }
   // Each set starts with last time's weight and reps (a set beyond last time's takes its last set's numbers).
@@ -658,7 +667,7 @@ function empezarGym(id, previo = null) {
     const ps = u && (u.series[f.si] || u.series[u.series.length - 1]);
     const kg = ps && ps.kg != null ? ps.kg : e.kg;
     const n = ps && !u.otra && ps[c] != null ? ps[c] : e.seg || e.reps;
-    valores[f.k] = { kg, n, hecho: false, prev: ps ? `${ps.kg ? `${String(ps.kg).replace(".", ",")}×` : ""}${ps[c] ?? ""}${e.seg ? " s" : ""}` : "—" };
+    valores[f.k] = { kg, n, hecho: false, prev: ps ? `${ps.kg ? `${num(ps.kg)}×` : ""}${ps[c] ?? ""}${e.seg ? " s" : ""}` : "—" };
   }
   // Last time every set was done at the target: one step up (not when coming back to a session already under way).
   const subidas = {};
@@ -692,7 +701,7 @@ function pagina(n) {
   const s = sesion, w = gym(s.rutina);
   s.pag = n;
   const pg = s.paginas[n];
-  $("regCuenta").textContent = `Ejercicio ${n + 1} de ${s.paginas.length}`;
+  $("regCuenta").textContent = t("Ejercicio {i} de {n}", { i: n + 1, n: s.paginas.length });
   $("regTitulo").textContent = pg.titulo;
   const ms = new Set(pg.ej.flatMap((i) => w.ej[i].p)), ss = new Set(pg.ej.flatMap((i) => w.ej[i].s));
   const fig = FIG_FUERZA[w.ej[pg.ej[0]].n];
@@ -700,25 +709,27 @@ function pagina(n) {
   $("regFig").hidden = !fig;
   animar($("regFig"));
   en3d($("regFig"), fig, { musculos: { p: [...ms], s: [...ss] } });
-  $("regMusc").innerHTML = html`${[...ms].map((m) => html`<span class="chip f">${NOMBRES[m]}</span>`)}${[...ss].filter((m) => !ms.has(m)).map((m) => html`<span class="chip">${NOMBRES[m]}</span>`)}`;
+  $("regMusc").innerHTML = html`${[...ms].map((m) => html`<span class="chip f">${M(m)}</span>`)}${[...ss].filter((m) => !ms.has(m)).map((m) => html`<span class="chip">${M(m)}</span>`)}`;
   const timed = pg.ej.every((i) => w.ej[i].seg);
-  $("regColReps").textContent = timed ? "SEG" : pg.ej.every((i) => w.ej[i].porLado) ? "REPS/LADO" : "REPS";
+  $("regColReps").textContent = t(timed ? "SEG" : pg.ej.every((i) => w.ej[i].porLado) ? "REPS/LADO" : "REPS");
   // Kg can be negative (assisted pull-ups on the machine), so the kg field has no min and no inputmode="decimal",
   // whose keyboard on Android has no minus key. Negative kg add nothing to the volume.
   $("regFilas").innerHTML = html`${pg.filas.map((f) => {
     const e = w.ej[f.e], v = s.valores[f.k];
-    const nombre = f.ronda ? `${f.lbl} · ${e.n}${e.lado ? (e.lado === "izq" ? " izq." : " der.") : ""}` : f.lbl;
+    const nombre = f.ronda ? `${f.lbl} · ${t(e.n)}${e.lado ? ` ${t(e.lado === "izq" ? "izq." : "der.")}` : ""}` : f.lbl;
     return html`<tr data-k="${f.k}" class="${v.hecho ? "done" : ""}"><td class="${f.ronda ? "lbl" : "num"}">${nombre}</td><td class="prev">${v.prev}</td>
-      <td><input type="number" step="0.5" data-c="kg" value="${v.kg ?? ""}" aria-label="Kg, serie ${f.lbl}" placeholder="${e.kg == null ? "—" : ""}"></td>
-      <td><input type="number" inputmode="numeric" min="0" data-c="n" value="${v.n ?? ""}" aria-label="${e.seg ? "Segundos" : "Repeticiones"}, serie ${f.lbl}"></td>
-      <td><button type="button" class="ck" data-ck="${f.k}" aria-pressed="${v.hecho}" aria-label="Serie ${f.lbl} hecha">✓</button></td></tr>`;
+      <td><input type="number" step="0.5" data-c="kg" value="${v.kg ?? ""}" aria-label="${t("Kg, serie {n}", { n: f.lbl })}" placeholder="${e.kg == null ? "—" : ""}"></td>
+      <td><input type="number" inputmode="numeric" min="0" data-c="n" value="${v.n ?? ""}" aria-label="${t(e.seg ? "Segundos, serie {n}" : "Repeticiones, serie {n}", { n: f.lbl })}"></td>
+      <td><button type="button" class="ck" data-ck="${f.k}" aria-pressed="${v.hecho}" aria-label="${t("Serie {n} hecha", { n: f.lbl })}">✓</button></td></tr>`;
   })}`;
-  $("regNota").textContent = w.notas.find((x) => pg.ej.some((i) => x.toLowerCase().startsWith(w.ej[i].n.toLowerCase().split(" ").slice(0, 2).join(" ")))) || "";
+  // Notes are matched to the exercise in Spanish, then shown translated.
+  const nota = w.notas.find((x) => pg.ej.some((i) => x.toLowerCase().startsWith(w.ej[i].n.toLowerCase().split(" ").slice(0, 2).join(" "))));
+  $("regNota").textContent = nota ? t(nota) : "";
   const sube = pg.ej.map((i) => s.subidas[i]).filter(Boolean);
-  $("regSube").textContent = sube.length ? `Subimos un paso. ${sube.join(" ")}` : "";
+  $("regSube").textContent = sube.length ? `${t("Subimos un paso.")} ${sube.join(" ")}` : "";
   $("regSube").hidden = !sube.length;
   $("regAnt").disabled = n === 0;
-  $("regSig").textContent = n === s.paginas.length - 1 ? "TERMINAR" : "SIGUIENTE";
+  $("regSig").textContent = t(n === s.paginas.length - 1 ? "TERMINAR" : "SIGUIENTE");
   guardarEnCurso();
 }
 $("regFilas").addEventListener("input", (e) => {
@@ -778,9 +789,9 @@ async function renderProgreso() {
   const desde = iso(lunes);
   const ses = sesiones.filter((s) => s.fecha >= desde);
   const n = (t) => ses.filter((s) => s.tipo === t).length;
-  $("semana").innerHTML = html`<div class="stat"><b>${ses.length}</b><span>sesiones esta semana</span></div>
-    <div class="stat"><b>${n("flexibilidad")}</b><span>flexibilidad</span></div>
-    <div class="stat"><b>${n("gimnasio")}</b><span>gimnasio</span></div>`;
+  $("semana").innerHTML = html`<div class="stat"><b>${ses.length}</b><span>${t("sesiones esta semana")}</span></div>
+    <div class="stat"><b>${n("flexibilidad")}</b><span>${t("flexibilidad")}</span></div>
+    <div class="stat"><b>${n("gimnasio")}</b><span>${t("gimnasio")}</span></div>`;
   // Five weeks, Monday to Sunday, ending this week.
   const porDia = {};
   for (const s of sesiones) if (s.fecha) (porDia[s.fecha] ||= new Set()).add(s.tipo);
@@ -797,7 +808,7 @@ async function renderProgreso() {
   const d = new Date(hoy);
   if (!porDia[iso(d)]) d.setDate(d.getDate() - 1);
   while (porDia[iso(d)]) { racha++; d.setDate(d.getDate() - 1); }
-  $("racha").textContent = racha === 1 ? "1 día seguido" : `${racha} días seguidos`;
+  $("racha").textContent = tn(racha, "{n} día seguido", "{n} días seguidos");
 
   semanaMusculos(ses.filter(gimnasio));
   tablaRecords();
@@ -821,11 +832,11 @@ function semanaMusculos(ses) {
     for (const m of def.s) sec[m] = (sec[m] || 0) + n;
   }
   const filas = Object.entries(p).sort((a, b) => b[1] - a[1]);
-  $("musSemana").innerHTML = html`<div class="hd"><h3>Series por músculo</h3><span class="sub">esta semana</span></div>
-    ${filas.length ? html`${maniqui({ p, s: sec }, "f", { titulo: "Músculos trabajados esta semana", etiquetas: etiquetasTop(p, 6, (v) => `${v} series`) })}
-      <ul class="barras musc">${filas.map(([m, v]) => html`<li class="${v >= 10 ? "en-rango" : ""}"><span class="n">${NOMBRES[m]}</span><span class="v num">${v}</span><span class="b"><i style="${`width:${Math.min(100, (v / 20) * 100).toFixed(1)}%`}"></i><em class="marca" aria-hidden="true"></em></span></li>`)}</ul>
-      <p class="sub">Series en que el músculo es el principal. La raya marca 10: entre 10 y 20 por semana es una guía habitual para ganar músculo.</p>`
-    : html`<p class="sub">Aún no hay series de fuerza esta semana.</p>`}`;
+  $("musSemana").innerHTML = html`<div class="hd"><h3>${t("Series por músculo")}</h3><span class="sub">${t("esta semana")}</span></div>
+    ${filas.length ? html`${maniqui({ p, s: sec }, "f", { titulo: t("Músculos trabajados esta semana"), etiquetas: etiquetasTop(p, 6, (v) => tn(v, "{n} serie", "{n} series")) })}
+      <ul class="barras musc">${filas.map(([m, v]) => html`<li class="${v >= 10 ? "en-rango" : ""}"><span class="n">${M(m)}</span><span class="v num">${v}</span><span class="b"><i style="${`width:${Math.min(100, (v / 20) * 100).toFixed(1)}%`}"></i><em class="marca" aria-hidden="true"></em></span></li>`)}</ul>
+      <p class="sub">${t("Series en que el músculo es el principal. La raya marca 10: entre 10 y 20 por semana es una guía habitual para ganar músculo.")}</p>`
+    : html`<p class="sub">${t("Aún no hay series de fuerza esta semana.")}</p>`}`;
 }
 // Each exercise's best: the set with the best estimated 1RM, or most reps / longest hold with no weight. Newest first.
 function tablaRecords() {
@@ -834,19 +845,19 @@ function tablaRecords() {
   for (const x of gs) for (const e of x.ejercicios || []) if (e?.n && !nombres.includes(e.n) && e.series?.some((y) => y?.hecho)) nombres.push(e.n);
   const filas = nombres.map((n) => {
     const seg = !!defGym(null, n)?.seg, b = mejorDe(gs, n, seg);
-    if (!b) return null;
-    const v = b.rm ? kgTxt(b.rm) : b.kg ? kgTxt(b.kg) : seg ? mmss(b.reps) : `${b.reps} reps`;
-    const det = b.rm ? `1RM est. · ${kgTxt(b.set.kg)} × ${b.set.reps}` : b.kg ? "peso máximo" : seg ? "mejor tiempo" : "peso corporal";
+    if (!b || !(b.rm || b.kg || b.reps)) return null;
+    const v = b.rm ? kgTxt(b.rm) : b.kg ? kgTxt(b.kg) : seg ? mmss(b.reps) : t("{n} reps", { n: b.reps });
+    const det = b.rm ? t("1RM est. · {set}", { set: `${kgTxt(b.set.kg)} × ${b.set.reps}` }) : t(b.kg ? "peso máximo" : seg ? "mejor tiempo" : "peso corporal");
     return { n, v, det, fecha: b.fecha };
-  }).filter((f) => f && (f.v !== "0 reps"));
-  $("records").innerHTML = html`<div class="hd"><h3>Récords</h3><span class="sub">1RM estimado (Epley)</span></div>
-    ${filas.length ? html`<ul class="recs">${filas.map((f) => html`<li><span class="n">${f.n}</span><span class="v num">${f.v}</span><span class="sub">${f.det}${f.fecha ? ` · ${fechaCorta(f.fecha)}` : ""}</span></li>`)}</ul>`
-    : html`<p class="sub">Tus mejores marcas aparecerán cuando registres series en el gimnasio.</p>`}`;
+  }).filter(Boolean);
+  $("records").innerHTML = html`<div class="hd"><h3>${t("Récords")}</h3><span class="sub">${t("1RM estimado (Epley)")}</span></div>
+    ${filas.length ? html`<ul class="recs">${filas.map((f) => html`<li><span class="n">${t(f.n)}</span><span class="v num">${f.v}</span><span class="sub">${f.det}${f.fecha ? ` · ${fechaCorta(f.fecha)}` : ""}</span></li>`)}</ul>`
+    : html`<p class="sub">${t("Tus mejores marcas aparecerán cuando registres series en el gimnasio.")}</p>`}`;
 }
 function camposTest(tests) {
   const f = Number($("testFase").value);
-  const t = tests.find((x) => x.fase === f) || {};
-  $("testCampos").innerHTML = html`${TESTS.map(([k, l, u]) => html`<label class="f">${l} (${u})<input type="number" inputmode="decimal" step="any" name="${k}" value="${t[k] ?? ""}"></label>`)}`;
+  const prev = tests.find((x) => x.fase === f) || {};
+  $("testCampos").innerHTML = html`${TESTS.map(([k, l, u]) => html`<label class="f">${t(l)} (${u})<input type="number" inputmode="decimal" step="any" name="${k}" value="${prev[k] ?? ""}"></label>`)}`;
 }
 $("testFase").addEventListener("change", async () => camposTest(await store.all("tests")));
 $("testForm").addEventListener("submit", async (e) => {
@@ -858,19 +869,19 @@ $("testForm").addEventListener("submit", async (e) => {
     datos[k] = v === "" || !Number.isFinite(Number(v)) ? null : Number(v);
   }
   await store.put("tests", `fase-${fase}`, datos);
-  $("testOk").textContent = `Test de la fase ${fase} guardado.`;
+  $("testOk").textContent = t("Test de la fase {n} guardado.", { n: fase });
 });
 function grafica(tests) {
   const pts = tests.filter((t) => Number.isFinite(t.dedosSueloCm)).sort((a, b) => a.fase - b.fase);
-  if (!pts.length) { $("testGrafica").innerHTML = html`<p class="sub">Aún no hay tests. Haz el primero al final de la fase 1.</p>`; return; }
+  if (!pts.length) { $("testGrafica").innerHTML = html`<p class="sub">${t("Aún no hay tests. Haz el primero al final de la fase 1.")}</p>`; return; }
   // Distance to the floor in cm: 0 means touching it, negative means past it. Higher on the chart is better.
   const vals = pts.map((t) => t.dedosSueloCm);
   const hi = Math.max(5, ...vals) + 2, lo = Math.min(-5, ...vals) - 2;
   const x = (f) => 30 + ((f - 1) / 5) * 205, y = (v) => 8 + ((v - lo) / (hi - lo)) * 60;
   const grid = [hi - 2, 0, lo + 2].map(Math.round).filter((v, i, a) => a.indexOf(v) === i);
-  $("testGrafica").innerHTML = html`<svg class="grafica" viewBox="0 0 250 86" role="img" aria-label="Test de dedos al suelo por fase">
+  $("testGrafica").innerHTML = html`<svg class="grafica" viewBox="0 0 250 86" role="img" aria-label="${t("Test de dedos al suelo por fase")}">
     ${grid.map((v) => html`<line x1="30" x2="240" y1="${y(v)}" y2="${y(v)}" stroke="var(--app-line)" stroke-width=".6" stroke-dasharray="${v === 0 ? "3 2" : "none"}"/><text x="26" y="${y(v) + 3}" text-anchor="end">${v}</text>`)}
-    <text x="240" y="${y(0) - 3}" text-anchor="end">tocar el suelo</text>
+    <text x="240" y="${y(0) - 3}" text-anchor="end">${t("tocar el suelo")}</text>
     <polyline points="${pts.map((t) => `${x(t.fase)},${y(t.dedosSueloCm)}`).join(" ")}" fill="none" stroke="var(--flex3)" stroke-width="2"/>
     ${pts.map((t, i) => html`<circle cx="${x(t.fase)}" cy="${y(t.dedosSueloCm)}" r="${i === pts.length - 1 ? 3.5 : 2.4}" fill="var(--flex3)"/>`)}
     ${[1, 2, 3, 4, 5, 6].map((f) => html`<text x="${x(f)}" y="82" text-anchor="middle">F${f}</text>`)}
@@ -894,29 +905,30 @@ form.addEventListener("submit", async (e) => {
   setTimeout(() => ($("nuevaOk").hidden = true), 1800);
 });
 
-const hora = (ms) => new Date(ms).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+const hora = (ms) => new Date(ms).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 function lineaReloj(s) {
   const r = s.reloj;
   const partes = [`⌚ ${hora(r.inicio)}–${hora(r.fin)}`];
-  if (r.fcMedia) partes.push(`FC ${r.fcMedia}${r.fcMax ? `/${r.fcMax}` : ""} ppm`);
+  if (r.fcMedia) partes.push(t("FC {v} ppm", { v: `${r.fcMedia}${r.fcMax ? `/${r.fcMax}` : ""}` }));
   if (r.kcal) partes.push(`${r.kcal} kcal`);
-  return partes.join(" · ") + (s.origen === "reloj" ? ". Apunta las series y se unirán." : "");
+  return partes.join(" · ") + (s.origen === "reloj" ? `. ${t("Apunta las series y se unirán.")}` : "");
 }
 function renderHistorial() {
   $("vacio").hidden = sesiones.length > 0;
   $("lista").innerHTML = html`${sesiones.map((s) => {
-    const nombre = s.rutina ? (s.nombre || titulo(s.rutina)) : "";
+    // The app's own workouts show their name in the chosen language; the watch's keep its title.
+    const nombre = s.rutina ? (rutinaFlex(s.rutina) || gym(s.rutina) ? titulo(s.rutina) : s.nombre || s.rutina) : s.nombre || "";
     const hechos = Array.isArray(s.ejercicios) && s.tipo === "flexibilidad" ? s.ejercicios.filter((x) => x.hecho).length : null;
     const series = s.tipo === "gimnasio" && Array.isArray(s.ejercicios) ? s.ejercicios.flatMap((x) => x.series || []).filter((x) => x.hecho).length : null;
     return html`<li>
-    <button type="button" class="txt" data-ver="${s.id}" aria-label="${`Ver la sesión: ${nombre || (s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad")}, ${s.fecha ? fechaLarga(s.fecha) : "sin fecha"}`}">
-      <span class="tipo ${s.tipo === "gimnasio" ? "gimnasio" : ""}">${s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad"}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? " · Solo en el reloj" : ""}</span>
+    <button type="button" class="txt" data-ver="${s.id}" aria-label="${t("Ver la sesión: {n}, {f}", { n: nombre || t(s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad"), f: s.fecha ? fechaLarga(s.fecha) : t("sin fecha") })}">
+      <span class="tipo ${s.tipo === "gimnasio" ? "gimnasio" : ""}">${t(s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad")}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? ` · ${t("Solo en el reloj")}` : ""}</span>
       ${nombre ? html`<span class="l">${nombre}</span>` : ""}
-      <span class="l"><b>${s.fecha ? fechaLarga(s.fecha) : "Sin fecha"}</b>${s.duracionMin ? ` · ${s.duracionMin} min` : ""}${hechos != null ? ` · ${hechos}/${s.ejercicios.length} ejercicios` : ""}${series ? ` · ${series} series` : ""}${s.volumenKg ? ` · ${s.volumenKg.toLocaleString("es-ES")} kg` : ""}</span>
+      <span class="l"><b>${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")}</b>${s.duracionMin ? ` · ${s.duracionMin} min` : ""}${hechos != null ? ` · ${hechos}/${s.ejercicios.length} ${t("ejercicios")}` : ""}${series ? ` · ${tn(series, "{n} serie", "{n} series")}` : ""}${s.volumenKg ? ` · ${num(s.volumenKg)} kg` : ""}</span>
       ${s.reloj ? html`<span class="l reloj">${lineaReloj(s)}</span>` : ""}
       ${s.notas ? html`<span class="l sub">${s.notas}</span>` : ""}
     </button>
-    <button type="button" class="del" data-del="${s.id}" aria-label="Borrar la sesión del ${s.fecha || ""}">Borrar</button>
+    <button type="button" class="del" data-del="${s.id}" aria-label="${t("Borrar la sesión del {f}", { f: s.fecha || "" })}">${t("Borrar")}</button>
   </li>`;
   })}`;
 }
@@ -929,7 +941,7 @@ $("lista").addEventListener("click", async (e) => {
 
 /* ---------- One session of the history (tap it in Historial) ---------- */
 let sesionVista = null;
-const kgTxt = (kg) => `${String(kg).replace(".", ",")} kg`;
+const kgTxt = (kg) => `${num(kg)} kg`;
 // A saved gym exercise's definition (muscles, per side, timed): from the session's workout, else any workout's.
 const defGym = (rutina, n) => gym(rutina)?.ej.find((e) => e.n === n) || GYM.flatMap((w) => w.ej).find((e) => e.n === n) || null;
 const volSeries = (series, def) => (series || []).reduce((a, x) => a + (x?.hecho && x.kg > 0 && x.reps > 0 ? x.kg * x.reps * (def?.porLado ? 2 : 1) : 0), 0);
@@ -950,17 +962,17 @@ function progresion(s, n) {
   const porKg = pts.some((p) => p.kg !== 0);
   return { pts: pts.slice(-8).map((p) => ({ ...p, v: porKg ? p.kg : p.reps })), porKg };
 }
-const fechaCorta = (f) => (f ? parse(f).toLocaleDateString("es-ES", { day: "numeric", month: "short" }) : "");
+const fechaCorta = (f) => (f ? parse(f).toLocaleDateString(locale, { day: "numeric", month: "short" }) : "");
 function grafProgresion(s, n, seg) {
   const { pts, porKg } = progresion(s, n);
   if (pts.length < 2) return "";
   const vs = pts.map((p) => p.v), lo = Math.min(...vs), hi = Math.max(...vs);
   const W = 240, H = 64, x = (i) => 16 + (i * (W - 32)) / (pts.length - 1), y = (v) => (hi === lo ? 34 : 52 - ((v - lo) / (hi - lo)) * 32);
-  const fmt = (v) => (porKg ? kgTxt(v) : seg ? mmss(v) : `${v} reps`);
+  const fmt = (v) => (porKg ? kgTxt(v) : seg ? mmss(v) : t("{n} reps", { n: v }));
   const ult = pts.length - 1;
   const dif = vs[ult] - vs[0];
-  return html`<div class="prog"><span class="sub">${porKg ? "Peso máximo" : seg ? "Mejor tiempo" : "Más reps"}, últimas ${pts.length} veces${dif ? ` · ${dif > 0 ? "+" : "−"}${porKg ? kgTxt(Math.abs(dif)) : seg ? mmss(Math.abs(dif)) : `${Math.abs(dif)} reps`}` : " · igual"}</span>
-    <svg class="grafica" viewBox="0 0 ${W} ${H}" role="img" aria-label="${`Progresión de ${n}: ${pts.map((p) => `${fechaCorta(p.fecha)} ${fmt(p.v)}`).join(", ")}`}">
+  return html`<div class="prog"><span class="sub">${t(porKg ? "Peso máximo, últimas {n} veces" : seg ? "Mejor tiempo, últimas {n} veces" : "Más reps, últimas {n} veces", { n: pts.length })}${dif ? ` · ${dif > 0 ? "+" : "−"}${fmt(Math.abs(dif))}` : ` · ${t("igual")}`}</span>
+    <svg class="grafica" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("Progresión de {x}: {l}", { x: t(n), l: pts.map((p) => `${fechaCorta(p.fecha)} ${fmt(p.v)}`).join(", ") })}">
       <line x1="16" x2="${W - 16}" y1="${H - 4}" y2="${H - 4}" stroke="var(--app-line)" stroke-width=".8"/>
       <polyline points="${pts.map((p, i) => `${x(i)},${y(p.v)}`).join(" ")}" fill="none" stroke="var(--prim)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       ${pts.map((p, i) => html`<circle cx="${x(i)}" cy="${y(p.v)}" r="${p.id === s.id ? 4.5 : 3}" fill="${p.id === s.id ? "var(--prim)" : "var(--card)"}" stroke="var(--prim)" stroke-width="2"><title>${`${fechaCorta(p.fecha)} · ${fmt(p.v)}`}</title></circle>`)}
@@ -981,17 +993,17 @@ function grafFc(r) {
   const iMax = c.reduce((m, p) => (p[1] > m[1] ? p : m), c[0]);
   const media = r.fcMedia || Math.round(vs.reduce((a, b) => a + b, 0) / vs.length);
   const marcas = [0, Math.round(total / 2), Math.round(total)];
-  return html`<div class="hd"><h3>Frecuencia cardiaca</h3><span class="sub">ppm · del reloj</span></div>
-    <svg class="grafica fc-graf" viewBox="0 0 ${W} ${H}" role="img" aria-label="${`Frecuencia cardiaca: media ${media}, máxima ${r.fcMax || iMax[1]} ppm`}" data-lo="${lo}" data-hi="${hi}">
+  return html`<div class="hd"><h3>${t("Frecuencia cardiaca")}</h3><span class="sub">${t("ppm · del reloj")}</span></div>
+    <svg class="grafica fc-graf" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("Frecuencia cardiaca: media {m}, máxima {x} ppm", { m: media, x: r.fcMax || iMax[1] })}" data-lo="${lo}" data-hi="${hi}">
       <defs><linearGradient id="fcArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--heat3)" stop-opacity=".35"/><stop offset="1" stop-color="var(--heat3)" stop-opacity="0"/></linearGradient></defs>
       ${grid.map((v) => html`<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--app-line)" stroke-width=".6"/><text x="${L - 4}" y="${y(v) + 3}" text-anchor="end">${v}</text>`)}
       ${marcas.map((m) => html`<text x="${L + (m / total) * (W - L - R)}" y="${H - 6}" text-anchor="${m === 0 ? "start" : m === marcas[2] ? "end" : "middle"}">${m} min</text>`)}
       <polygon points="${`${x(c[0][0]).toFixed(1)},${y(lo)} ${pts.join(" ")} ${x(c.at(-1)[0]).toFixed(1)},${y(lo)}`}" fill="url(#fcArea)"/>
       <polyline points="${pts.join(" ")}" fill="none" stroke="var(--heat3)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       <line x1="${L}" x2="${W - R}" y1="${y(media)}" y2="${y(media)}" stroke="var(--fg)" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>
-      <text x="${W - R}" y="${y(media) - 4}" text-anchor="end" style="fill:var(--fg)">${`media ${media}`}</text>
+      <text x="${W - R}" y="${y(media) - 4}" text-anchor="end" style="fill:var(--fg)">${t("media {n}", { n: media })}</text>
       <circle cx="${x(iMax[0])}" cy="${y(iMax[1])}" r="4" fill="var(--heat3)" stroke="var(--card)" stroke-width="2"/>
-      <text x="${x(iMax[0])}" y="${y(iMax[1]) - 7}" text-anchor="middle" style="fill:var(--fg);font-weight:600">${`máx ${iMax[1]}`}</text>
+      <text x="${x(iMax[0])}" y="${y(iMax[1]) - 7}" text-anchor="middle" style="fill:var(--fg);font-weight:600">${t("máx {n}", { n: iMax[1] })}</text>
       <g class="fc-cursor" visibility="hidden"><line y1="${T}" y2="${H - B}" stroke="var(--fg)" stroke-width=".8"/><circle r="4" fill="var(--heat3)" stroke="var(--fg)" stroke-width="1.5"/><text text-anchor="middle" style="fill:var(--fg);font-weight:600"></text></g>
       <rect class="fc-toque" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>
     </svg>`;
@@ -1018,10 +1030,10 @@ function cursorFc(e) {
   g.querySelector("line").setAttribute("x2", cx);
   g.querySelector("circle").setAttribute("cx", cx);
   g.querySelector("circle").setAttribute("cy", cy);
-  const t = g.querySelector("text");
-  t.setAttribute("x", Math.max(L + 30, Math.min(W - R - 30, cx)));
-  t.setAttribute("y", Math.max(T + 8, cy - 9));
-  t.textContent = `${v} ppm · ${mmss((i * paso))}`;
+  const txt = g.querySelector("text");
+  txt.setAttribute("x", Math.max(L + 30, Math.min(W - R - 30, cx)));
+  txt.setAttribute("y", Math.max(T + 8, cy - 9));
+  txt.textContent = `${t("{n} ppm", { n: v })} · ${mmss((i * paso))}`;
   g.setAttribute("visibility", "visible");
 }
 $("sesFc").addEventListener("pointermove", cursorFc);
@@ -1041,14 +1053,15 @@ function renderSesion() {
   if (!s) { if (pantalla === "sesion") show("historial"); return; }
   const g = s.tipo === "gimnasio", r = s.reloj;
   $("sesion").classList.toggle("flex", !g);
-  $("sesTipo").textContent = `${g ? "Gimnasio" : "Flexibilidad"}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? " · Solo en el reloj" : ""}`;
-  $("sesTitle").textContent = s.rutina ? s.nombre || titulo(s.rutina) : r?.titulo || (g ? "Gimnasio" : "Flexibilidad");
+  $("sesTipo").textContent = `${t(g ? "Gimnasio" : "Flexibilidad")}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? ` · ${t("Solo en el reloj")}` : ""}`;
+  // The app's own workouts show their name in the chosen language; the watch's keep its title.
+  $("sesTitle").textContent = s.rutina ? (rutinaFlex(s.rutina) || gym(s.rutina) ? titulo(s.rutina) : s.nombre || s.rutina) : r?.titulo || t(g ? "Gimnasio" : "Flexibilidad");
   const ini = s.inicio || r?.inicio, fin = s.fin || r?.fin;
-  $("sesSub").textContent = `${s.fecha ? fechaLarga(s.fecha) : "Sin fecha"}${ini && fin ? ` · ${hora(ini)}–${hora(fin)}` : ""}`;
+  $("sesSub").textContent = `${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")}${ini && fin ? ` · ${hora(ini)}–${hora(fin)}` : ""}`;
   const min = s.duracionMin || (r ? Math.round((r.fin - r.inicio) / 60000) : null);
   const ejs = Array.isArray(s.ejercicios) ? s.ejercicios : [];
-  const esf = s.esfuerzo ? stat(s.esfuerzo, "Esfuerzo", "/10") : "";
-  const reloj = r ? html`${stat(r.fcMedia || "—", "FC media", r.fcMedia ? "ppm" : "")}${stat(r.fcMax || "—", "FC máxima", r.fcMax ? "ppm" : "")}${stat(r.kcal || "—", "Calorías", r.kcal ? "kcal" : "")}` : "";
+  const esf = s.esfuerzo ? stat(s.esfuerzo, t("Esfuerzo"), "/10") : "";
+  const reloj = r ? html`${stat(r.fcMedia || "—", t("FC media"), r.fcMedia ? t("ppm") : "")}${stat(r.fcMax || "—", t("FC máxima"), r.fcMax ? t("ppm") : "")}${stat(r.kcal || "—", t("Calorías"), r.kcal ? "kcal" : "")}` : "";
   let man = "", lista;
   const vol = [];
   if (g) {
@@ -1062,10 +1075,10 @@ function renderSesion() {
       const v = volSeries(e?.series, def);
       if (v > 0) vol.push([e.n, v]);
     }
-    if (hechas) man = html`${maniqui({ p, s: sec }, "f", { titulo: `Músculos trabajados`, etiquetas: etiquetasTop(p, 4, (v) => `${v} series`) })}
-      <div class="leyenda"><span><i style="background:var(--prim)"></i>Principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
+    if (hechas) man = html`${maniqui({ p, s: sec }, "f", { titulo: t("Músculos trabajados"), etiquetas: etiquetasTop(p, 4, (v) => tn(v, "{n} serie", "{n} series")) })}
+      <div class="leyenda"><span><i style="background:var(--prim)"></i>${t("Principales")}</span><span><i style="background:var(--sec)"></i>${t("Secundarios")}</span></div>`;
     const volTotal = s.volumenKg ?? Math.round(vol.reduce((a, [, v]) => a + v, 0));
-    $("sesStats").innerHTML = html`${stat(hechas, "Series")}${stat(volTotal.toLocaleString("es-ES"), "Volumen", "kg")}${stat(min || "—", "Duración", min ? "min" : "")}${esf}${reloj}`;
+    $("sesStats").innerHTML = html`${stat(hechas, t("Series"))}${stat(num(volTotal), t("Volumen"), "kg")}${stat(min || "—", t("Duración"), min ? "min" : "")}${esf}${reloj}`;
     const vistos = {};
     const recs = Object.fromEntries(records(s).map((x) => [x.n, x]));
     lista = ejs.filter((e) => e?.n).map((e) => {
@@ -1079,10 +1092,10 @@ function renderSesion() {
       vistos[e.n] = true;
       const rec = primera && recs[e.n];
       return html`<li class="ej g ses">${fig ? html`<span class="th">${figura(fig)}</span>` : ""}<div class="meta">
-        <span class="name">${e.n}${def?.lado ? lado(def) : ""}</span>
-        ${rec ? html`<span class="chip ok rec">Récord · ${rec.t} ${rec.v}</span>` : ""}
-        <span class="dosis">${n}/${series.length} series${v ? ` · ${Math.round(v).toLocaleString("es-ES")} kg` : ""}${def?.porLado ? " · por lado" : ""}</span>
-        <span class="series">${series.map((x, i) => html`<span class="${`serie${x?.hecho ? " ok" : ""}`}"><i>${i + 1}</i>${x?.kg != null && x.kg !== "" ? kgTxt(x.kg) : "PC"} × ${x?.seg != null ? mmss(x.seg) : x?.reps ?? "—"}</span>`)}</span>
+        <span class="name">${t(e.n)}${def?.lado ? lado(def) : ""}</span>
+        ${rec ? html`<span class="chip ok rec">${t("Récord")} · ${t(rec.t)} ${rec.v}</span>` : ""}
+        <span class="dosis">${t("{n}/{total} series", { n, total: series.length })}${v ? ` · ${num(Math.round(v))} kg` : ""}${def?.porLado ? ` · ${t("por lado")}` : ""}</span>
+        <span class="series">${series.map((x, i) => html`<span class="${`serie${x?.hecho ? " ok" : ""}`}"><i>${i + 1}</i>${x?.kg != null && x.kg !== "" ? kgTxt(x.kg) : t("PC")} × ${x?.seg != null ? mmss(x.seg) : x?.reps ?? "—"}</span>`)}</span>
         ${graf}</div></li>`;
     });
   } else {
@@ -1091,16 +1104,16 @@ function renderSesion() {
     for (const [i, e] of ejs.entries()) {
       if (!e?.hecho || !EX[e.id]) continue;
       hechos++;
-      const t = pasos([e.id, e.dosis || ""], i).reduce((a, p) => a + p.seg, 0);
-      seg += t;
-      for (const m of EX[e.id].p) musc[m] = (musc[m] || 0) + t / 60;
-      for (const m of EX[e.id].s) musc[m] = (musc[m] || 0) + t / 120;
+      const sg = pasos([e.id, e.dosis || ""], i).reduce((a, p) => a + p.seg, 0);
+      seg += sg;
+      for (const m of EX[e.id].p) musc[m] = (musc[m] || 0) + sg / 60;
+      for (const m of EX[e.id].s) musc[m] = (musc[m] || 0) + sg / 120;
     }
-    if (hechos) man = html`${maniqui(musc, "x", { titulo: "Músculos estirados", etiquetas: etiquetasTop(musc, 4, fmtMin) })}
+    if (hechos) man = html`${maniqui(musc, "x", { titulo: t("Músculos estirados"), etiquetas: etiquetasTop(musc, 4, fmtMin) })}
       <div class="leyenda"><span><i style="background:var(--flex1)"></i>&lt; 1 min</span><span><i style="background:var(--flex2)"></i>1–3 min</span><span><i style="background:var(--flex3)"></i>3+ min</span></div>`;
-    $("sesStats").innerHTML = html`${ejs.length ? stat(`${hechos}/${ejs.length}`, "Ejercicios") : ""}${ejs.length ? stat(Math.round(seg / 60), "Estirando", "min") : ""}${stat(min || "—", "Duración", min ? "min" : "")}${esf}${reloj}`;
+    $("sesStats").innerHTML = html`${ejs.length ? stat(`${hechos}/${ejs.length}`, t("Ejercicios")) : ""}${ejs.length ? stat(Math.round(seg / 60), t("Estirando"), "min") : ""}${stat(min || "—", t("Duración"), min ? "min" : "")}${esf}${reloj}`;
     lista = ejs.filter((e) => EX[e?.id]).map((e) => html`<li class="${`ej ses${e.hecho ? "" : " saltado"}`}"><span class="th">${figura(e.id)}</span><div class="meta">
-      <span class="name">${EX[e.id].n}</span><span class="dosis">${e.dosis || ""}</span><span class="zona">${e.hecho ? "Hecho ✓" : "Saltado"}</span></div></li>`);
+      <span class="name">${t(EX[e.id].n)}</span><span class="dosis">${tDosis(e.dosis || "")}</span><span class="zona">${t(e.hecho ? "Hecho ✓" : "Saltado")}</span></div></li>`);
   }
   $("sesMan").innerHTML = html`${man}`;
   $("sesMan").hidden = !man;
@@ -1108,16 +1121,16 @@ function renderSesion() {
   $("sesFc").hidden = !$("sesFc").innerHTML;
   vol.sort((a, b) => b[1] - a[1]);
   const maxVol = vol[0]?.[1] || 1;
-  $("sesVol").innerHTML = html`${vol.length > 1 ? html`<div class="hd"><h3>Volumen por ejercicio</h3><span class="sub">kg × reps</span></div>
-    <ul class="barras">${vol.map(([n, v]) => html`<li><span class="n">${n}</span><span class="v num">${Math.round(v).toLocaleString("es-ES")} kg</span><span class="b"><i style="${`width:${Math.max(2, (v / maxVol) * 100).toFixed(1)}%`}"></i></span></li>`)}</ul>` : ""}`;
+  $("sesVol").innerHTML = html`${vol.length > 1 ? html`<div class="hd"><h3>${t("Volumen por ejercicio")}</h3><span class="sub">${t("kg × reps")}</span></div>
+    <ul class="barras">${vol.map(([n, v]) => html`<li><span class="n">${t(n)}</span><span class="v num">${num(Math.round(v))} kg</span><span class="b"><i style="${`width:${Math.max(2, (v / maxVol) * 100).toFixed(1)}%`}"></i></span></li>`)}</ul>` : ""}`;
   $("sesVol").hidden = vol.length < 2;
   $("sesLista").innerHTML = html`${lista}`;
-  $("sesNotas").innerHTML = html`${s.notas ? html`<h3>Notas</h3><p>${s.notas}</p>` : ""}`;
+  $("sesNotas").innerHTML = html`${s.notas ? html`<h3>${t("Notas")}</h3><p>${s.notas}</p>` : ""}`;
   $("sesNotas").hidden = !s.notas;
-  $("sesNota").textContent = s.origen === "reloj" ? "Solo en el reloj: apunta las series de este entreno y se unirán a estos datos."
+  $("sesNota").textContent = t(s.origen === "reloj" ? "Solo en el reloj: apunta las series de este entreno y se unirán a estos datos."
     : !ejs.length ? "Sesión apuntada a mano, sin ejercicios."
       : r && !r.curva && hc ? "La gráfica del pulso aparecerá en la próxima lectura de Health Connect."
-        : !r && hc && estadoSalud.permiso ? "Sin datos del reloj para esta sesión." : "";
+        : !r && hc && estadoSalud.permiso ? "Sin datos del reloj para esta sesión." : "");
   animar($("sesion"));
 }
 $("sesVolver").addEventListener("click", () => show("historial"));
@@ -1126,14 +1139,25 @@ $("sesVolver").addEventListener("click", () => show("historial"));
 function renderPerfil() {
   if (document.activeElement !== $("planInicio")) $("planInicio").value = inicioPlan || "";
   const ep = enPlan(inicioPlan, iso(new Date()));
-  $("planEstado").textContent = !inicioPlan ? "Empieza con tu primera sesión de flexibilidad, o elige la fecha aquí."
-    : ep.antes ? "El plan aún no ha empezado." : ep.despues ? "Plan completado: sigue con la fase 6 como mantenimiento."
-      : `Semana ${ep.semana} de 26 · Fase ${ep.fase.n}, ${ep.fase.name}.`;
+  $("planEstado").textContent = !inicioPlan ? t("Empieza con tu primera sesión de flexibilidad, o elige la fecha aquí.")
+    : ep.antes ? t("El plan aún no ha empezado.") : ep.despues ? t("Plan completado: sigue con la fase 6 como mantenimiento.")
+      : t("Semana {s} de 26 · Fase {n}, {nombre}.", { s: ep.semana, n: ep.fase.n, nombre: t(ep.fase.name) });
 }
 $("planInicio").addEventListener("change", async (e) => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) await store.put("ajustes", "plan-flexibilidad", { plan: "flexibilidad-6m-v1", inicio: e.target.value });
 });
 $("planCard").addEventListener("submit", (e) => e.preventDefault());
+
+// The app's language (i18n.js reads it on load): this device only. Changing it reloads the page, back on Perfil.
+$("idioma").innerHTML = html`${IDIOMAS.map(([c, n]) => html`<option value="${c}" lang="${c}">${n}</option>`)}`;
+$("idioma").value = idioma;
+$("idioma").addEventListener("change", (e) => {
+  ajustes.idioma = e.target.value;
+  ajustes.tab = "perfil";
+  saveAjustes();
+  location.reload();
+});
+$("idiomaCard").addEventListener("submit", (e) => e.preventDefault());
 
 /* ---------- Reloj (Health Connect) ---------- */
 // Only in the Android app: the watch's workouts, heart rate and calories (reloj.js joins them to the sessions).
@@ -1161,15 +1185,15 @@ async function renderReloj(r) {
   const st = $("relojEstado"), btn = $("relojBoton");
   st.classList.toggle("error", !!r?.error || !estadoSalud.disponible);
   btn.hidden = !estadoSalud.disponible;
-  btn.textContent = estadoSalud.permiso ? "Leer ahora" : "Conectar Health Connect";
-  if (!estadoSalud.disponible) { st.textContent = "Health Connect no está disponible en este teléfono (hace falta Android 14 o posterior)."; return; }
-  if (!estadoSalud.permiso) { st.textContent = "Sin permiso todavía: pulsa el botón y permite leer ejercicio, frecuencia cardiaca y calorías."; return; }
+  btn.textContent = t(estadoSalud.permiso ? "Leer ahora" : "Conectar Health Connect");
+  if (!estadoSalud.disponible) { st.textContent = t("Health Connect no está disponible en este teléfono (hace falta Android 14 o posterior)."); return; }
+  if (!estadoSalud.permiso) { st.textContent = t("Sin permiso todavía: pulsa el botón y permite leer ejercicio, frecuencia cardiaca y calorías."); return; }
   if (r?.error) { st.textContent = r.error; return; }
   const ult = await store.getMeta("relojLectura");
   const n = r || { unidas: sesiones.filter((s) => s.origen !== "reloj" && s.reloj).length, sueltas: sesiones.filter((s) => s.origen === "reloj").length };
-  st.textContent = `${ult ? `Última lectura: ${new Date(ult).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" })}. ` : ""}`
-    + `${n.unidas} ${n.unidas === 1 ? "sesión unida" : "sesiones unidas"} a su entreno del reloj${n.sueltas ? `, ${n.sueltas} solo en el reloj` : ""}.`
-    + `${estadoSalud.fc === false ? " Falta el permiso de frecuencia cardiaca." : ""}${estadoSalud.kcal === false ? " Falta el permiso de calorías." : ""}`;
+  st.textContent = `${ult ? `${t("Última lectura: {f}.", { f: new Date(ult).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) })} ` : ""}`
+    + tn(n.unidas, "{n} sesión unida a su entreno del reloj", "{n} sesiones unidas a su entreno del reloj") + (n.sueltas ? t(", {n} solo en el reloj", { n: n.sueltas }) : "") + "."
+    + `${estadoSalud.fc === false ? ` ${t("Falta el permiso de frecuencia cardiaca.")}` : ""}${estadoSalud.kcal === false ? ` ${t("Falta el permiso de calorías.")}` : ""}`;
 }
 $("relojBoton").addEventListener("click", async () => {
   if (!estadoSalud.permiso) {
@@ -1177,11 +1201,135 @@ $("relojBoton").addEventListener("click", async () => {
     renderReloj();
     if (!estadoSalud.permiso) return;
   }
-  $("relojEstado").textContent = "Leyendo Health Connect…";
+  $("relojEstado").textContent = t("Leyendo Health Connect…");
   await leerReloj({ forzar: true });
 });
 capApp?.addListener("resume", () => comprobarSalud().then(() => leerReloj()));
 setInterval(() => leerReloj(), 2 * 60 * 1000);
+
+/* ---------- Actualizaciones (GitHub releases) ---------- */
+// Only in the Android app: on start and on resume (at most every 6 hours, or from Perfil) it reads the repo's releases;
+// when one is newer than the installed app it offers it, downloads the APK and opens Android's installer.
+const actualizador = native && window.Capacitor.isPluginAvailable?.("Actualizar") ? window.Capacitor.registerPlugin("Actualizar") : null;
+// { comprobada (ms), release (the newer one found then), ignorada (versionCode the user said "Ahora no" to) }
+const ACT = "flexfit.actualizacion";
+let act = { comprobada: 0, ignorada: 0 };
+try { act = { ...act, ...JSON.parse(localStorage.getItem(ACT) || "null") }; } catch (e) { /* no storage */ }
+const saveAct = () => { try { localStorage.setItem(ACT, JSON.stringify(act)); } catch (e) { /* no storage */ } };
+let instalada = null; // { codigo, nombre }
+let nueva = null; // the newest release, when newer than the installed app
+let actEstado = { texto: "", error: false };
+let actOcupado = false;
+let esperandoPermiso = false;
+async function versionInstalada() {
+  if (instalada) return instalada;
+  try { instalada = await actualizador.version(); } catch (e) { /* older app */ }
+  const meta = document.querySelector('meta[name="app-version"]')?.content;
+  if (!instalada?.codigo && codigoDe(meta)) instalada = { codigo: codigoDe(meta), nombre: meta };
+  return instalada;
+}
+async function buscarActualizacion({ forzar = false } = {}) {
+  if (!actualizador || actOcupado) return;
+  const yo = await versionInstalada();
+  if (!forzar && Date.now() - act.comprobada < 6 * 3600 * 1000) {
+    nueva = act.release?.codigo > (yo?.codigo || Infinity) ? act.release : null;
+    return renderActualizar();
+  }
+  if (forzar) { actEstado = { texto: t("Buscando en GitHub…"), error: false }; renderActualizar(); }
+  try {
+    const r = await ultimaRelease();
+    nueva = r && yo?.codigo && r.codigo > yo.codigo ? r : null;
+    act.comprobada = Date.now();
+    act.release = nueva;
+    saveAct();
+    actEstado = { texto: nueva ? "" : t("Tienes la última versión."), error: false };
+  } catch (e) {
+    actEstado = { texto: t("No se pudo consultar GitHub. Prueba más tarde."), error: true };
+  }
+  renderActualizar();
+  // On its own it asks once per version, never in the middle of a session, and not in debug builds (the emulator test).
+  if (nueva && !forzar && !yo.depuracion && act.ignorada !== nueva.codigo && !sesion && $("continuarPanel").hidden) {
+    const v = { yo: yo.nombre || yo.codigo, nueva: nueva.version, fecha: nueva.fecha ? new Date(nueva.fecha).toLocaleDateString(locale, { day: "numeric", month: "long" }) : "" };
+    $("actTexto").textContent = `${v.fecha ? t("Tienes la {yo} y en GitHub está la {nueva}, del {fecha}.", v) : t("Tienes la {yo} y en GitHub está la {nueva}.", v)} `
+      + t("Se descarga, Android te pide confirmar la instalación y la app se abre de nuevo con tus datos.");
+    $("actPanel").hidden = false;
+  }
+}
+function renderActualizar() {
+  $("actCard").hidden = !actualizador;
+  if (!actualizador) return;
+  const yo = instalada ? t("Versión instalada: {v}.", { v: instalada.nombre || instalada.codigo }) : "";
+  const hay = nueva ? ` ${t("Hay una versión nueva: {v}.", { v: nueva.version })}` : "";
+  const st = $("actEstado");
+  st.textContent = `${yo}${hay}${actEstado.texto ? ` ${actEstado.texto}` : ""}`.trim();
+  st.classList.toggle("error", actEstado.error);
+  $("actInstalar").hidden = !nueva;
+  $("actInstalar").disabled = actOcupado;
+  $("actBuscar").disabled = actOcupado;
+}
+// The plugin's errors, by code (its own messages are in Spanish only).
+const ERRORES_ACT = {
+  url: "Solo descargo las versiones publicadas en GitHub.",
+  apk: "El archivo descargado no es una APK válida de Flex & Fit.",
+  version: "Ya tienes esta versión o una más nueva.",
+  firma: "La versión nueva está firmada con otra clave: Android no la instalaría encima. Desinstala la app y descárgala de GitHub.",
+  red: "No se pudo descargar. Comprueba la conexión y vuelve a intentarlo.",
+  "sin-descarga": "Primero hay que descargar la versión nueva.",
+  instalador: "No se pudo abrir el instalador.",
+};
+const errorActualizar = (e, otro) => t(Object.hasOwn(ERRORES_ACT, e?.code) ? ERRORES_ACT[e.code] : otro);
+async function abrirInstalador() {
+  const r = await actualizador.instalar();
+  esperandoPermiso = r?.estado === "permiso";
+  actEstado = esperandoPermiso
+    ? { texto: t("Activa «Permitir de esta fuente» para Flex & Fit y vuelve a la app: el instalador se abrirá solo."), error: false }
+    : { texto: t("Confirma la instalación en la ventana de Android."), error: false };
+}
+async function instalarActualizacion() {
+  if (!nueva || actOcupado) return;
+  $("actPanel").hidden = true;
+  show("perfil");
+  $("actCard").scrollIntoView({ block: "center" });
+  actOcupado = true;
+  const barra = $("actProgreso");
+  barra.hidden = false;
+  barra.removeAttribute("value");
+  actEstado = { texto: t("Descargando la {v}…", { v: nueva.version }), error: false };
+  renderActualizar();
+  const oyente = await actualizador.addListener?.("progreso", ({ bytes, total }) => {
+    const tam = total > 0 ? total : nueva?.bytes;
+    if (tam > 0) { barra.value = Math.min(1, bytes / tam); actEstado.texto = `${t("Descargando la {v}…", { v: nueva.version })} ${Math.round((100 * bytes) / tam)} %`; renderActualizar(); }
+  });
+  try {
+    await actualizador.descargar({ url: nueva.url });
+    barra.value = 1;
+    await abrirInstalador();
+  } catch (e) {
+    actEstado = { texto: errorActualizar(e, "No se pudo descargar la versión nueva."), error: true };
+  } finally {
+    oyente?.remove?.();
+    actOcupado = false;
+    barra.hidden = true;
+    renderActualizar();
+  }
+}
+$("actBuscar").addEventListener("click", () => buscarActualizacion({ forzar: true }));
+$("actInstalar").addEventListener("click", instalarActualizacion);
+$("actSi").addEventListener("click", instalarActualizacion);
+$("actNo").addEventListener("click", () => { $("actPanel").hidden = true; if (nueva) { act.ignorada = nueva.codigo; saveAct(); } });
+capApp?.addListener("resume", async () => {
+  // Back from "Instalar apps desconocidas": open the installer if it's allowed now.
+  if (esperandoPermiso) {
+    esperandoPermiso = false;
+    try {
+      if ((await actualizador.permiso()).puede) await abrirInstalador();
+      else actEstado = { texto: t("Sin permiso para instalar: pulsa «Descargar e instalar» cuando quieras volver a intentarlo."), error: true };
+    } catch (e) { actEstado = { texto: errorActualizar(e, "No se pudo abrir el instalador."), error: true }; }
+    renderActualizar();
+    return;
+  }
+  buscarActualizacion();
+});
 
 /* ---------- Sync ---------- */
 const ERRORES = { "sin-conexion": "No encuentro el Mac. Se sincronizará cuando esté encendido y a tu alcance.", clave: "La clave no coincide con la del Mac.", "sin-servidor": "Sin servidor: los datos se quedan solo en este dispositivo." };
@@ -1233,14 +1381,14 @@ async function renderSync(r) {
   const ult = await store.getMeta("ultimaSync");
   if (gen !== renderGen) return;
   const pill = $("syncPill");
-  if (!servidor()) { pill.dataset.estado = "local"; pill.textContent = "Solo en este dispositivo"; }
-  else if (r && !r.ok) { pill.dataset.estado = "error"; pill.textContent = pend ? `${pend} sin subir` : "Sin conexión con el Mac"; }
-  else if (pend) { pill.dataset.estado = "pendiente"; pill.textContent = `${pend} sin subir`; }
-  else { pill.dataset.estado = "ok"; pill.textContent = "Sincronizado"; }
+  if (!servidor()) { pill.dataset.estado = "local"; pill.textContent = t("Solo en este dispositivo"); }
+  else if (r && !r.ok) { pill.dataset.estado = "error"; pill.textContent = pend ? t("{n} sin subir", { n: pend }) : t("Sin conexión con el Mac"); }
+  else if (pend) { pill.dataset.estado = "pendiente"; pill.textContent = t("{n} sin subir", { n: pend }); }
+  else { pill.dataset.estado = "ok"; pill.textContent = t("Sincronizado"); }
   const st = $("syncEstado");
   st.classList.toggle("error", !!(r && !r.ok && r.error !== "sin-servidor"));
-  st.textContent = r && !r.ok ? ERRORES[r.error] || `El Mac respondió con un error (${r.error}).`
-    : ult ? `Última sincronización: ${new Date(ult).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" })}` : "";
+  st.textContent = r && !r.ok ? (ERRORES[r.error] ? t(ERRORES[r.error]) : t("El Mac respondió con un error ({e}).", { e: r.error }))
+    : ult ? t("Última sincronización: {f}", { f: new Date(ult).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) }) : "";
 }
 const syncSoon = () => { clearTimeout(timer); timer = setTimeout(sync, 1500); };
 $("syncPill").addEventListener("click", () => { show("perfil"); sync(); });
@@ -1254,18 +1402,18 @@ $("servidor").value = servidor();
 $("token").value = ajustes.token || "";
 function renderDirecciones() {
   const otras = unir([ajustes.servidores || []]).filter((u) => u !== servidor());
-  $("direcciones").textContent = otras.length ? `También la conozco en: ${otras.join(", ")}` : "";
+  $("direcciones").textContent = otras.length ? t("También la conozco en: {l}", { l: otras.join(", ") }) : "";
 }
 renderDirecciones();
 $("buscarMac").hidden = !descubrir;
 $("buscarMac").addEventListener("click", async () => {
   const st = $("syncEstado");
   st.classList.remove("error");
-  st.textContent = "Buscando el Mac en esta wifi…";
+  st.textContent = t("Buscando el Mac en esta wifi…");
   const h = await buscarMac(true);
-  if (!h) { st.classList.add("error"); st.textContent = "No encuentro el Mac en esta wifi. ¿Está encendido y en la misma red?"; return; }
+  if (!h) { st.classList.add("error"); st.textContent = t("No encuentro el Mac en esta wifi. ¿Está encendido y en la misma red?"); return; }
   const r = await sync();
-  if (r.ok) st.textContent = `Encontrado en ${h.servidor}. ${r.enviados} enviados, ${r.recibidos} recibidos.`;
+  if (r.ok) st.textContent = t("Encontrado en {s}. {e} enviados, {r} recibidos.", { s: h.servidor, e: r.enviados, r: r.recibidos });
 });
 $("servidorCard").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -1274,9 +1422,9 @@ $("servidorCard").addEventListener("submit", async (e) => {
   if (ajustes.servidor) ajustes.servidores = unir([[ajustes.servidor], ajustes.servidores || []]);
   saveAjustes();
   renderDirecciones();
-  $("syncEstado").textContent = "Sincronizando…";
+  $("syncEstado").textContent = t("Sincronizando…");
   const r = await sync();
-  if (r.ok) $("syncEstado").textContent = `Listo: ${r.enviados} enviados, ${r.recibidos} recibidos.`;
+  if (r.ok) $("syncEstado").textContent = t("Listo: {e} enviados, {r} recibidos.", { e: r.enviados, r: r.recibidos });
 });
 
 /* ---------- Backups ---------- */
@@ -1292,7 +1440,7 @@ $("exportar").addEventListener("click", async () => {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  $("copiaEstado").textContent = `Descargado ${name}`;
+  $("copiaEstado").textContent = t("Descargado {n}", { n: name });
 });
 $("importar").addEventListener("change", async (e) => {
   const f = e.target.files?.[0];
@@ -1302,10 +1450,10 @@ $("importar").addEventListener("change", async (e) => {
   try {
     const n = await store.importJSON(JSON.parse(await f.text()));
     st.classList.remove("error");
-    st.textContent = `Importados ${n} registros.`;
+    st.textContent = t("Importados {n} registros.", { n });
   } catch (err) {
     st.classList.add("error");
-    st.textContent = err instanceof SyntaxError ? "El archivo no es un JSON válido." : err.message;
+    st.textContent = err instanceof SyntaxError ? t("El archivo no es un JSON válido.") : t(err.message);
   }
 });
 
@@ -1326,10 +1474,11 @@ store.onChange(async (origen) => {
   if (origen === "local") syncSoon();
 });
 const ver = document.querySelector('meta[name="app-version"]')?.content;
-$("version").textContent = `Versión ${ver || "local"}${native ? " · app Android" : ""}`;
+$("version").textContent = t("Versión {v}", { v: ver || t("local") }) + (native ? ` · ${t("app Android")}` : "");
 show(ajustes.tab);
 await renderAll();
 await renderSync();
 ofrecerContinuar();
 comprobarSalud().then(() => leerReloj());
+buscarActualizacion();
 sync();

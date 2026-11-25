@@ -161,7 +161,7 @@ jobs:
           {
             echo "Flex & Fit para Android, compilada desde ${GITHUB_SHA::7}."
             echo
-            echo "En el móvil, abre esta página en Chrome, toca **flex-and-fit.apk** y luego Abrir. Si Android lo pide, deja que Chrome instale apps desconocidas. Cada versión se instala encima de la anterior y conserva tus datos."
+            echo "En el móvil, abre esta página en Chrome, toca **flex-and-fit.apk** y luego Abrir. Si Android lo pide, deja que Chrome instale apps desconocidas. Cada versión se instala encima de la anterior y conserva tus datos. La app avisa sola de las versiones nuevas (Perfil → Actualizaciones)."
             if [ "$(cat signed-with.txt)" != "release" ]; then
               echo
               echo "⚠️ Firmada con una clave de un solo uso porque faltan los secretos de firma del repo. Desinstala la versión anterior antes de instalar esta."

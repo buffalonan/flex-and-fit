@@ -104,3 +104,35 @@ test("with no strength sets this week, Progreso says so", async ({ page }) => {
   await expect(page.locator("#musSemana")).toContainText("Aún no hay series de fuerza esta semana.");
   await expect(page.locator("#records")).toContainText("Tus mejores marcas aparecerán");
 });
+
+for (const idioma of ["en", "de", "ca"]) {
+  test(`records, the step up, sets per muscle and effort are translated: ${idioma}`, async ({ page }) => {
+    await page.clock.install({ time: MIERCOLES });
+    await page.addInitScript((idioma) => {
+      localStorage.setItem("flexfit.ajustes", JSON.stringify({ servidor: "", idioma }));
+      const get = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (tipo, ...r) { return /webgl/.test(tipo) ? null : get.call(this, tipo, ...r); };
+    }, idioma);
+    await page.goto("/");
+    await poner(page, "a", g1("2026-11-18", 18, [{ n: "Press de banca", series: series(5, 40, 8) }, { n: "Fondos en paralelas", series: series(3, null, 8) }]));
+    await poner(page, "b", g1("2026-11-24", 24, [{ n: "Press de banca", series: series(5, 42.5, 8) }, { n: "Fondos en paralelas", series: series(3, null, 9) }]));
+    await page.click('[data-tab="progreso"]');
+    await expect(page.locator("#records li")).toHaveCount(2);
+    await page.click('[data-tab="historial"]');
+    await page.click('#lista [data-ver="b"]');
+    await expect(page.locator("#sesLista .rec")).toHaveCount(2);
+    await page.click("#sesVolver");
+    await page.click('[data-tab="entrenos"]');
+    await page.locator('label:has(input[value="fuerza"])').click();
+    await page.click('[data-abrir="g1"]');
+    await page.locator("#detLista li.ej").first().click();
+    await page.click("#fichaEmpezar");
+    await expect(page.locator("#regSube")).toBeVisible();
+    await page.click('[data-ck="0-0"]');
+    for (let i = 0; i < 6; i++) await page.click("#regSig");
+    await expect(page.locator("#resRecords")).toBeVisible();
+    await page.click('#resEsf [data-esf="6"]');
+    await expect(page.locator("#resEsfuerzo h3")).not.toHaveText("¿Cuánto te ha costado?");
+    expect(await page.evaluate(async () => [...(await import("./i18n.js")).faltan])).toEqual([]);
+  });
+}

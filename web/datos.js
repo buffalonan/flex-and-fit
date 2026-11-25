@@ -2,6 +2,8 @@
 // Muscles use the mannequin's region names (maniqui.js): p = primary, s = secondary.
 /* eslint-disable security/detect-object-injection, security/detect-unsafe-regex -- keys and doses come from the fixed data in this file */
 
+import { t } from "./i18n.js";
+
 /* ---------- Stretches ---------- */
 export const EX = {
   resp: { n: "Respiración boca arriba", z: "Abdomen y diafragma", p: ["abdominales"], s: [], c: ["Rodillas flexionadas, pies en el suelo", "Inhala 4 s inflando la barriga, exhala 6 s", "Suelta hombros y mandíbula"] },
@@ -85,19 +87,19 @@ export function pasos(item, i) {
   const push = (seg, texto, lado, reps = null) => out.push({ ex, i, lado, seg: Math.round(seg), reps, texto });
   let m;
   if ((m = dosis.match(/(\d+)\s*×\s*(\d+)(?:–(\d+))?\s*s\b/))) {
-    for (let s = 0; s < +m[1]; s++) for (const l of lados) push(+(m[3] || m[2]), `Serie ${s + 1} de ${m[1]}`, l);
+    for (let s = 0; s < +m[1]; s++) for (const l of lados) push(+(m[3] || m[2]), t("Serie {s} de {n}", { s: s + 1, n: m[1] }), l);
   } else if ((m = dosis.match(/(\d+)\s*min/))) {
     push(+m[1] * 60, "", null);
   } else if ((m = dosis.match(/(\d+)\s*ciclos/))) {
-    for (const l of lados) push(+m[1] * 30, `${m[1]} ciclos: empuja 5 s, suelta y gana rango`, l);
+    for (const l of lados) push(+m[1] * 30, t("{n} ciclos: empuja 5 s, suelta y gana rango", { n: m[1] }), l);
   } else if ((m = dosis.match(/(\d+)\s*cambios/))) {
-    push(+m[1] * 6, `${m[1]} cambios de lado, despacio`, null);
+    push(+m[1] * 6, t("{n} cambios de lado, despacio", { n: m[1] }), null);
     const h = dosis.match(/\+\s*(\d+)\s*s/);
-    if (h) for (const l of lados) push(+h[1], "Quieto en la postura", l);
+    if (h) for (const l of lados) push(+h[1], t("Quieto en la postura"), l);
   } else if ((m = dosis.match(/(\d+)\s*balanceos(?:\s*\+\s*(\d+)\s*s)?/))) {
-    for (const l of lados) { push(+m[1] * 5, `${m[1]} balanceos lentos`, l, +m[1]); if (m[2]) push(+m[2], "Quieto en la postura", l); }
+    for (const l of lados) { push(+m[1] * 5, t("{n} balanceos lentos", { n: m[1] }), l, +m[1]); if (m[2]) push(+m[2], t("Quieto en la postura"), l); }
   } else if ((m = dosis.match(/(\d+)\s*×\s*(\d+)/))) {
-    for (let s = 0; s < +m[1]; s++) for (const l of lados) push(+m[2] * ritmo, `Serie ${s + 1} de ${m[1]}`, l, +m[2]);
+    for (let s = 0; s < +m[1]; s++) for (const l of lados) push(+m[2] * ritmo, t("Serie {s} de {n}", { s: s + 1, n: m[1] }), l, +m[2]);
   } else {
     push(45, "", null);
   }

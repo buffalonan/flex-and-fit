@@ -28,6 +28,8 @@ public class EntrenoPlugin extends Plugin {
         }
         Intent i = new Intent(getContext(), EntrenoServicio.class);
         i.putExtra("titulo", call.getString("titulo", "Entreno"));
+        // The notification's heading, in the app's language (the web side translates it).
+        i.putExtra("cabecera", call.getString("cabecera", "Entreno en curso"));
         Double inicio = call.getDouble("inicio");
         i.putExtra("inicio", inicio == null ? System.currentTimeMillis() : inicio.longValue());
         try {

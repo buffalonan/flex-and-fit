@@ -131,6 +131,10 @@
 
   <section id="perfil" class="screen" aria-labelledby="perTitle" hidden>
     <h2 id="perTitle">Perfil</h2>
+    <form class="card" id="idiomaCard">
+      <h3>Idioma</h3>
+      <label class="f">Idioma de la app <select id="idioma"></select></label>
+    </form>
     <form class="card" id="planCard">
       <h3>Plan de flexibilidad</h3>
       <label class="f">Fecha de inicio <input type="date" id="planInicio"></label>
@@ -153,6 +157,17 @@
       <p class="sub">La app lee de Health Connect los entrenos de tu Coros (hora, frecuencia cardiaca y calorías) y los une a la sesión que apuntas aquí por la hora o por el día. Las series y los kg siguen siendo cosa tuya. En la app de COROS activa la sincronización con Health Connect (Perfil → Ajustes → Apps de terceros).</p>
       <button type="button" class="btn" id="relojBoton">Conectar Health Connect</button>
       <p class="status" id="relojEstado"></p>
+    </div>
+
+    <div class="card" id="actCard" hidden>
+      <h3>Actualizaciones</h3>
+      <p class="sub">La app mira en GitHub si hay una versión nueva al abrirse. Se instala encima de la actual y conserva tus datos.</p>
+      <p class="status" id="actEstado"></p>
+      <progress id="actProgreso" max="1" value="0" hidden></progress>
+      <div class="row">
+        <button type="button" class="btn" id="actBuscar">Buscar actualizaciones</button>
+        <button type="button" class="btn-main" id="actInstalar" hidden>Descargar e instalar</button>
+      </div>
     </div>
 
     <div class="card">
@@ -228,6 +243,16 @@
     <button type="button" class="btn-main" id="contSeguir">Continuar</button>
     <button type="button" class="btn" id="contGuardar">Guardar lo hecho</button>
     <button type="button" class="btn ghost" id="contDescartar">Descartar</button>
+  </div>
+</div>
+
+<!-- A newer version of the app on GitHub. -->
+<div class="salir" id="actPanel" role="dialog" aria-labelledby="actTitulo" hidden>
+  <div class="card">
+    <h3 id="actTitulo">Hay una versión nueva</h3>
+    <p class="sub" id="actTexto"></p>
+    <button type="button" class="btn-main" id="actSi">Actualizar</button>
+    <button type="button" class="btn ghost" id="actNo">Ahora no</button>
   </div>
 </div>
 
