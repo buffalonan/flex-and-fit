@@ -603,6 +603,14 @@ export default {
   "Sesión apuntada a mano, sin ejercicios.": "Session logged by hand, with no exercises.",
   "La gráfica del pulso aparecerá en la próxima lectura de Health Connect.": "The heart rate chart will show up at the next Health Connect read.",
   "Sin datos del reloj para esta sesión.": "No watch data for this session.",
+  "{n} entreno del reloj": "{n} watch workout",
+  "{n} entrenos del reloj": "{n} watch workouts",
+  "Unir a una sesión": "Join to a session",
+  "¿Apuntaste las series de este entreno en la app? Únelo a esa sesión.": "Did you log this workout's sets in the app? Join it to that session.",
+  "No hay sesiones apuntadas cerca de este día para unir.": "There are no sessions logged around this day to join.",
+  "Entrenos del reloj": "Watch workouts",
+  "Si uno no es de esta sesión, sepáralo: volverá al historial por su cuenta.": "If one isn't from this session, separate it: it goes back to the history on its own.",
+  "Separar": "Separate",
   "‹ Historial": "‹ History",
 
   /* ---------- Actualizaciones ---------- */

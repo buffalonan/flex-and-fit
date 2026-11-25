@@ -603,6 +603,14 @@ export default {
   "Sesión apuntada a mano, sin ejercicios.": "Von Hand eingetragene Einheit, ohne Übungen.",
   "La gráfica del pulso aparecerá en la próxima lectura de Health Connect.": "Die Pulskurve erscheint beim nächsten Lesen von Health Connect.",
   "Sin datos del reloj para esta sesión.": "Keine Uhrdaten für diese Einheit.",
+  "{n} entreno del reloj": "{n} Uhr-Workout",
+  "{n} entrenos del reloj": "{n} Uhr-Workouts",
+  "Unir a una sesión": "Mit einer Einheit verbinden",
+  "¿Apuntaste las series de este entreno en la app? Únelo a esa sesión.": "Hast du die Sätze dieses Workouts in der App eingetragen? Verbinde es mit dieser Einheit.",
+  "No hay sesiones apuntadas cerca de este día para unir.": "Um diesen Tag gibt es keine eingetragenen Einheiten zum Verbinden.",
+  "Entrenos del reloj": "Uhr-Workouts",
+  "Si uno no es de esta sesión, sepáralo: volverá al historial por su cuenta.": "Gehört eines nicht zu dieser Einheit, trenne es: Es erscheint wieder einzeln im Verlauf.",
+  "Separar": "Trennen",
   "‹ Historial": "‹ Verlauf",
 
   /* ---------- Actualizaciones ---------- */

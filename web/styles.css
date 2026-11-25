@@ -229,6 +229,11 @@ body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; 
 .barras .b i { display: block; height: 100%; background: var(--prim); border-radius: 99px; }
 .fc-graf { touch-action: pan-y; }
 #sesNotas p { white-space: pre-wrap; overflow-wrap: anywhere; }
+#sesReloj .unir { display: block; width: 100%; margin-top: 8px; text-align: left; overflow-wrap: anywhere; }
+#sesReloj .partes { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+#sesReloj .partes li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#sesReloj .partes span { overflow-wrap: anywhere; min-width: 0; }
+#sesReloj .del { background: transparent; color: var(--app-muted); border: 1px solid var(--app-line); padding: 8px 12px; min-height: 44px; flex: none; }
 
 /* Records, progression, sets per muscle, effort. */
 .recs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

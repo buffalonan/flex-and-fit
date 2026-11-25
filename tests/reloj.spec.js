@@ -140,3 +140,78 @@ test("the heart-rate curve is kept for the session's chart, cleaned", async ({ p
   expect(r[0].curvaPaso).toBe(60);
   expect(r[1].curva).toBeUndefined();
 });
+
+test("a watch stopped and started again: the pieces close to the session join it, and the sets logged before the watch too", async ({ page }) => {
+  await page.goto("/");
+  const r = await page.evaluate(async () => {
+    const { emparejar } = await import("./reloj.js");
+    const h = (hh, mm = 0) => new Date(2026, 10, 25, hh, mm).getTime();
+    const corto = { id: "w-corto", inicio: h(10, 13), fin: h(10, 15), categoria: "fuerza", fcMedia: 96, fcMax: 107, kcal: 26, curva: [95, 97], curvaPaso: 60, titulo: "Strength" };
+    const largo = { id: "w-largo", inicio: h(10, 16), fin: h(11, 14), categoria: "fuerza", fcMedia: 91, fcMax: 114, kcal: 249, curva: Array(58).fill(90), curvaPaso: 60, titulo: "Strength" };
+    const lejos = { id: "w-tarde", inicio: h(19, 0), fin: h(19, 40), categoria: "fuerza" };
+    // As it was: the sets logged in a minute, joined to the short piece; the long one alone in the history.
+    const { datosReloj } = await import("./reloj.js");
+    const g3 = { id: "g3", tipo: "gimnasio", fecha: "2026-11-25", inicio: h(10, 14), fin: h(10, 15), duracionMin: 1, reloj: datosReloj(corto) };
+    const sola = { id: "reloj-w-largo", tipo: "gimnasio", fecha: "2026-11-25", origen: "reloj", reloj: datosReloj(largo) };
+    const uno = emparejar([g3, sola], [corto, largo], ["w-corto", "w-largo"]);
+    const escrito = { ...g3, ...Object.fromEntries(uno.poner).g3 };
+    const dos = emparejar([escrito], [corto, largo], uno.vistos);
+    // Logged quickly before starting the watch, with nothing joined yet: the same day still joins; one far in the
+    // evening, with the session already joined, stays on its own.
+    const antes = { id: "a", tipo: "gimnasio", fecha: "2026-11-25", inicio: h(9, 50), fin: h(9, 51) };
+    const tres = emparejar([antes], [largo, lejos], []);
+    // Separated by hand: never joined to that session again.
+    const cuatro = emparejar([{ ...antes, relojNo: ["w-largo"] }], [largo], ["w-largo"]);
+    return { uno, reloj: Object.fromEntries(uno.poner).g3?.reloj, dos, tres: Object.fromEntries(tres.poner.map(([id, d]) => [id, d.reloj.partes?.map((p) => p.id) || d.reloj.id])), cuatro };
+  });
+  expect(r.uno.quitar).toEqual(["reloj-w-largo"]);
+  expect(r.reloj).toMatchObject({ id: "w-largo", fcMax: 114, kcal: 275, fcMedia: 91, curvaPaso: 60 });
+  expect(r.reloj.fin - r.reloj.inicio).toBe(61 * 60000);
+  expect(r.reloj.partes.map((p) => p.id)).toEqual(["w-corto", "w-largo"]);
+  // The curve on one timeline: the short piece's minutes, a minute with nothing, then the long one.
+  expect(r.reloj.curva.slice(0, 4)).toEqual([95, 97, 0, 90]);
+  expect(r.dos.poner).toEqual([]);
+  expect(r.tres).toEqual({ a: "w-largo", "reloj-w-tarde": "w-tarde" });
+  expect(r.cuatro.poner).toEqual([]);
+});
+
+test("join a watch workout to a session by hand from the history, and separate it again", async ({ page }) => {
+  // A stretching workout on the watch, but the session was logged as gym: they don't join on their own.
+  await abrirComoAndroid(page, { permiso: true, relojes: [{ id: "coros-7", desde: -70, hasta: -10, categoria: "flex", fcMedia: 88, fcMax: 120, kcal: 150, titulo: "Yoga" }] });
+  await page.getByRole("button", { name: "Historial" }).click();
+  const li = page.locator("#lista li");
+  await expect(li).toHaveCount(1);
+  await page.click("#nuevaBox summary");
+  await page.locator('#nueva label:has(input[value="gimnasio"])').click();
+  await page.fill('#nueva textarea[name="notas"]', "a mano");
+  await page.click('#nueva button[type="submit"]');
+  await expect(li).toHaveCount(2);
+
+  await li.filter({ hasText: "Solo en el reloj" }).locator("[data-ver]").click();
+  await expect(page.locator("#sesReloj")).toContainText("Unir a una sesión");
+  await page.locator("#sesReloj [data-unir]").click();
+  // Now the session logged by hand, with the watch's data.
+  await expect(page.locator("#sesNotas")).toContainText("a mano");
+  await expect(page.locator("#sesStats")).toContainText("150");
+  await expect(page.locator("#sesReloj")).toContainText("Yoga");
+  await page.click("#sesVolver");
+  await expect(li).toHaveCount(1);
+  await expect(li).toContainText("FC 88/120 ppm · 150 kcal");
+
+  await li.locator("[data-ver]").click();
+  await page.locator("#sesReloj [data-separar]").click();
+  await expect(page.locator("#sesReloj")).toBeHidden();
+  await page.click("#sesVolver");
+  await expect(li).toHaveCount(2);
+  await expect(li.filter({ hasText: "Solo en el reloj" })).toContainText("150 kcal");
+
+  // Every new text has its translation.
+  const faltan = await page.evaluate(async () => {
+    const claves = ["Unir a una sesión", "¿Apuntaste las series de este entreno en la app? Únelo a esa sesión.", "No hay sesiones apuntadas cerca de este día para unir.",
+      "Entrenos del reloj", "Si uno no es de esta sesión, sepáralo: volverá al historial por su cuenta.", "Separar", "{n} entreno del reloj", "{n} entrenos del reloj"];
+    const r = [];
+    for (const l of ["en", "de", "ca"]) { const d = (await import(`./idiomas/${l}.js`)).default; for (const k of claves) if (!d[k]) r.push(`${l}: ${k}`); }
+    return r;
+  });
+  expect(faltan).toEqual([]);
+});

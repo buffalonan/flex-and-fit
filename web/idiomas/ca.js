@@ -603,6 +603,14 @@ export default {
   "Sesión apuntada a mano, sin ejercicios.": "Sessió apuntada a mà, sense exercicis.",
   "La gráfica del pulso aparecerá en la próxima lectura de Health Connect.": "La gràfica del pols apareixerà a la propera lectura de Health Connect.",
   "Sin datos del reloj para esta sesión.": "Sense dades del rellotge per a aquesta sessió.",
+  "{n} entreno del reloj": "{n} entrenament del rellotge",
+  "{n} entrenos del reloj": "{n} entrenaments del rellotge",
+  "Unir a una sesión": "Unir a una sessió",
+  "¿Apuntaste las series de este entreno en la app? Únelo a esa sesión.": "Vas apuntar les sèries d'aquest entrenament a l'app? Uneix-lo a aquella sessió.",
+  "No hay sesiones apuntadas cerca de este día para unir.": "No hi ha sessions apuntades a prop d'aquest dia per unir.",
+  "Entrenos del reloj": "Entrenaments del rellotge",
+  "Si uno no es de esta sesión, sepáralo: volverá al historial por su cuenta.": "Si un no és d'aquesta sessió, separa'l: tornarà a l'historial pel seu compte.",
+  "Separar": "Separar",
   "‹ Historial": "‹ Historial",
 
   /* ---------- Actualizaciones ---------- */
