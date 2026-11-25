@@ -198,6 +198,59 @@ test("the gym logger fills in last time's numbers and starts the rest timer", as
   await expect(page.locator("#regFilas tr").nth(1)).toContainText("R1 · Plancha lateral izq.");
 });
 
+test("changing a set's weight carries it to the exercise's later sets not ticked yet", async ({ page }) => {
+  await abrirApp(page);
+  await page.locator('label:has(input[value="fuerza"])').click();
+  await page.click('[data-abrir="g1"]');
+  await page.click("#detEmpezar");
+  const kg = (n) => page.locator(`#regFilas tr >> nth=${n} >> input[data-c="kg"]`);
+  await kg(0).fill("50");
+  for (let n = 0; n < 5; n++) await expect(kg(n)).toHaveValue("50");
+  await page.click('[data-ck="0-0"]');
+  await page.click('[data-ck="0-2"]');
+  // From the second set: the ticked third one keeps its weight, the first is earlier and keeps it too.
+  await kg(1).fill("24");
+  await expect(kg(0)).toHaveValue("50");
+  await expect(kg(1)).toHaveValue("24");
+  await expect(kg(2)).toHaveValue("50");
+  await expect(kg(3)).toHaveValue("24");
+  await expect(kg(4)).toHaveValue("24");
+  // The values are kept, not only shown: leaving the page and coming back shows them.
+  await page.click("#regSig");
+  await page.click("#regAnt");
+  await expect(kg(4)).toHaveValue("24");
+  await page.click('[data-ck="0-4"]');
+  await page.click("#regSig");
+  for (let i = 0; i < 4; i++) await page.click("#regSig");
+  await page.click("#regSig");
+  // 50×8 + 50×8 + 24×8.
+  await expect(page.locator("#resStats")).toContainText("992kg");
+});
+
+test("assisted pull-ups take a negative weight, which adds nothing to the volume", async ({ page }) => {
+  await abrirApp(page);
+  await page.locator('label:has(input[value="fuerza"])').click();
+  await page.click('[data-abrir="g3"]');
+  await page.click("#detEmpezar");
+  await page.click("#regSig");
+  await expect(page.locator("#regTitulo")).toHaveText("Dominadas");
+  const kg = page.locator('#regFilas tr >> nth=0 >> input[data-c="kg"]');
+  await expect(kg).not.toHaveAttribute("min");
+  await kg.fill("-20");
+  await expect(page.locator('#regFilas tr >> nth=3 >> input[data-c="kg"]')).toHaveValue("-20");
+  await page.click('[data-ck="1-0"]');
+  for (let i = 0; i < 5; i++) await page.click("#regSig");
+  await expect(page.locator("#resStats")).toContainText("1Series");
+  await expect(page.locator("#resStats")).toContainText("0kg");
+  await page.click("#resListo");
+  await page.getByRole("button", { name: "Entrenos" }).click();
+  await page.click('[data-abrir="g3"]');
+  await page.click("#detEmpezar");
+  await page.click("#regSig");
+  await expect(page.locator("#regFilas tr").first().locator(".prev")).toHaveText("-20×8");
+  await expect(kg).toHaveValue("-20");
+});
+
 test("the monthly test is saved and charted, and the calendar marks the days trained", async ({ page }) => {
   await abrirApp(page);
   await page.getByRole("button", { name: "Historial" }).click();
