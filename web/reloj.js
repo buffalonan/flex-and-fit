@@ -16,6 +16,11 @@ export function datosReloj(w) {
   if (Number.isFinite(w.fcMedia) && w.fcMedia > 0) r.fcMedia = Math.round(w.fcMedia);
   if (Number.isFinite(w.fcMax) && w.fcMax > 0) r.fcMax = Math.round(w.fcMax);
   if (Number.isFinite(w.kcal) && w.kcal > 0) r.kcal = Math.round(w.kcal);
+  // The heart-rate curve for the session's chart: one average per `curvaPaso` seconds, 0 where there's none.
+  if (Array.isArray(w.curva) && w.curva.length && Number.isFinite(w.curvaPaso) && w.curvaPaso > 0) {
+    r.curva = w.curva.slice(0, 400).map((v) => (Number.isFinite(v) && v > 0 && v < 260 ? Math.round(v) : 0));
+    r.curvaPaso = Math.round(w.curvaPaso);
+  }
   if (w.titulo) r.titulo = String(w.titulo).slice(0, 120);
   if (w.origen) r.origen = String(w.origen).slice(0, 120);
   return r;

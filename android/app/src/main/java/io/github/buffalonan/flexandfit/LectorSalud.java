@@ -77,11 +77,15 @@ final class LectorSalud {
             o.put("origen", origen);
             if (fc) {
                 // The watch's own heart rate first; if it wrote none, any source's (another watch, a chest strap).
-                long[] f = pulso(leer(hc, HeartRateRecord.class, a, b, origen), a, b);
-                if (f[2] == 0) f = pulso(leer(hc, HeartRateRecord.class, a, b, null), a, b);
+                List<HeartRateRecord> rs = leer(hc, HeartRateRecord.class, a, b, origen);
+                long[] f = pulso(rs, a, b);
+                if (f[2] == 0) { rs = leer(hc, HeartRateRecord.class, a, b, null); f = pulso(rs, a, b); }
                 if (f[2] > 0) {
                     o.put("fcMedia", f[0]);
                     o.put("fcMax", f[1]);
+                    long paso = curvaPaso(a, b);
+                    o.put("curva", curva(rs, a, b, paso));
+                    o.put("curvaPaso", paso / 1000);
                 }
             }
             // Calories from the same app only: Health Connect can't add up other sources without double counting.
@@ -118,6 +122,30 @@ final class LectorSalud {
             o.put("ultimaEn", ultimaEn);
         }
         return o;
+    }
+
+    /** The heart-rate curve's bucket in ms: a minute, or longer so a long workout keeps at most 180 points. */
+    static long curvaPaso(Instant a, Instant b) {
+        long dur = b.toEpochMilli() - a.toEpochMilli();
+        return Math.max(60000L, ((dur / 180) / 1000 + 1) * 1000);
+    }
+
+    /** The average heart rate of each bucket of [a, b] (0 where the watch wrote nothing), for the session's chart. */
+    private static JSArray curva(List<HeartRateRecord> rs, Instant a, Instant b, long paso) {
+        long ini = a.toEpochMilli();
+        int n = (int) Math.max(1, (b.toEpochMilli() - ini + paso - 1) / paso);
+        long[] suma = new long[n], cuenta = new long[n];
+        for (HeartRateRecord r : rs) {
+            for (HeartRateRecord.HeartRateSample m : r.getSamples()) {
+                if (m.getTime().isBefore(a) || m.getTime().isAfter(b)) continue;
+                int i = (int) Math.min(n - 1, (m.getTime().toEpochMilli() - ini) / paso);
+                suma[i] += m.getBeatsPerMinute();
+                cuenta[i]++;
+            }
+        }
+        JSArray out = new JSArray();
+        for (int i = 0; i < n; i++) out.put(cuenta[i] > 0 ? Math.round((double) suma[i] / cuenta[i]) : 0);
+        return out;
     }
 
     /** { average, max, samples } of the samples inside [a, b]. */

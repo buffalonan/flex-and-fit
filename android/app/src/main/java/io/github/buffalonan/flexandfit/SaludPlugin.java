@@ -19,7 +19,8 @@ import com.getcapacitor.annotation.PermissionCallback;
  * JS: Capacitor.registerPlugin("Salud")
  *   .estado()                    → { disponible, permiso }
  *   .pedirPermiso()              → { disponible, permiso }
- *   .sesiones({ desde, hasta })  → { sesiones: [{ id, inicio, fin, tipo, categoria, titulo, origen, fcMedia, fcMax, kcal }] }
+ *   .sesiones({ desde, hasta })  → { sesiones: [{ id, inicio, fin, tipo, categoria, titulo, origen, fcMedia, fcMax, kcal, curva, curvaPaso }] }
+ *                                   (curva: average heart rate per curvaPaso seconds, 0 where there's none)
  *   .fc({ desde, hasta })        → { fcMedia, fcMax, ultima, ultimaEn, muestras }   (heart rate in a window, any source)
  * Times are epoch milliseconds.
  */

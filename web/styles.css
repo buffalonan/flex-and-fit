@@ -159,7 +159,9 @@ details > summary { cursor: pointer; font-weight: 600; min-height: 24px; }
 #nueva { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .list li { background: var(--card); border-radius: var(--r); padding: 12px 14px; display: flex; gap: 12px; align-items: center; }
-.list .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.list .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; display: block; text-align: left; background: transparent; border: 0; padding: 0; margin: 0; border-radius: 8px; font-weight: 400; color: var(--fg); }
+.list .txt .l { display: block; }
+.list li:has(.txt:active) { background: var(--card2); }
 .list .tipo { font-size: .78rem; font-weight: 600; color: var(--flex3); }
 .list .tipo.gimnasio { color: var(--heat3); }
 .list .del { background: transparent; color: var(--app-muted); border: 1px solid var(--app-line); padding: 8px 12px; }
@@ -208,3 +210,21 @@ body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; 
 .reg-fig .f3d-vistas button { font-size: .8rem; }
 .list .reloj { font-size: .85rem; color: var(--app-muted); }
 .full-top .fc { color: var(--heat3); }
+
+/* One session of the history (#sesion) */
+.ej.ses .meta { gap: 4px; }
+.ej.saltado { opacity: .5; }
+.series { display: flex; flex-wrap: wrap; gap: 6px; }
+.serie { font-family: var(--display); font-weight: 600; font-size: 1rem; font-variant-numeric: tabular-nums; padding: 3px 9px; border-radius: 8px; background: var(--card2); color: var(--app-muted); white-space: nowrap; }
+.serie i { font-style: normal; font-size: .75rem; margin-right: 6px; color: var(--app-muted); }
+.serie.ok { color: var(--fg); box-shadow: inset 0 0 0 1px #1f5a37; }
+.prog { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.prog .grafica { max-width: 320px; }
+.prog .grafica text { font-size: 10px; }
+.barras { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.barras li { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: .9rem; }
+.barras .v { font-size: 1rem; }
+.barras .b { grid-column: 1 / -1; height: 8px; border-radius: 99px; background: var(--card2); overflow: hidden; }
+.barras .b i { display: block; height: 100%; background: var(--prim); border-radius: 99px; }
+.fc-graf { touch-action: pan-y; }
+#sesNotas p { white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -78,7 +78,7 @@ const TABS = ["entrenos", "progreso", "historial", "perfil"];
 let pantalla = "entrenos";
 function show(tab) {
   if (!TABS.includes(tab)) tab = "entrenos";
-  for (const t of [...TABS, "detalle"]) $(t).hidden = t !== tab;
+  for (const t of [...TABS, "detalle", "sesion"]) $(t).hidden = t !== tab;
   document.querySelectorAll(".tabs button").forEach((b) => (b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
   pantalla = tab;
   ajustes.tab = tab;
@@ -94,6 +94,7 @@ capApp?.addListener("backButton", () => {
   else if (!$("ficha").hidden) cerrarFicha();
   else if (sesion) pedirSalir();
   else if (!$("resumen").hidden) cerrarResumen();
+  else if (pantalla === "sesion") show("historial");
   else if (pantalla === "entrenos") capApp.exitApp();
   else show("entrenos");
 });
@@ -779,21 +780,213 @@ function renderHistorial() {
     const hechos = Array.isArray(s.ejercicios) && s.tipo === "flexibilidad" ? s.ejercicios.filter((x) => x.hecho).length : null;
     const series = s.tipo === "gimnasio" && Array.isArray(s.ejercicios) ? s.ejercicios.flatMap((x) => x.series || []).filter((x) => x.hecho).length : null;
     return html`<li>
-    <div class="txt">
+    <button type="button" class="txt" data-ver="${s.id}" aria-label="${`Ver la sesión: ${nombre || (s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad")}, ${s.fecha ? fechaLarga(s.fecha) : "sin fecha"}`}">
       <span class="tipo ${s.tipo === "gimnasio" ? "gimnasio" : ""}">${s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad"}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? " · Solo en el reloj" : ""}</span>
-      ${nombre ? html`<div>${nombre}</div>` : ""}
-      <div><b>${s.fecha ? fechaLarga(s.fecha) : "Sin fecha"}</b>${s.duracionMin ? ` · ${s.duracionMin} min` : ""}${hechos != null ? ` · ${hechos}/${s.ejercicios.length} ejercicios` : ""}${series ? ` · ${series} series` : ""}${s.volumenKg ? ` · ${s.volumenKg.toLocaleString("es-ES")} kg` : ""}</div>
-      ${s.reloj ? html`<div class="reloj">${lineaReloj(s)}</div>` : ""}
-      ${s.notas ? html`<div class="sub">${s.notas}</div>` : ""}
-    </div>
+      ${nombre ? html`<span class="l">${nombre}</span>` : ""}
+      <span class="l"><b>${s.fecha ? fechaLarga(s.fecha) : "Sin fecha"}</b>${s.duracionMin ? ` · ${s.duracionMin} min` : ""}${hechos != null ? ` · ${hechos}/${s.ejercicios.length} ejercicios` : ""}${series ? ` · ${series} series` : ""}${s.volumenKg ? ` · ${s.volumenKg.toLocaleString("es-ES")} kg` : ""}</span>
+      ${s.reloj ? html`<span class="l reloj">${lineaReloj(s)}</span>` : ""}
+      ${s.notas ? html`<span class="l sub">${s.notas}</span>` : ""}
+    </button>
     <button type="button" class="del" data-del="${s.id}" aria-label="Borrar la sesión del ${s.fecha || ""}">Borrar</button>
   </li>`;
   })}`;
 }
 $("lista").addEventListener("click", async (e) => {
   const id = e.target.closest("[data-del]")?.dataset.del;
-  if (id) await store.remove("sesiones", id);
+  if (id) { await store.remove("sesiones", id); return; }
+  const ver = e.target.closest("[data-ver]")?.dataset.ver;
+  if (ver) verSesion(ver);
 });
+
+/* ---------- One session of the history (tap it in Historial) ---------- */
+let sesionVista = null;
+const kgTxt = (kg) => `${String(kg).replace(".", ",")} kg`;
+// A saved gym exercise's definition (muscles, per side, timed): from the session's workout, else any workout's.
+const defGym = (rutina, n) => gym(rutina)?.ej.find((e) => e.n === n) || GYM.flatMap((w) => w.ej).find((e) => e.n === n) || null;
+const volSeries = (series, def) => (series || []).reduce((a, x) => a + (x?.hecho && x.kg > 0 && x.reps > 0 ? x.kg * x.reps * (def?.porLado ? 2 : 1) : 0), 0);
+const cuando = (x) => `${x.fecha || ""}|${String(x.inicio || 0).padStart(15, "0")}`;
+// The best set of an exercise in each gym session (heaviest kg; reps or time when it's bodyweight), oldest first,
+// up to and including session `s`: the exercise's progression.
+function progresion(s, n) {
+  const pts = [];
+  for (const x of [...sesiones].filter((x) => x.tipo === "gimnasio" && cuando(x) <= cuando(s)).sort((a, b) => cuando(a).localeCompare(cuando(b)))) {
+    const hechas = (x.ejercicios || []).filter((e) => e?.n === n).flatMap((e) => e.series || []).filter((y) => y?.hecho);
+    if (!hechas.length) continue;
+    const kgs = hechas.map((y) => Number(y.kg)).filter((v) => Number.isFinite(v) && v !== 0);
+    const kg = kgs.length ? Math.max(...kgs) : 0;
+    const reps = Math.max(...hechas.map((y) => Number(y.reps ?? y.seg) || 0));
+    pts.push({ id: x.id, fecha: x.fecha, kg, reps });
+  }
+  // By weight when there's any (negative is assistance on the machine: less of it is progress), else reps or time.
+  const porKg = pts.some((p) => p.kg !== 0);
+  return { pts: pts.slice(-8).map((p) => ({ ...p, v: porKg ? p.kg : p.reps })), porKg };
+}
+const fechaCorta = (f) => (f ? parse(f).toLocaleDateString("es-ES", { day: "numeric", month: "short" }) : "");
+function grafProgresion(s, n, seg) {
+  const { pts, porKg } = progresion(s, n);
+  if (pts.length < 2) return "";
+  const vs = pts.map((p) => p.v), lo = Math.min(...vs), hi = Math.max(...vs);
+  const W = 240, H = 64, x = (i) => 16 + (i * (W - 32)) / (pts.length - 1), y = (v) => (hi === lo ? 34 : 52 - ((v - lo) / (hi - lo)) * 32);
+  const fmt = (v) => (porKg ? kgTxt(v) : seg ? mmss(v) : `${v} reps`);
+  const ult = pts.length - 1;
+  const dif = vs[ult] - vs[0];
+  return html`<div class="prog"><span class="sub">${porKg ? "Peso máximo" : seg ? "Mejor tiempo" : "Más reps"}, últimas ${pts.length} veces${dif ? ` · ${dif > 0 ? "+" : "−"}${porKg ? kgTxt(Math.abs(dif)) : seg ? mmss(Math.abs(dif)) : `${Math.abs(dif)} reps`}` : " · igual"}</span>
+    <svg class="grafica" viewBox="0 0 ${W} ${H}" role="img" aria-label="${`Progresión de ${n}: ${pts.map((p) => `${fechaCorta(p.fecha)} ${fmt(p.v)}`).join(", ")}`}">
+      <line x1="16" x2="${W - 16}" y1="${H - 4}" y2="${H - 4}" stroke="var(--app-line)" stroke-width=".8"/>
+      <polyline points="${pts.map((p, i) => `${x(i)},${y(p.v)}`).join(" ")}" fill="none" stroke="var(--prim)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${pts.map((p, i) => html`<circle cx="${x(i)}" cy="${y(p.v)}" r="${p.id === s.id ? 4.5 : 3}" fill="${p.id === s.id ? "var(--prim)" : "var(--card)"}" stroke="var(--prim)" stroke-width="2"><title>${`${fechaCorta(p.fecha)} · ${fmt(p.v)}`}</title></circle>`)}
+      <text x="${x(0)}" y="${y(vs[0]) - 7}" text-anchor="start">${fmt(vs[0])}</text>
+      <text x="${x(ult)}" y="${y(vs[ult]) - 7}" text-anchor="end" style="fill:var(--fg);font-weight:600">${fmt(vs[ult])}</text>
+    </svg></div>`;
+}
+// The watch's heart rate over the workout: one point per `curvaPaso` seconds, with the average as a dashed line.
+function grafFc(r) {
+  const c = (r?.curva || []).map((v, i) => [i, v]).filter(([, v]) => v > 0);
+  if (c.length < 2) return "";
+  const paso = r.curvaPaso || 60, total = (r.curva.length * paso) / 60;
+  const vs = c.map(([, v]) => v), lo = Math.floor((Math.min(...vs) - 5) / 10) * 10, hi = Math.ceil((Math.max(...vs) + 5) / 10) * 10;
+  const W = 300, H = 132, L = 30, R = 8, T = 10, B = 20;
+  const x = (i) => L + ((i + 0.5) * paso / 60 / total) * (W - L - R), y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const grid = [lo, Math.round((lo + hi) / 20) * 10, hi];
+  const pts = c.map(([i, v]) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+  const iMax = c.reduce((m, p) => (p[1] > m[1] ? p : m), c[0]);
+  const media = r.fcMedia || Math.round(vs.reduce((a, b) => a + b, 0) / vs.length);
+  const marcas = [0, Math.round(total / 2), Math.round(total)];
+  return html`<div class="hd"><h3>Frecuencia cardiaca</h3><span class="sub">ppm · del reloj</span></div>
+    <svg class="grafica fc-graf" viewBox="0 0 ${W} ${H}" role="img" aria-label="${`Frecuencia cardiaca: media ${media}, máxima ${r.fcMax || iMax[1]} ppm`}" data-lo="${lo}" data-hi="${hi}">
+      <defs><linearGradient id="fcArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--heat3)" stop-opacity=".35"/><stop offset="1" stop-color="var(--heat3)" stop-opacity="0"/></linearGradient></defs>
+      ${grid.map((v) => html`<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--app-line)" stroke-width=".6"/><text x="${L - 4}" y="${y(v) + 3}" text-anchor="end">${v}</text>`)}
+      ${marcas.map((m) => html`<text x="${L + (m / total) * (W - L - R)}" y="${H - 6}" text-anchor="${m === 0 ? "start" : m === marcas[2] ? "end" : "middle"}">${m} min</text>`)}
+      <polygon points="${`${x(c[0][0]).toFixed(1)},${y(lo)} ${pts.join(" ")} ${x(c.at(-1)[0]).toFixed(1)},${y(lo)}`}" fill="url(#fcArea)"/>
+      <polyline points="${pts.join(" ")}" fill="none" stroke="var(--heat3)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <line x1="${L}" x2="${W - R}" y1="${y(media)}" y2="${y(media)}" stroke="var(--fg)" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>
+      <text x="${W - R}" y="${y(media) - 4}" text-anchor="end" style="fill:var(--fg)">${`media ${media}`}</text>
+      <circle cx="${x(iMax[0])}" cy="${y(iMax[1])}" r="4" fill="var(--heat3)" stroke="var(--card)" stroke-width="2"/>
+      <text x="${x(iMax[0])}" y="${y(iMax[1]) - 7}" text-anchor="middle" style="fill:var(--fg);font-weight:600">${`máx ${iMax[1]}`}</text>
+      <g class="fc-cursor" visibility="hidden"><line y1="${T}" y2="${H - B}" stroke="var(--fg)" stroke-width=".8"/><circle r="4" fill="var(--heat3)" stroke="var(--fg)" stroke-width="1.5"/><text text-anchor="middle" style="fill:var(--fg);font-weight:600"></text></g>
+      <rect class="fc-toque" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>
+    </svg>`;
+}
+// Touch or hover the heart-rate chart: a cursor shows the value at that minute.
+function cursorFc(e) {
+  const svg = e.target.closest?.(".fc-graf");
+  if (!svg) return;
+  const r = sesiones.find((x) => x.id === sesionVista)?.reloj;
+  const c = r?.curva || [];
+  const box = svg.getBoundingClientRect();
+  const W = 300, H = 132, L = 30, R = 8, T = 10, B = 20, paso = r?.curvaPaso || 60, total = (c.length * paso) / 60;
+  const px = ((e.clientX - box.left) / box.width) * W;
+  let i = Math.round(((px - L) / (W - L - R)) * total * 60 / paso - 0.5);
+  i = Math.max(0, Math.min(c.length - 1, i));
+  // The nearest minute with a reading.
+  for (let d = 0; d < c.length && !(c[i] > 0); d++) { if (c[i + d] > 0) i += d; else if (c[i - d] > 0) i -= d; }
+  const v = c[i];
+  const g = svg.querySelector(".fc-cursor");
+  if (!(v > 0)) { g.setAttribute("visibility", "hidden"); return; }
+  const lo = Number(svg.dataset.lo), hi = Number(svg.dataset.hi);
+  const cx = L + ((i + 0.5) * paso / 60 / total) * (W - L - R), cy = T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  g.querySelector("line").setAttribute("x1", cx);
+  g.querySelector("line").setAttribute("x2", cx);
+  g.querySelector("circle").setAttribute("cx", cx);
+  g.querySelector("circle").setAttribute("cy", cy);
+  const t = g.querySelector("text");
+  t.setAttribute("x", Math.max(L + 30, Math.min(W - R - 30, cx)));
+  t.setAttribute("y", Math.max(T + 8, cy - 9));
+  t.textContent = `${v} ppm · ${mmss((i * paso))}`;
+  g.setAttribute("visibility", "visible");
+}
+$("sesFc").addEventListener("pointermove", cursorFc);
+$("sesFc").addEventListener("pointerdown", cursorFc);
+$("sesFc").addEventListener("pointerleave", () => $("sesFc").querySelector(".fc-cursor")?.setAttribute("visibility", "hidden"));
+
+function verSesion(id) {
+  sesionVista = id;
+  for (const t of [...TABS, "detalle"]) $(t).hidden = true;
+  $("sesion").hidden = false;
+  pantalla = "sesion";
+  renderSesion();
+  window.scrollTo(0, 0);
+}
+function renderSesion() {
+  const s = sesiones.find((x) => x.id === sesionVista);
+  if (!s) { if (pantalla === "sesion") show("historial"); return; }
+  const g = s.tipo === "gimnasio", r = s.reloj;
+  $("sesion").classList.toggle("flex", !g);
+  $("sesTipo").textContent = `${g ? "Gimnasio" : "Flexibilidad"}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? " · Solo en el reloj" : ""}`;
+  $("sesTitle").textContent = s.rutina ? s.nombre || titulo(s.rutina) : r?.titulo || (g ? "Gimnasio" : "Flexibilidad");
+  const ini = s.inicio || r?.inicio, fin = s.fin || r?.fin;
+  $("sesSub").textContent = `${s.fecha ? fechaLarga(s.fecha) : "Sin fecha"}${ini && fin ? ` · ${hora(ini)}–${hora(fin)}` : ""}`;
+  const min = s.duracionMin || (r ? Math.round((r.fin - r.inicio) / 60000) : null);
+  const ejs = Array.isArray(s.ejercicios) ? s.ejercicios : [];
+  const reloj = r ? html`${stat(r.fcMedia || "—", "FC media", r.fcMedia ? "ppm" : "")}${stat(r.fcMax || "—", "FC máxima", r.fcMax ? "ppm" : "")}${stat(r.kcal || "—", "Calorías", r.kcal ? "kcal" : "")}` : "";
+  let man = "", lista;
+  const vol = [];
+  if (g) {
+    const p = {}, sec = {};
+    let hechas = 0;
+    for (const e of ejs) {
+      const def = defGym(s.rutina, e?.n);
+      const n = (e?.series || []).filter((x) => x?.hecho).length;
+      hechas += n;
+      if (def && n) { for (const m of def.p) p[m] = (p[m] || 0) + n; for (const m of def.s) sec[m] = (sec[m] || 0) + n; }
+      const v = volSeries(e?.series, def);
+      if (v > 0) vol.push([e.n, v]);
+    }
+    if (hechas) man = html`${maniqui({ p, s: sec }, "f", { titulo: `Músculos trabajados`, etiquetas: etiquetasTop(p, 4, (v) => `${v} series`) })}
+      <div class="leyenda"><span><i style="background:var(--prim)"></i>Principales</span><span><i style="background:var(--sec)"></i>Secundarios</span></div>`;
+    const volTotal = s.volumenKg ?? Math.round(vol.reduce((a, [, v]) => a + v, 0));
+    $("sesStats").innerHTML = html`${stat(hechas, "Series")}${stat(volTotal.toLocaleString("es-ES"), "Volumen", "kg")}${stat(min || "—", "Duración", min ? "min" : "")}${reloj}`;
+    const vistos = {};
+    lista = ejs.filter((e) => e?.n).map((e) => {
+      const def = defGym(s.rutina, e.n), fig = FIG_FUERZA[e.n];
+      const series = e.series || [];
+      const n = series.filter((x) => x?.hecho).length;
+      const v = volSeries(series, def);
+      // The chart once per exercise, under its first row (a side plank per side shares it).
+      const graf = vistos[e.n] ? "" : grafProgresion(s, e.n, !!def?.seg);
+      vistos[e.n] = true;
+      return html`<li class="ej g ses">${fig ? html`<span class="th">${figura(fig)}</span>` : ""}<div class="meta">
+        <span class="name">${e.n}${def?.lado ? lado(def) : ""}</span>
+        <span class="dosis">${n}/${series.length} series${v ? ` · ${Math.round(v).toLocaleString("es-ES")} kg` : ""}${def?.porLado ? " · por lado" : ""}</span>
+        <span class="series">${series.map((x, i) => html`<span class="${`serie${x?.hecho ? " ok" : ""}`}"><i>${i + 1}</i>${x?.kg != null && x.kg !== "" ? kgTxt(x.kg) : "PC"} × ${x?.seg != null ? mmss(x.seg) : x?.reps ?? "—"}</span>`)}</span>
+        ${graf}</div></li>`;
+    });
+  } else {
+    const musc = {};
+    let seg = 0, hechos = 0;
+    for (const [i, e] of ejs.entries()) {
+      if (!e?.hecho || !EX[e.id]) continue;
+      hechos++;
+      const t = pasos([e.id, e.dosis || ""], i).reduce((a, p) => a + p.seg, 0);
+      seg += t;
+      for (const m of EX[e.id].p) musc[m] = (musc[m] || 0) + t / 60;
+      for (const m of EX[e.id].s) musc[m] = (musc[m] || 0) + t / 120;
+    }
+    if (hechos) man = html`${maniqui(musc, "x", { titulo: "Músculos estirados", etiquetas: etiquetasTop(musc, 4, fmtMin) })}
+      <div class="leyenda"><span><i style="background:var(--flex1)"></i>&lt; 1 min</span><span><i style="background:var(--flex2)"></i>1–3 min</span><span><i style="background:var(--flex3)"></i>3+ min</span></div>`;
+    $("sesStats").innerHTML = html`${ejs.length ? stat(`${hechos}/${ejs.length}`, "Ejercicios") : ""}${ejs.length ? stat(Math.round(seg / 60), "Estirando", "min") : ""}${stat(min || "—", "Duración", min ? "min" : "")}${reloj}`;
+    lista = ejs.filter((e) => EX[e?.id]).map((e) => html`<li class="${`ej ses${e.hecho ? "" : " saltado"}`}"><span class="th">${figura(e.id)}</span><div class="meta">
+      <span class="name">${EX[e.id].n}</span><span class="dosis">${e.dosis || ""}</span><span class="zona">${e.hecho ? "Hecho ✓" : "Saltado"}</span></div></li>`);
+  }
+  $("sesMan").innerHTML = html`${man}`;
+  $("sesMan").hidden = !man;
+  $("sesFc").innerHTML = html`${grafFc(r)}`;
+  $("sesFc").hidden = !$("sesFc").innerHTML;
+  vol.sort((a, b) => b[1] - a[1]);
+  const maxVol = vol[0]?.[1] || 1;
+  $("sesVol").innerHTML = html`${vol.length > 1 ? html`<div class="hd"><h3>Volumen por ejercicio</h3><span class="sub">kg × reps</span></div>
+    <ul class="barras">${vol.map(([n, v]) => html`<li><span class="n">${n}</span><span class="v num">${Math.round(v).toLocaleString("es-ES")} kg</span><span class="b"><i style="${`width:${Math.max(2, (v / maxVol) * 100).toFixed(1)}%`}"></i></span></li>`)}</ul>` : ""}`;
+  $("sesVol").hidden = vol.length < 2;
+  $("sesLista").innerHTML = html`${lista}`;
+  $("sesNotas").innerHTML = html`${s.notas ? html`<h3>Notas</h3><p>${s.notas}</p>` : ""}`;
+  $("sesNotas").hidden = !s.notas;
+  $("sesNota").textContent = s.origen === "reloj" ? "Solo en el reloj: apunta las series de este entreno y se unirán a estos datos."
+    : !ejs.length ? "Sesión apuntada a mano, sin ejercicios."
+      : r && !r.curva && hc ? "La gráfica del pulso aparecerá en la próxima lectura de Health Connect."
+        : !r && hc && estadoSalud.permiso ? "Sin datos del reloj para esta sesión." : "";
+  animar($("sesion"));
+}
+$("sesVolver").addEventListener("click", () => show("historial"));
 
 /* ---------- Perfil ---------- */
 function renderPerfil() {
@@ -987,6 +1180,7 @@ async function renderAll() {
   await cargar();
   renderEntrenos();
   renderHistorial();
+  if (pantalla === "sesion") renderSesion();
   renderPerfil();
   await renderProgreso();
   rellenarResumen();
