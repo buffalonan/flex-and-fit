@@ -84,9 +84,10 @@ test("a flexibility routine shows each stretch animated, with its dose and cues"
   // The figure moves: its trunk is drawn somewhere else a few seconds later (only figures on screen are animated).
   await page.locator("#detLista .ej").nth(1).scrollIntoViewIfNeeded();
   const trunk = () => page.locator('#detLista .ej >> nth=1 >> [data-k="tr"]').getAttribute("d");
+  // The IntersectionObserver reports the figure on screen in real time, maybe after the first fake seconds have run,
+  // so keep running the clock until it moves.
   const before = await trunk();
-  await page.clock.runFor(3000);
-  expect(await trunk()).not.toBe(before);
+  await expect.poll(async () => { await page.clock.runFor(1000); return trunk(); }).not.toBe(before);
 });
 
 test("the plan's start date decides today's routine, and Sunday is the gentle one", async ({ page }) => {
@@ -328,9 +329,10 @@ test("each exercise can be looked at before starting: animation, dose and cues",
   await expect(f.locator("svg.fig.grande")).toHaveCount(1);
   // The big figure moves too.
   const trunk = () => f.locator('[data-k="tr"]').first().getAttribute("d");
+  // The IntersectionObserver reports the figure on screen in real time, maybe after the first fake seconds have run,
+  // so keep running the clock until it moves.
   const before = await trunk();
-  await page.clock.runFor(3000);
-  expect(await trunk()).not.toBe(before);
+  await expect.poll(async () => { await page.clock.runFor(1000); return trunk(); }).not.toBe(before);
   await page.click("#fichaSig");
   await expect(page.locator("#fichaCuenta")).toHaveText("Ejercicio 5 de 9");
   await page.click("#fichaSalir");
