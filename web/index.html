@@ -129,6 +129,13 @@
       <p class="status" id="syncEstado"></p>
     </form>
 
+    <div class="card" id="relojCard" hidden>
+      <h3>Reloj · Health Connect</h3>
+      <p class="sub">La app lee de Health Connect los entrenos de tu Coros (hora, frecuencia cardiaca y calorías) y los une a la sesión que apuntas aquí por la hora o por el día. Las series y los kg siguen siendo cosa tuya. En la app de COROS activa la sincronización con Health Connect (Perfil → Ajustes → Apps de terceros).</p>
+      <button type="button" class="btn" id="relojBoton">Conectar Health Connect</button>
+      <p class="status" id="relojEstado"></p>
+    </div>
+
     <div class="card">
       <h3>Copia de seguridad</h3>
       <p class="sub">Descarga todos tus datos en un archivo JSON, o importa una copia. También acepta el JSON copiado del plan de flexibilidad de 6 meses.</p>
@@ -145,7 +152,7 @@
 
 <!-- Stretching player: full screen, advances on its own. -->
 <section id="reproductor" class="full" aria-label="Sesión de estiramientos" hidden>
-  <div class="full-top"><span class="sub" id="repCuenta"></span><span class="sub num" id="repReloj">0:00</span><button type="button" class="x" id="repSalir" aria-label="Salir">✕</button></div>
+  <div class="full-top"><span class="sub" id="repCuenta"></span><span class="sub num" id="repReloj">0:00</span><span class="sub num fc" id="repFc" hidden></span><button type="button" class="x" id="repSalir" aria-label="Salir">✕</button></div>
   <h2 id="repTitulo"></h2>
   <p class="sub" id="repSerie"></p>
   <div class="side" id="repLado"><span data-lado="izq">Lado izquierdo</span><span data-lado="der">Lado derecho</span></div>
@@ -161,7 +168,7 @@
 
 <!-- Gym logger: one page per exercise (or per circuit). -->
 <section id="registro" class="full" aria-label="Registro de series" hidden>
-  <div class="full-top"><span class="sub" id="regCuenta"></span><span class="sub num" id="regReloj">0:00</span><button type="button" class="x" id="regSalir" aria-label="Salir">✕</button></div>
+  <div class="full-top"><span class="sub" id="regCuenta"></span><span class="sub num" id="regReloj">0:00</span><span class="sub num fc" id="regFc" hidden></span><button type="button" class="x" id="regSalir" aria-label="Salir">✕</button></div>
   <h2 id="regTitulo"></h2>
   <div class="reg-fig" id="regFig" hidden></div>
   <div class="chips" id="regMusc"></div>
@@ -199,7 +206,7 @@
   <h2 id="resTitulo"></h2>
   <div class="panel-man" id="resMan"></div>
   <div class="stats" id="resStats"></div>
-  <p class="sub">FC media y kcal llegarán de tu Coros a través de Health Connect.</p>
+  <p class="sub" id="resNota"></p>
   <button type="button" class="btn-go" id="resListo">LISTO</button>
 </section>
 

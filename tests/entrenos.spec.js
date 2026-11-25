@@ -359,6 +359,8 @@ test("the kettlebell workout: ten exercises with the halo, the one-arm press per
 
 test("every strength exercise has its animated figure: in the workout, its sheet and the set logger", async ({ page }) => {
   await abrirApp(page);
+  // The cards render after IndexedDB answers: wait for them before reading their ids.
+  await expect(page.locator("#listaFuerza [data-abrir], #listaPlantillas [data-abrir]")).toHaveCount(8);
   const ids = await page.locator("#listaFuerza [data-abrir], #listaPlantillas [data-abrir]").evaluateAll((els) => els.map((e) => e.dataset.abrir));
   expect(ids.length).toBe(8);
   for (const id of ids) {
