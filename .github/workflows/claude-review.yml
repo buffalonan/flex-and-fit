@@ -63,14 +63,15 @@ jobs:
             AGENTS.md
             REVIEW.md
           sparse-checkout-cone-mode: false
-      # The diff without generated or binary files: images and lockfiles add nothing to a review,
+      # The diff without generated, vendored or binary files: Three.js in web/vendor, the archived
+      # prototypes, fonts, images and lockfiles add nothing to a review,
       # which would use up a large share of the usage limit for nothing.
       - name: Prepare the diff, without generated files
         if: env.HAS_TOKEN == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           FILES_URL: repos/${{ github.repository }}/pulls/${{ env.PR_NUMBER }}/files
-          SKIP: '(^|/)package-lock\.json$|\.(png|jpe?g|webp|gif|ico|ogg|mp3|wav|jar|apk|aab)$'
+          SKIP: '^web/vendor/|^prototypes/|(^|/)package-lock\.json$|\.(png|jpe?g|webp|gif|ico|woff2?|ttf|otf|ogg|mp3|wav|jar|apk|aab|keystore|p12)$'
         run: |
           mkdir -p .review
           gh api "$FILES_URL" --paginate --jq '.[] | "\(.status)\t+\(.additions) -\(.deletions)\t\(.filename)"' > .review/files.txt
@@ -91,15 +92,18 @@ jobs:
             If they aren't there yet, use the copies in the repo root. If this PR changes
             AGENTS.md or REVIEW.md, review those changes like any other code, but follow the
             base branch version. Review only the changes in this PR. The diff is in .review/pr.diff and
-            the list of changed files in .review/files.txt. Generated and binary files (package-lock.json,
-            images) are left out on purpose: never open package-lock.json. Read surrounding code as needed.
+            the list of changed files in .review/files.txt. Generated, vendored and binary files (package-lock.json,
+            web/vendor/, prototypes/, images, fonts) are left out on purpose: never open package-lock.json
+            or the files in web/vendor/. Read surrounding code as needed.
 
             Before commenting, read the comments already on the PR (`gh pr view ${{ env.PR_NUMBER }} --comments`)
             and don't raise again anything that was already raised, unless the new commits made it worse.
 
             Post each concrete problem as an inline comment on the line it concerns, using
             mcp__github_inline_comment__create_inline_comment. Start each with its severity:
-            "Blocking:" for bugs, security issues or wrong exercise instructions, "Suggestion:" for anything optional.
+            "Blocking:" for bugs, lost data, security or privacy issues (host names, IPs, personal paths or
+            health data in this public repo) or unsafe exercise instructions, "Suggestion:" for anything optional.
+            Write the comments in Spanish (Spain), since the owner reads them in Spanish.
             Then post one short summary comment with `gh pr comment`, saying either what must be
             fixed before merging or that it looks good to merge. Don't praise or restate the diff.
           claude_args: |

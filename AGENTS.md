@@ -77,7 +77,7 @@ In Claude's cloud sessions use Node 24 (`export PATH=/opt/node24/bin:$PATH`) and
 ## CI and workflow
 
 - Work on a branch and open a PR into `main`. Don't push to `main` directly.
-- `tests.yml`: ESLint, server tests, Playwright. `security.yml`: npm audit, signatures, gitleaks (weekly too). `codeql.yml` and dependency review (public repo). `claude-review.yml`: Claude reviews each PR once (`@claude review` for another look).
+- `tests.yml`: ESLint, server tests, Playwright. `security.yml`: npm audit, signatures, gitleaks (weekly too). `codeql.yml` and dependency review (public repo). `claude-review.yml`: Claude reviews each PR once against `REVIEW.md` from the base branch, in Spanish, skipping `web/vendor/`, `prototypes/`, lockfiles and binaries (`@claude review` for another look; `@claude` in a comment answers). It needs the repo secret `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`); without it the job passes with a "NOT REVIEWED" step.
 - `android.yml`: Android Lint, emulator smoke test, APK on every PR (artifact) and on `main` the release `app-v1.<run>` with `flex-and-fit.apk`, signed with `ANDROID_KEYSTORE_BASE64`/`ANDROID_KEYSTORE_PASSWORD` or a one-off key if missing.
 - `docker.yml`: builds the image for arm64 (the Mac is Apple Silicon, Docker via colima) and amd64; on `main` pushes `:latest` and `:1.<run>` to ghcr.io. The package must be public for the Mac to pull it without logging in.
 - `pages.yml`: the demo on GitHub Pages, in two jobs (build, then deploy) so deploy-pages finds the uploaded artifact.
