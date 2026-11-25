@@ -194,3 +194,15 @@ body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; 
 .ficha-cuerpo .extra { margin: 6px 0 0; color: var(--amber); }
 .full-btns button:disabled { opacity: .4; }
 #detMaquinas a { color: var(--flex3); }
+
+/* 3D figure (figura3d.js): the canvas keeps its own aspect; the angle buttons sit under it, as in Coros. */
+.f3d-lienzo { width: 100%; aspect-ratio: 4 / 3; touch-action: pan-y; cursor: grab; }
+.f3d-lienzo canvas { width: 100%; height: 100%; display: block; }
+.ficha-fig .f3d-lienzo { max-width: 520px; margin: 0 auto; }
+.f3d-vistas { display: flex; gap: 6px; margin: 6px 0 10px; }
+.f3d-vistas button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 4px; border-radius: 10px; border: 1px solid var(--app-line); background: var(--card2); color: var(--fg); font: 600 .9rem var(--text); }
+.f3d-vistas button[aria-pressed="true"] { border-color: var(--fg); }
+.ring-fig .f3d-lienzo { aspect-ratio: 4 / 3; }
+.reg-fig .f3d-lienzo { aspect-ratio: 4 / 3; }
+.reg-fig.f3d { max-width: 340px; padding: 0 6px 2px; }
+.reg-fig .f3d-vistas button { font-size: .8rem; }
