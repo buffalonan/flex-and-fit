@@ -4,7 +4,7 @@ import * as store from "./store.js";
 import { syncNow } from "./sync.js";
 import { elegir, salud, buscarEnWifi, unir } from "./direccion.js";
 import { html } from "./html.js";
-import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
+import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, CARDIO, CAMPOS_CARDIO, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
 import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
 import { importar as importarReloj, importarPeso, unirPesos, partesDe, unirA, separar } from "./reloj.js";
@@ -172,7 +172,8 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
 
 const capApp = native ? window.Capacitor.registerPlugin("App") : null;
 capApp?.addListener("backButton", () => {
-  if (!$("actPanel").hidden) $("actPanel").hidden = true;
+  if (!$("cardioPanel").hidden) cerrarCardio();
+  else if (!$("actPanel").hidden) $("actPanel").hidden = true;
   else if (!$("continuarPanel").hidden) $("continuarPanel").hidden = true;
   else if (!$("salirPanel").hidden) cerrarSalir();
   else if (!$("ficha").hidden) cerrarFicha();
@@ -381,7 +382,7 @@ function guardarEnCurso() {
   const s = sesion;
   if (!s?.rutina) return;
   const d = s.tipo === "gym"
-    ? { tipo: "gym", rutina: s.rutina, inicio: s.inicio, valores: s.valores, pag: s.pag, desc: s.desc }
+    ? { tipo: "gym", rutina: s.rutina, inicio: s.inicio, valores: s.valores, pag: s.pag, desc: s.desc, cardio: s.cardio }
     : { tipo: "flex", rutina: s.rutina, inicio: s.inicio, idx: s.idx, hechos: [...s.hechos], seg: s.seg };
   try { localStorage.setItem(EN_CURSO, JSON.stringify({ ...d, guardado: Date.now() })); } catch (e) { /* no storage */ }
 }
@@ -450,6 +451,7 @@ function salirSesion() {
   $("reproductor").hidden = true;
   $("registro").hidden = true;
   $("salirPanel").hidden = true;
+  cerrarCardio();
   pantallaEncendida(false);
 }
 function pedirSalir() { $("salirPanel").hidden = false; if (sesion?.tipo === "flex" && !sesion.pausa) pausar(); }
@@ -500,6 +502,8 @@ async function terminar() {
     const peso = pesoEn(fecha);
     const vol = s.filas.reduce((a, f) => { const v = s.valores[f.k], e = w.ej[f.e]; return a + (v.hecho && !e.seg && v.n > 0 ? carga(v.kg, e, peso) * v.n * (e.porLado ? 2 : 1) : 0); }, 0);
     datos = { tipo: "gimnasio", fecha, inicio: s.inicio, fin: Date.now(), rutina: w.id, nombre: w.n, duracionMin: min, notas: "", volumenKg: Math.round(vol), ejercicios };
+    // Cardio stays apart from the sets: not in the volume, the records or the mannequin.
+    if (s.cardio.length) datos.cardio = s.cardio;
     const p = {}, sec = {};
     for (const f of s.filas) if (s.valores[f.k].hecho) { for (const m of w.ej[f.e].p) p[m] = (p[m] || 0) + 1; for (const m of w.ej[f.e].s) sec[m] = (sec[m] || 0) + 1; }
     man = maniqui({ p, s: sec }, "f", { etiquetas: etiquetasTop(p, 4, (v) => tn(v, "{n} serie", "{n} series")) });
@@ -520,6 +524,8 @@ async function terminar() {
     <ul class="recs">${recs.map((r) => html`<li><span class="n">${t(r.n)}</span><span class="v num">${r.v}</span><span class="sub">${t("{que} · antes {v}", { que: t(r.t), v: r.antes })}</span></li>`)}</ul>`;
   $("resRecords").hidden = !recs.length;
   pintarEsfuerzo(null);
+  resCardio = s.tipo === "flex" ? null : [...(datos.cardio || [])];
+  renderResCardio();
   $("resumen").classList.toggle("flex", s.tipo === "flex");
   $("resumen").hidden = false;
   rellenarResumen();
@@ -542,18 +548,38 @@ function rellenarResumen() {
 function pintarEsfuerzo(v) {
   $("resEsf").innerHTML = html`${Array.from({ length: 10 }, (_, i) => html`<button type="button" data-esf="${i + 1}" aria-pressed="${v === i + 1}">${i + 1}</button>`)}`;
 }
+// Changes a saved session's fields, read fresh from the store (another change from the summary may not have reached
+// `sesiones` yet). Changes to one session are queued, so two quick taps can't overwrite each other.
+let cola = Promise.resolve();
+function cambiarSesion(id, cambios) {
+  cola = cola.then(async () => {
+    const x = (await store.all("sesiones")).find((y) => y.id === id);
+    if (!x) return;
+    const { id: _id, _actualizado, ...data } = x; // eslint-disable-line no-unused-vars
+    await store.put("sesiones", id, { ...data, ...cambios });
+  }).catch(() => {});
+  return cola;
+}
 $("resEsf").addEventListener("click", async (e) => {
   const v = Number(e.target.closest("[data-esf]")?.dataset.esf);
   if (!v || !resumenId) return;
   pintarEsfuerzo(v);
-  const id = resumenId;
-  const x = sesiones.find((y) => y.id === id) || (await store.all("sesiones")).find((y) => y.id === id);
-  if (!x) return;
-  const data = { ...x };
-  delete data.id;
-  delete data._actualizado;
-  await store.put("sesiones", id, { ...data, esfuerzo: v });
+  await cambiarSesion(resumenId, { esfuerzo: v });
 });
+// Cardio after the weights can still be added from the summary, saved on the session at once.
+let resCardio = null;
+function renderResCardio() {
+  const c = resCardio;
+  $("resCardio").hidden = !c;
+  if (!c) return;
+  $("resCardio").innerHTML = html`<div class="hd"><h3>${t("Cardio")}</h3>${c.length ? html`<span class="sub">${t("{n} min", { n: num(cardioMin(c)) })}</span>` : ""}</div>
+    <div class="cardio-reg" data-cardio="res">${listaCardio(c)}<button type="button" class="add" data-cardio-add>${t("+ Añadir cardio")}</button></div>`;
+}
+$("resCardio").addEventListener("click", (e) => accionCardio(e, resCardio, "despues", (lista) => {
+  resCardio = lista;
+  renderResCardio();
+  if (resumenId) cambiarSesion(resumenId, { cardio: lista.length ? lista : null });
+}));
 function cerrarResumen() { resumenId = null; $("resumen").hidden = true; document.body.classList.remove("en-sesion"); show("historial"); }
 $("resListo").addEventListener("click", cerrarResumen);
 
@@ -715,10 +741,12 @@ function empezarGym(id, previo = null) {
     pag = Math.max(0, Math.min(Number(previo.pag) || 0, paginas.length - 1));
     if (previo.desc?.fin > Date.now()) desc = previo.desc;
   }
-  sesion = { tipo: "gym", paginas, filas, valores, pag, desc, subidas };
+  const cardio = Array.isArray(previo?.cardio) ? previo.cardio.filter((c) => c && c.min > 0) : [];
+  sesion = { tipo: "gym", paginas, filas, valores, pag, desc, subidas, cardio };
   entrar(id, previo?.inicio);
   $("registro").hidden = false;
   pagina(pag);
+  renderCardioReg();
   sesion.timer = setInterval(tickGym, 250);
 }
 function pagina(n) {
@@ -805,6 +833,96 @@ $("regMas").addEventListener("click", () => { if (sesion?.desc) { sesion.desc.fi
 $("regFinDesc").addEventListener("click", () => { if (sesion) { sesion.desc = null; tickGym(); guardarEnCurso(); } });
 $("regAnt").addEventListener("click", () => sesion.pag > 0 && pagina(sesion.pag - 1));
 $("regSig").addEventListener("click", () => (sesion.pag < sesion.paginas.length - 1 ? pagina(sesion.pag + 1) : terminar()));
+
+/* ---------- Cardio (elliptical, treadmill, bike, rowing…) before or after the weights ---------- */
+const maquina = (id) => CARDIO.find((c) => c.id === id) || CARDIO.at(-1);
+const cardioDe = (s) => (Array.isArray(s?.cardio) ? s.cardio.filter((c) => c && Number(c.min) > 0) : []);
+const cardioMin = (lista) => Math.round(lista.reduce((a, c) => a + (Number(c?.min) || 0), 0) * 10) / 10;
+// The details of a cardio block: "20 min · 2,1 km · 6 km/h · incline 8 % · level 5 · 180 kcal".
+function lineaCardio(c) {
+  const p = [t("{n} min", { n: num(c.min) })];
+  for (const k of Object.keys(CAMPOS_CARDIO)) {
+    const v = Number(c[k]);
+    if (!(v > 0)) continue;
+    p.push(k === "nivel" ? t("nivel {n}", { n: num(v) }) : k === "incl" ? t("inclinación {n} %", { n: num(v) }) : `${num(v)} ${CAMPOS_CARDIO[k].u}`);
+  }
+  return p.join(" · ");
+}
+// The blocks as buttons: tap one to change it, ✕ to remove it.
+const listaCardio = (lista) => lista.map((c, i) => {
+  const n = t(maquina(c.tipo).n);
+  return html`<span class="cardio-it"><button type="button" class="edit" data-cardio-ed="${i}" aria-label="${t("Cambiar {x}", { x: n })}">${n} · ${t("{n} min", { n: num(c.min) })}</button><button type="button" class="del" data-cardio-del="${i}" aria-label="${t("Quitar {x}", { x: n })}">✕</button></span>`;
+});
+function accionCardio(e, lista, momento, guardar) {
+  const b = e.target.closest("[data-cardio-add], [data-cardio-ed], [data-cardio-del]");
+  if (!b || !lista) return;
+  if (b.dataset.cardioDel != null) { guardar(lista.filter((_, i) => i !== Number(b.dataset.cardioDel))); return; }
+  abrirCardio({ lista, i: b.dataset.cardioEd != null ? Number(b.dataset.cardioEd) : null, momento, guardar });
+}
+// In the logger: on every page, under the sets. Before any set is ticked it's warm-up cardio, after that it's after.
+function renderCardioReg() {
+  const s = sesion;
+  if (s?.tipo !== "gym") return;
+  $("regCardio").innerHTML = html`${listaCardio(s.cardio)}<button type="button" class="add" data-cardio-add>${t("+ Cardio")}</button>`;
+}
+$("regCardio").addEventListener("click", (e) => {
+  if (sesion?.tipo !== "gym") return;
+  const momento = Object.values(sesion.valores).some((v) => v.hecho) ? "despues" : "antes";
+  accionCardio(e, sesion.cardio, momento, (lista) => {
+    if (sesion?.tipo !== "gym") return;
+    sesion.cardio = lista;
+    renderCardioReg();
+    guardarEnCurso();
+  });
+});
+// The form: the machine, before or after, the minutes and what that machine's display shows.
+let cardioForm = null;
+function abrirCardio({ lista, i = null, momento, guardar }) {
+  const ultimo = cardioDe(sesiones.find((x) => cardioDe(x).length)).at(-1)?.tipo;
+  const d = i != null && lista[i] ? { ...lista[i] } : { tipo: lista.at(-1)?.tipo || ultimo || CARDIO[0].id, momento };
+  cardioForm = { lista, i, guardar, d };
+  $("cardioError").textContent = "";
+  pintarCardio();
+  $("cardioPanel").hidden = false;
+  $("cardioCampos").querySelector("input")?.focus({ preventScroll: true });
+}
+function pintarCardio() {
+  const d = cardioForm.d, m = maquina(d.tipo);
+  $("cardioTit").textContent = t(cardioForm.i != null ? "Cambiar cardio" : "Añadir cardio");
+  $("cardioTipos").innerHTML = html`${CARDIO.map((c) => html`<button type="button" data-tipo="${c.id}" aria-pressed="${c.id === m.id}">${t(c.n)}</button>`)}`;
+  for (const r of $("cardioForm").querySelectorAll('input[name="momento"]')) r.checked = r.value === (d.momento === "antes" ? "antes" : "despues");
+  const campo = (k, l, u, step, max) => html`<label class="f">${u ? `${l} (${u})` : l}<input type="number" inputmode="${step < 1 ? "decimal" : "numeric"}" min="0" max="${max}" step="${step}" data-campo="${k}" value="${d[k] ?? ""}"></label>`;
+  $("cardioCampos").innerHTML = html`${campo("min", t("Minutos"), "", 1, 300)}${m.campos.map((k) => campo(k, t(CAMPOS_CARDIO[k].l), CAMPOS_CARDIO[k].u, CAMPOS_CARDIO[k].step, CAMPOS_CARDIO[k].max))}`;
+}
+function cerrarCardio() { cardioForm = null; $("cardioPanel").hidden = true; }
+$("cardioTipos").addEventListener("click", (e) => {
+  const id = e.target.closest("[data-tipo]")?.dataset.tipo;
+  if (!id || !cardioForm) return;
+  cardioForm.d.tipo = id;
+  pintarCardio();
+});
+$("cardioForm").addEventListener("input", (e) => {
+  if (!cardioForm) return;
+  if (e.target.name === "momento") { cardioForm.d.momento = e.target.value; return; }
+  const k = e.target.dataset.campo;
+  if (!k) return;
+  const v = Number(String(e.target.value).replace(",", "."));
+  cardioForm.d[k] = e.target.value === "" || !Number.isFinite(v) ? null : v;
+});
+$("cardioForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!cardioForm) return;
+  const { d, lista, i, guardar } = cardioForm, m = maquina(d.tipo);
+  if (!(d.min > 0 && d.min <= 300)) { $("cardioError").textContent = t("Apunta los minutos, entre 1 y 300."); return; }
+  const c = { tipo: m.id, momento: d.momento === "antes" ? "antes" : "despues", min: d.min };
+  // Only the fields of this machine, and only sensible numbers (an empty or 0 field is left out).
+  for (const k of m.campos) if (d[k] > 0 && d[k] <= CAMPOS_CARDIO[k].max) c[k] = d[k];
+  const nueva = [...lista];
+  if (i != null) nueva[i] = c; else nueva.push(c);
+  cerrarCardio();
+  guardar(nueva);
+});
+$("cardioCancelar").addEventListener("click", cerrarCardio);
 
 /* ---------- Progreso ---------- */
 async function renderProgreso() {
@@ -973,7 +1091,7 @@ function renderHistorial() {
     <button type="button" class="txt" data-ver="${s.id}" aria-label="${t("Ver la sesión: {n}, {f}", { n: nombre || t(s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad"), f: s.fecha ? fechaLarga(s.fecha) : t("sin fecha") })}">
       <span class="tipo ${s.tipo === "gimnasio" ? "gimnasio" : ""}">${t(s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad")}${s.rutina ? ` · ${s.rutina.toUpperCase()}` : ""}${s.origen === "reloj" ? ` · ${t("Solo en el reloj")}` : ""}</span>
       ${nombre ? html`<span class="l">${nombre}</span>` : ""}
-      <span class="l"><b>${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")}</b>${durMin(s) ? ` · ${durMin(s)} min` : ""}${hechos != null ? ` · ${hechos}/${s.ejercicios.length} ${t("ejercicios")}` : ""}${series ? ` · ${tn(series, "{n} serie", "{n} series")}` : ""}${s.volumenKg ? ` · ${num(s.volumenKg)} kg` : ""}</span>
+      <span class="l"><b>${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")}</b>${durMin(s) ? ` · ${durMin(s)} min` : ""}${hechos != null ? ` · ${hechos}/${s.ejercicios.length} ${t("ejercicios")}` : ""}${series ? ` · ${tn(series, "{n} serie", "{n} series")}` : ""}${s.volumenKg ? ` · ${num(s.volumenKg)} kg` : ""}${cardioDe(s).length ? ` · ${t("cardio {n} min", { n: num(cardioMin(cardioDe(s))) })}` : ""}</span>
       ${s.reloj ? html`<span class="l reloj">${lineaReloj(s)}</span>` : ""}
       ${s.notas ? html`<span class="l sub">${s.notas}</span>` : ""}
     </button>
@@ -1128,7 +1246,8 @@ function renderSesion() {
       <div class="leyenda"><span><i style="background:var(--prim)"></i>${t("Principales")}</span><span><i style="background:var(--sec)"></i>${t("Secundarios")}</span></div>`;
     // From the sets (with your weight for bodyweight exercises, when known); a session logged by hand keeps its own.
     const volTotal = ejs.length ? Math.round(vol.reduce((a, [, v]) => a + v, 0)) : s.volumenKg ?? 0;
-    $("sesStats").innerHTML = html`${stat(hechas, t("Series"))}${stat(num(volTotal), t("Volumen"), "kg")}${stat(min || "—", t("Duración"), min ? "min" : "")}${esf}${reloj}`;
+    const cmin = cardioMin(cardioDe(s));
+    $("sesStats").innerHTML = html`${stat(hechas, t("Series"))}${stat(num(volTotal), t("Volumen"), "kg")}${stat(min || "—", t("Duración"), min ? "min" : "")}${cmin ? stat(num(cmin), t("Cardio"), "min") : ""}${esf}${reloj}`;
     const vistos = {};
     const recs = Object.fromEntries(records(s).map((x) => [x.n, x]));
     lista = ejs.filter((e) => e?.n).map((e) => {
@@ -1167,6 +1286,11 @@ function renderSesion() {
   }
   $("sesMan").innerHTML = html`${man}`;
   $("sesMan").hidden = !man;
+  // Cardio before the weights first, then after.
+  const cs = cardioDe(s).map((c, i) => [c, i]).sort(([a, i], [b, j]) => (a.momento === "antes" ? 0 : 1) - (b.momento === "antes" ? 0 : 1) || i - j).map(([c]) => c);
+  $("sesCardio").innerHTML = html`${cs.length ? html`<div class="hd"><h3>${t("Cardio")}</h3><span class="sub">${t("{n} min", { n: num(cardioMin(cs)) })}</span></div>
+    <ul class="cardio-lista">${cs.map((c) => html`<li><span class="n">${t(maquina(c.tipo).n)}</span><span class="sub">${t(c.momento === "antes" ? "Antes de la fuerza" : "Después de la fuerza")} · ${lineaCardio(c)}</span></li>`)}</ul>` : ""}`;
+  $("sesCardio").hidden = !cs.length;
   $("sesFc").innerHTML = html`${grafFc(r)}`;
   $("sesFc").hidden = !$("sesFc").innerHTML;
   vol.sort((a, b) => b[1] - a[1]);
@@ -1236,11 +1360,13 @@ function abrirEdicion() {
   edicion = { id: s.id, gym: g, rutina: s.rutina,
     ejercicios: g ? ejs.filter((e) => e?.n).map((e) => ({ n: e.n, series: (e.series || []).map((x) => ({ kg: x?.kg ?? null, n: x?.seg ?? x?.reps ?? null, hecho: !!x?.hecho })) }))
       // Every stretch is kept, the ones this app no longer knows too (only the known ones are shown).
-      : ejs.map((e) => (e && typeof e === "object" ? { ...e, hecho: !!e.hecho } : e)) };
+      : ejs.map((e) => (e && typeof e === "object" ? { ...e, hecho: !!e.hecho } : e)), cardio: g ? cardioDe(s).map((c) => ({ ...c })) : null };
   $("edFecha").textContent = `${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")} · ${$("sesTitle").textContent}`;
   $("edMin").value = s.duracionMin ?? "";
   $("edNotas").value = s.notas || "";
   $("edAnadirBox").hidden = !g;
+  $("edCardioBox").hidden = !g;
+  renderEdCardio();
   $("editar").hidden = false;
   document.body.classList.add("en-sesion");
   renderEdicion();
@@ -1248,6 +1374,7 @@ function abrirEdicion() {
 }
 function cerrarEdicion() {
   edicion = null;
+  cerrarCardio();
   $("editar").hidden = true;
   $("edLista").innerHTML = "";
   document.body.classList.remove("en-sesion");
@@ -1278,6 +1405,16 @@ function renderEdicion() {
   })}`;
   $("edAnadir").innerHTML = html`<option value="">${t("Elige un ejercicio…")}</option>${nombres.map((n) => html`<option value="${n}">${t(n)}</option>`)}`;
 }
+// The session's cardio, changed with the same form as in the logger; written with the rest on Guardar.
+function renderEdCardio() {
+  const c = edicion?.cardio;
+  $("edCardio").innerHTML = html`${c ? html`${listaCardio(c)}<button type="button" class="add" data-cardio-add>${t("+ Añadir cardio")}</button>` : ""}`;
+}
+$("edCardio").addEventListener("click", (e) => accionCardio(e, edicion?.cardio, "despues", (lista) => {
+  if (!edicion?.gym) return;
+  edicion.cardio = lista;
+  renderEdCardio();
+}));
 const celda = (k) => { const [ei, si] = k.split("-").map(Number); return edicion?.ejercicios[ei]?.series[si]; };
 $("edLista").addEventListener("input", (e) => {
   const i = e.target.closest("input[data-c]"), x = celda(i?.closest("tr")?.dataset.k || "");
@@ -1336,6 +1473,7 @@ async function guardarEdicion() {
     // logged later no longer takes it).
     if (d.origen === "reloj" && d.ejercicios.length) delete d.origen;
     if (!d.ejercicios.length && !Array.isArray(s.ejercicios)) delete d.ejercicios;
+    if (ed.cardio.length) d.cardio = ed.cardio; else delete d.cardio;
   } else if (Array.isArray(s.ejercicios)) d.ejercicios = ed.ejercicios;
   cerrarEdicion();
   await store.put("sesiones", ed.id, d);

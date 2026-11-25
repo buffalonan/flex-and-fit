@@ -125,6 +125,7 @@
     <div class="panel-man" id="sesMan"></div>
     <div class="stats" id="sesStats"></div>
     <div class="card" id="sesFc"></div>
+    <div class="card" id="sesCardio" hidden></div>
     <div class="card" id="sesVol"></div>
     <ol class="ejercicios" id="sesLista"></ol>
     <div class="card" id="sesNotas"></div>
@@ -222,6 +223,7 @@
     <button type="button" class="mini" id="regMenos">−15 s</button><button type="button" class="mini" id="regMas">+15 s</button><button type="button" class="mini" id="regFinDesc">Saltar</button></div>
   <p class="sube" id="regSube" hidden></p>
   <p class="sub" id="regNota"></p>
+  <div class="cardio-reg" id="regCardio"></div>
   <div class="full-btns"><button type="button" class="btn-sec" id="regAnt">ANTERIOR</button><button type="button" class="btn-go" id="regSig">SIGUIENTE</button></div>
 </section>
 
@@ -231,6 +233,7 @@
   <h2 id="edTitulo">Editar la sesión</h2>
   <ol class="ed-lista" id="edLista"></ol>
   <label class="f" id="edAnadirBox">Añadir un ejercicio <select id="edAnadir"></select></label>
+  <div class="card" id="edCardioBox" hidden><h3>Cardio</h3><div class="cardio-reg" id="edCardio"></div></div>
   <div class="row">
     <label class="f">Minutos <input type="number" id="edMin" min="1" max="600" inputmode="numeric"></label>
   </div>
@@ -257,6 +260,22 @@
     <button type="button" class="btn" id="salirSeguir">Seguir</button>
     <button type="button" class="btn ghost" id="salirDescartar">Descartar</button>
   </div>
+</div>
+
+<!-- Cardio done before or after the weights (elliptical, treadmill, bike, rowing…), added during the session or from its summary. -->
+<div class="salir" id="cardioPanel" role="dialog" aria-labelledby="cardioTit" hidden>
+  <form class="card cardio-form" id="cardioForm" novalidate>
+    <h3 id="cardioTit">Añadir cardio</h3>
+    <div class="maquinas" id="cardioTipos" role="group" aria-label="Máquina"></div>
+    <div class="seg" role="radiogroup" aria-label="Cuándo">
+      <label><input type="radio" name="momento" value="antes"><span>Antes de la fuerza</span></label>
+      <label><input type="radio" name="momento" value="despues"><span>Después de la fuerza</span></label>
+    </div>
+    <div class="cardio-campos" id="cardioCampos"></div>
+    <p class="sub" id="cardioError" role="alert"></p>
+    <button type="submit" class="btn-main" id="cardioGuardar">Guardar</button>
+    <button type="button" class="btn ghost" id="cardioCancelar">Cancelar</button>
+  </form>
 </div>
 
 <!-- A session left open when the app closed (the phone locked and Android closed the app). -->
@@ -287,6 +306,7 @@
   <div class="panel-man" id="resMan"></div>
   <div class="stats" id="resStats"></div>
   <p class="sub" id="resNota"></p>
+  <div class="card" id="resCardio" hidden></div>
   <div class="card" id="resRecords" hidden></div>
   <div class="card esfuerzo" id="resEsfuerzo" role="group" aria-labelledby="resEsfTit">
     <div class="hd"><h3 id="resEsfTit">¿Cuánto te ha costado?</h3><span class="sub">1 muy fácil · 10 al límite</span></div>
