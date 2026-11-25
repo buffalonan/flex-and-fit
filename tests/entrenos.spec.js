@@ -278,8 +278,20 @@ test("assisted pull-ups take a negative weight, which adds nothing to the volume
   await expect(page.locator("#regTitulo")).toHaveText("Dominadas");
   const kg = page.locator('#regFilas tr >> nth=0 >> input[data-c="kg"]');
   await expect(kg).not.toHaveAttribute("min");
-  await kg.fill("-20");
+  // The phone's number keyboard has no minus key: type 20 and tap ± next to it.
+  await kg.fill("20");
+  const signo = page.locator("#regFilas tr >> nth=0 >> [data-signo]");
+  await expect(signo).toHaveAttribute("aria-pressed", "false");
+  await signo.click();
+  await expect(kg).toHaveValue("-20");
+  await expect(signo).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('#regFilas tr >> nth=3 >> input[data-c="kg"]')).toHaveValue("-20");
+  await expect(page.locator("#regFilas tr >> nth=3 >> [data-signo]")).toHaveAttribute("aria-pressed", "true");
+  // Tapping it again gives the weight back; typing a minus still works where the keyboard has one.
+  await signo.click();
+  await expect(kg).toHaveValue("20");
+  await kg.fill("-20");
+  await expect(signo).toHaveAttribute("aria-pressed", "true");
   await page.click('[data-ck="1-0"]');
   for (let i = 0; i < 5; i++) await page.click("#regSig");
   await expect(page.locator("#resStats")).toContainText("1Series");
@@ -291,6 +303,10 @@ test("assisted pull-ups take a negative weight, which adds nothing to the volume
   await page.click("#regSig");
   await expect(page.locator("#regFilas tr").first().locator(".prev")).toHaveText("-20×8");
   await expect(kg).toHaveValue("-20");
+  await expect(signo).toHaveAttribute("aria-pressed", "true");
+  // Exercises with a weight have no ±.
+  await page.click("#regSig");
+  await expect(page.locator("#regFilas [data-signo]")).toHaveCount(0);
 });
 
 test("the monthly test is saved and charted, and the calendar marks the days trained", async ({ page }) => {
