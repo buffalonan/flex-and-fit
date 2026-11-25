@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(DescubrirPlugin.class);
         registerPlugin(SaludPlugin.class);
         registerPlugin(EntrenoPlugin.class);
+        registerPlugin(ActualizarPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

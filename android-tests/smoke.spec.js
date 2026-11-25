@@ -23,6 +23,8 @@ test("the app opens, has no server set until you type one, and saves a session o
     expect(await page.evaluate(() => window.Capacitor.isNativePlatform())).toBe(true);
     // Native HTTP lets the app reach the Mac's plain-http server from the app's https origin.
     expect(await page.evaluate(() => window.Capacitor.isPluginAvailable("CapacitorHttp"))).toBe(true);
+    // The updater answers with the installed version (a debug build: versionCode 1, never offered an update on its own).
+    expect(await page.evaluate(() => window.Capacitor.registerPlugin("Actualizar").version())).toMatchObject({ codigo: 1, depuracion: true });
 
     const notas = `emulador-${Date.now()}`;
     await page.click('.tabs button[data-tab="historial"]');
