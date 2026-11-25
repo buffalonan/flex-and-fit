@@ -129,3 +129,14 @@ test("without permission the summary says where to connect it", async ({ page })
   await expect(page.locator("#resNota")).toContainText("Conecta Health Connect en Perfil");
 });
 
+
+test("the heart-rate curve is kept for the session's chart, cleaned", async ({ page }) => {
+  await page.goto("/");
+  const r = await page.evaluate(async () => {
+    const { datosReloj } = await import("./reloj.js");
+    return [datosReloj({ id: "w", inicio: 1, fin: 2, categoria: "fuerza", curva: [90, 0, 120.4, -3, 999, "x"], curvaPaso: 60 }), datosReloj({ id: "w", inicio: 1, fin: 2, categoria: "fuerza", curva: [90] })];
+  });
+  expect(r[0].curva).toEqual([90, 0, 120, 0, 0, 0]);
+  expect(r[0].curvaPaso).toBe(60);
+  expect(r[1].curva).toBeUndefined();
+});

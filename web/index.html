@@ -110,6 +110,23 @@
     <p class="empty" id="vacio">Todavía no hay sesiones.</p>
   </section>
 
+  <!-- One session of the history: what was done, the watch's numbers and charts. -->
+  <section id="sesion" class="screen" aria-labelledby="sesTitle" hidden>
+    <button type="button" class="back" id="sesVolver">‹ Historial</button>
+    <div>
+      <p class="eyebrow" id="sesTipo"></p>
+      <h2 id="sesTitle"></h2>
+      <p class="sub" id="sesSub"></p>
+    </div>
+    <div class="panel-man" id="sesMan"></div>
+    <div class="stats" id="sesStats"></div>
+    <div class="card" id="sesFc"></div>
+    <div class="card" id="sesVol"></div>
+    <ol class="ejercicios" id="sesLista"></ol>
+    <div class="card" id="sesNotas"></div>
+    <p class="sub" id="sesNota"></p>
+  </section>
+
   <section id="perfil" class="screen" aria-labelledby="perTitle" hidden>
     <h2 id="perTitle">Perfil</h2>
     <form class="card" id="planCard">
