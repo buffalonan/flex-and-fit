@@ -157,6 +157,17 @@
       <p class="status" id="relojEstado"></p>
     </div>
 
+    <div class="card" id="actCard" hidden>
+      <h3>Actualizaciones</h3>
+      <p class="sub">La app mira en GitHub si hay una versión nueva al abrirse. Se instala encima de la actual y conserva tus datos.</p>
+      <p class="status" id="actEstado"></p>
+      <progress id="actProgreso" max="1" value="0" hidden></progress>
+      <div class="row">
+        <button type="button" class="btn" id="actBuscar">Buscar actualizaciones</button>
+        <button type="button" class="btn-main" id="actInstalar" hidden>Descargar e instalar</button>
+      </div>
+    </div>
+
     <div class="card">
       <h3>Copia de seguridad</h3>
       <p class="sub">Descarga todos tus datos en un archivo JSON, o importa una copia. También acepta el JSON copiado del plan de flexibilidad de 6 meses.</p>
@@ -229,6 +240,16 @@
     <button type="button" class="btn-main" id="contSeguir">Continuar</button>
     <button type="button" class="btn" id="contGuardar">Guardar lo hecho</button>
     <button type="button" class="btn ghost" id="contDescartar">Descartar</button>
+  </div>
+</div>
+
+<!-- A newer version of the app on GitHub. -->
+<div class="salir" id="actPanel" role="dialog" aria-labelledby="actTitulo" hidden>
+  <div class="card">
+    <h3 id="actTitulo">Hay una versión nueva</h3>
+    <p class="sub" id="actTexto"></p>
+    <button type="button" class="btn-main" id="actSi">Actualizar</button>
+    <button type="button" class="btn ghost" id="actNo">Ahora no</button>
   </div>
 </div>
 
