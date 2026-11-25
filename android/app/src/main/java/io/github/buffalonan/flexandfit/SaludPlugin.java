@@ -22,12 +22,13 @@ import com.getcapacitor.annotation.PermissionCallback;
  *   .sesiones({ desde, hasta })  → { sesiones: [{ id, inicio, fin, tipo, categoria, titulo, origen, fcMedia, fcMax, kcal, curva, curvaPaso }] }
  *                                   (curva: average heart rate per curvaPaso seconds, 0 where there's none)
  *   .fc({ desde, hasta })        → { fcMedia, fcMax, ultima, ultimaEn, muestras }   (heart rate in a window, any source)
+ *   .peso({ desde, hasta })      → { pesos: [{ t, kg, origen }] }   (body weight, any source: a scale, Samsung Health, COROS)
  * Times are epoch milliseconds.
  */
 @CapacitorPlugin(
     name = "Salud",
     permissions = { @Permission(alias = "salud", strings = {
-        SaludPlugin.EJERCICIO, SaludPlugin.FC, SaludPlugin.KCAL_TOTALES, SaludPlugin.KCAL_ACTIVAS
+        SaludPlugin.EJERCICIO, SaludPlugin.FC, SaludPlugin.KCAL_TOTALES, SaludPlugin.KCAL_ACTIVAS, SaludPlugin.PESO
     }) }
 )
 public class SaludPlugin extends Plugin {
@@ -35,6 +36,7 @@ public class SaludPlugin extends Plugin {
     static final String FC = "android.permission.health.READ_HEART_RATE";
     static final String KCAL_TOTALES = "android.permission.health.READ_TOTAL_CALORIES_BURNED";
     static final String KCAL_ACTIVAS = "android.permission.health.READ_ACTIVE_CALORIES_BURNED";
+    static final String PESO = "android.permission.health.READ_WEIGHT";
 
     @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private static boolean disponible() {
@@ -53,6 +55,7 @@ public class SaludPlugin extends Plugin {
         r.put("permiso", d && concedido(EJERCICIO));
         r.put("fc", d && concedido(FC));
         r.put("kcal", d && (concedido(KCAL_TOTALES) || concedido(KCAL_ACTIVAS)));
+        r.put("peso", d && concedido(PESO));
         return r;
     }
 
@@ -115,5 +118,27 @@ public class SaludPlugin extends Plugin {
                 call.reject("No he podido leer Health Connect: " + e.getMessage());
             }
         }, "salud-fc").start();
+    }
+
+    @PluginMethod
+    public void peso(PluginCall call) {
+        if (!disponible() || !concedido(PESO)) {
+            JSObject r = new JSObject();
+            r.put("pesos", new JSArray());
+            call.resolve(r);
+            return;
+        }
+        long hasta = (long) (double) call.getDouble("hasta", (double) System.currentTimeMillis());
+        long desde = (long) (double) call.getDouble("desde", (double) (hasta - 365L * 86400000L));
+        new Thread(() -> {
+            if (!disponible()) return;
+            try {
+                JSObject r = new JSObject();
+                r.put("pesos", LectorSalud.pesos(getContext(), desde, hasta));
+                call.resolve(r);
+            } catch (Exception e) {
+                call.reject("No he podido leer Health Connect: " + e.getMessage());
+            }
+        }, "salud-peso").start();
     }
 }

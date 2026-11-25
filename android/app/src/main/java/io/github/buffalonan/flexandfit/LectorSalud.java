@@ -13,6 +13,7 @@ import android.health.connect.datatypes.ExerciseSessionType;
 import android.health.connect.datatypes.HeartRateRecord;
 import android.health.connect.datatypes.Record;
 import android.health.connect.datatypes.TotalCaloriesBurnedRecord;
+import android.health.connect.datatypes.WeightRecord;
 import android.os.Build;
 import android.os.OutcomeReceiver;
 import androidx.annotation.RequiresApi;
@@ -93,6 +94,20 @@ final class LectorSalud {
             if (kcalTotales) kcal = energia(leer(hc, TotalCaloriesBurnedRecord.class, a, b, origen), a, b);
             if (kcal <= 0 && kcalActivas) kcal = energia(leer(hc, ActiveCaloriesBurnedRecord.class, a, b, origen), a, b);
             if (kcal > 0) o.put("kcal", Math.round(kcal));
+            out.put(o);
+        }
+        return out;
+    }
+
+    /** Body weight readings in a window, any source, as { t (ms), kg, origen }. */
+    static JSArray pesos(Context ctx, long desde, long hasta) throws Exception {
+        HealthConnectManager hc = ctx.getSystemService(HealthConnectManager.class);
+        JSArray out = new JSArray();
+        for (WeightRecord w : leer(hc, WeightRecord.class, Instant.ofEpochMilli(desde), Instant.ofEpochMilli(hasta), null)) {
+            JSObject o = new JSObject();
+            o.put("t", w.getTime().toEpochMilli());
+            o.put("kg", w.getWeight().getInGrams() / 1000.0);
+            o.put("origen", w.getMetadata().getDataOrigin().getPackageName());
             out.put(o);
         }
         return out;

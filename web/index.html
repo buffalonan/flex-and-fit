@@ -74,6 +74,7 @@
       <div class="chips"><span class="chip f">■ Fuerza</span><span class="chip x">■ Flex</span></div>
     </div>
     <div class="card" id="musSemana"></div>
+    <div class="card" id="pesoGraf" hidden></div>
     <div class="card" id="records"></div>
     <div class="card">
       <div class="hd"><h3>Test: dedos al suelo</h3><span class="sub">cm hasta el suelo</span></div>
@@ -150,6 +151,15 @@
       <label class="f">Clave (si la pusiste en el Mac) <input type="password" name="token" id="token" autocomplete="off"></label>
       <button type="submit" class="btn-main">Guardar y sincronizar</button>
       <p class="status" id="syncEstado"></p>
+    </form>
+
+    <form class="card" id="pesoForm" autocomplete="off">
+      <h3>Peso corporal</h3>
+      <p class="sub">Para la fuerza relativa (tu 1RM frente a tu peso) y el volumen de los ejercicios con tu propio peso. Llega solo de Health Connect si tu báscula, Samsung Health o COROS lo guardan allí; también puedes apuntarlo aquí.</p>
+      <p class="status" id="pesoEstado"></p>
+      <div class="row"><label class="f">Peso (kg)<input type="number" step="0.1" inputmode="decimal" id="pesoKg" name="kg"></label>
+        <button type="submit" class="btn">Guardar peso</button></div>
+      <button type="button" class="btn" id="pesoPermiso" hidden>Leer el peso de Health Connect</button>
     </form>
 
     <div class="card" id="relojCard" hidden>
