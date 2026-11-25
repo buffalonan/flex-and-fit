@@ -1235,7 +1235,8 @@ function abrirEdicion() {
   const ejs = Array.isArray(s.ejercicios) ? s.ejercicios : [];
   edicion = { id: s.id, gym: g, rutina: s.rutina,
     ejercicios: g ? ejs.filter((e) => e?.n).map((e) => ({ n: e.n, series: (e.series || []).map((x) => ({ kg: x?.kg ?? null, n: x?.seg ?? x?.reps ?? null, hecho: !!x?.hecho })) }))
-      : ejs.filter((e) => EX[e?.id]).map((e) => ({ ...e, hecho: !!e.hecho })) };
+      // Every stretch is kept, the ones this app no longer knows too (only the known ones are shown).
+      : ejs.map((e) => (e && typeof e === "object" ? { ...e, hecho: !!e.hecho } : e)) };
   $("edFecha").textContent = `${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")} · ${$("sesTitle").textContent}`;
   $("edMin").value = s.duracionMin ?? "";
   $("edNotas").value = s.notas || "";
@@ -1255,9 +1256,9 @@ function renderEdicion() {
   const ed = edicion;
   const nombres = ejerciciosGym(ed.rutina);
   if (!ed.gym) {
-    $("edLista").innerHTML = html`${ed.ejercicios.map((e, i) => html`<li class="${`ej ses${e.hecho ? "" : " saltado"}`}"><span class="th">${figura(e.id)}</span><div class="meta">
+    $("edLista").innerHTML = html`${ed.ejercicios.map((e, i) => (!EX[e?.id] ? "" : html`<li class="${`ej ses${e.hecho ? "" : " saltado"}`}"><span class="th">${figura(e.id)}</span><div class="meta">
       <span class="name">${t(EX[e.id].n)}</span><span class="dosis">${tDosis(e.dosis || "")}</span>
-      <button type="button" class="btn ed-hecho" data-hecho="${i}" aria-pressed="${String(e.hecho)}">${t(e.hecho ? "Hecho ✓" : "Saltado")}</button></div></li>`)}`;
+      <button type="button" class="btn ed-hecho" data-hecho="${i}" aria-pressed="${String(e.hecho)}">${t(e.hecho ? "Hecho ✓" : "Saltado")}</button></div></li>`))}`;
     animar($("edLista"));
     return;
   }
@@ -1335,7 +1336,7 @@ async function guardarEdicion() {
     // logged later no longer takes it).
     if (d.origen === "reloj" && d.ejercicios.length) delete d.origen;
     if (!d.ejercicios.length && !Array.isArray(s.ejercicios)) delete d.ejercicios;
-  } else if (ed.ejercicios.length) d.ejercicios = ed.ejercicios;
+  } else if (Array.isArray(s.ejercicios)) d.ejercicios = ed.ejercicios;
   cerrarEdicion();
   await store.put("sesiones", ed.id, d);
 }
