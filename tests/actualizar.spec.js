@@ -8,10 +8,10 @@ const release = (n, extra = {}) => ({
   assets: [{ name: "flex-and-fit.apk", size: 4_000_000, browser_download_url: URL_APK(n) }], ...extra,
 });
 
-async function abrirComoAndroid(page, { instalada = 40, releases = [release(42), release(41)], permiso = true } = {}) {
+async function abrirComoAndroid(page, { instalada = 40, releases = [release(42), release(41)], permiso = true, idioma } = {}) {
   await page.route("https://api.github.com/**", (r) => r.fulfill({ json: releases }));
-  await page.addInitScript(({ instalada, permiso }) => {
-    if (!localStorage.getItem("flexfit.ajustes")) localStorage.setItem("flexfit.ajustes", JSON.stringify({ servidor: "" }));
+  await page.addInitScript(({ instalada, permiso, idioma }) => {
+    if (!localStorage.getItem("flexfit.ajustes")) localStorage.setItem("flexfit.ajustes", JSON.stringify({ servidor: "", ...(idioma ? { idioma } : {}) }));
     const get = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (tipo, ...r) { return /webgl/.test(tipo) ? null : get.call(this, tipo, ...r); };
     window.__act = { descargas: [], instalar: 0, permiso, oyentes: {}, app: {} };
@@ -32,7 +32,7 @@ async function abrirComoAndroid(page, { instalada = 40, releases = [release(42),
       },
     };
     window.Capacitor = { isNativePlatform: () => true, isPluginAvailable: (n) => n in plugins, registerPlugin: (n) => plugins[n] };
-  }, { instalada, permiso });
+  }, { instalada, permiso, idioma });
   await page.goto("/");
 }
 
@@ -106,3 +106,19 @@ test("the web has no updater", async ({ page }) => {
   await page.getByRole("button", { name: "Perfil" }).click();
   await expect(page.locator("#actCard")).toBeHidden();
 });
+
+for (const idioma of ["en", "de", "ca"]) {
+  test(`the updater's texts are translated (${idioma})`, async ({ page }) => {
+    await abrirComoAndroid(page, { idioma, permiso: false });
+    await expect(page.locator("#actPanel")).toBeVisible();
+    await expect(page.locator("#actTexto")).not.toContainText("Tienes la");
+    await page.click("#actSi");
+    await page.evaluate(() => window.__act.terminar());
+    await expect(page.locator("#actEstado")).not.toHaveText(/Permitir de esta fuente|Versión instalada/);
+    await page.evaluate(() => { window.__act.app.resume.forEach((f) => f()); });
+    await expect(page.locator("#actEstado")).not.toContainText("Sin permiso");
+    await page.click("#actBuscar");
+    await expect(page.locator("#actEstado")).not.toHaveText(/Buscando/);
+    expect(await page.evaluate(async () => [...(await import("./i18n.js")).faltan])).toEqual([]);
+  });
+}

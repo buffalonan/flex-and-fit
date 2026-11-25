@@ -8,6 +8,7 @@ import * as THREE from "./vendor/three.module.min.js";
 import { RoomEnvironment } from "./vendor/RoomEnvironment.js";
 import { estado, bucle, figura, animar } from "./figura.js";
 import { html } from "./html.js";
+import { t } from "./i18n.js";
 
 const D2R = Math.PI / 180;
 const K = 0.0147; // metres per SVG unit: the 2D figure's limbs are the 3D figure's limbs at this scale
@@ -613,9 +614,9 @@ export function montar(host, id, opts = {}) {
   caja.append(R.canvas);
   host.append(caja);
   if (!opts.compacto) {
-    const bar = document.createElement("div"); bar.className = "f3d-vistas"; bar.setAttribute("role", "group"); bar.setAttribute("aria-label", "Ángulo de cámara");
+    const bar = document.createElement("div"); bar.className = "f3d-vistas"; bar.setAttribute("role", "group"); bar.setAttribute("aria-label", t("Ángulo de cámara"));
     vistas.forEach(([n, az, el], i) => {
-      const b = document.createElement("button"); b.type = "button"; b.textContent = n; b.setAttribute("aria-pressed", String(i === 0));
+      const b = document.createElement("button"); b.type = "button"; b.textContent = t(n); b.setAttribute("aria-pressed", String(i === 0));
       b.addEventListener("click", () => { st.azT = az; st.elT = el; bar.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); });
       bar.append(b);
     });

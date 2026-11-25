@@ -174,7 +174,7 @@ test("the gym logger fills in last time's numbers and starts the rest timer", as
   await expect(page.locator("#resStats")).toContainText("340kg");
   await page.click("#resListo");
   await expect(page.locator("#lista li").first()).toContainText("Gimnasio · G1");
-  await expect(page.locator("#lista li").first()).toContainText("1 series");
+  await expect(page.locator("#lista li").first()).toContainText("1 serie"); // singular for one set
 
   await page.getByRole("button", { name: "Entrenos" }).click();
   await page.click('[data-abrir="g1"]');
