@@ -77,7 +77,7 @@ export const TESTS = [
 export const RUTINAS_FLEX = [...PH.map((p) => ({ ...p, id: `F${p.n}` })), { ...SUAVE, id: "suave" }];
 
 /* ---------- Turning a dose into timed steps ---------- */
-// "1 × 60 s /lado" → izq 30, der 30, izq 30, der 30. Reps are timed at the exercise's pace (s per rep).
+// "2 × 30 s /lado" → izq 30, der 30, izq 30, der 30. Reps are timed at the exercise's pace (s per rep).
 // Each step: { ex, i (item index), lado, seg, reps, texto }.
 export function pasos(item, i) {
   const [ex, dosis] = item;
