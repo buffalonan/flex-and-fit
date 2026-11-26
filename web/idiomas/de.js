@@ -717,4 +717,12 @@ export default {
   "Quitar la serie {n}": "Satz {n} entfernen",
   "+ Añadir una serie": "+ Satz hinzufügen",
   "Elige un ejercicio…": "Übung wählen…",
+
+  /* ---------- Papelera ---------- */
+  "¿Borrar esta sesión?": "Diese Einheit löschen?",
+  "{n}, {f}. Podrás recuperarla en Perfil → Sesiones borradas durante 30 días.": "{n}, {f}. Du kannst sie 30 Tage lang unter Profil → Gelöschte Einheiten wiederherstellen.",
+  "Sesiones borradas": "Gelöschte Einheiten",
+  "Las sesiones que borras en este dispositivo se guardan aquí 30 días.": "Einheiten, die du auf diesem Gerät löschst, bleiben hier 30 Tage.",
+  "Recuperar": "Wiederherstellen",
+  "Recuperada: está otra vez en Historial.": "Wiederhergestellt: sie ist wieder im Verlauf.",
 };

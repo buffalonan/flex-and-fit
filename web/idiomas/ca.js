@@ -717,4 +717,12 @@ export default {
   "Quitar la serie {n}": "Treure la sèrie {n}",
   "+ Añadir una serie": "+ Afegir una sèrie",
   "Elige un ejercicio…": "Tria un exercici…",
+
+  /* ---------- Papelera ---------- */
+  "¿Borrar esta sesión?": "Vols esborrar aquesta sessió?",
+  "{n}, {f}. Podrás recuperarla en Perfil → Sesiones borradas durante 30 días.": "{n}, {f}. La podràs recuperar a Perfil → Sessions esborrades durant 30 dies.",
+  "Sesiones borradas": "Sessions esborrades",
+  "Las sesiones que borras en este dispositivo se guardan aquí 30 días.": "Les sessions que esborres en aquest dispositiu es guarden aquí 30 dies.",
+  "Recuperar": "Recuperar",
+  "Recuperada: está otra vez en Historial.": "Recuperada: torna a ser a l'Historial.",
 };

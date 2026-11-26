@@ -36,6 +36,7 @@ test("a session logged on one device reaches another through the Mac", async ({ 
 
   // Deleting on the second device removes it on the first after its next sync.
   await phone.locator("li", { hasText: notas }).getByRole("button", { name: /Borrar/ }).click();
+  await phone.click("#borrarSi");
   await expect(phone.locator("#lista")).not.toContainText(notas);
   await expect.poll(() => pendingCount(phone)).toBe(0);
   await other.close();
