@@ -64,6 +64,7 @@ test("the bin keeps a deleted session 30 days", async ({ page }) => {
     const dia = 864e5, ahora = Date.now();
     await (await import("./store.js")).setMeta("papelera", [{ id: "a", data: { ...d, notas: "29 días" }, borrada: ahora - 29 * dia }, { id: "b", data: d, borrada: ahora - 31 * dia }]);
   }, sesion);
+  await page.reload(); // the bin is read when Perfil renders
   await page.click('[data-tab="perfil"]');
   await expect(page.locator("#papelera [data-recuperar]")).toHaveCount(1);
   await expect(page.locator('#papelera [data-recuperar="a"]')).toBeVisible();
