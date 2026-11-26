@@ -24,6 +24,9 @@ if [ ! -f .env ]; then
     echo "DRIVE_BACKUP_DIR=$HOME/Documents/fitness-backups/drive-pendiente"
     echo "SYNC_TOKEN="
   } > .env
+elif grep -q '^DRIVE_BACKUP_DIR=.*/Library/CloudStorage/' .env; then
+  # Older installs mounted Google Drive's folder in the container; update.sh copies there now instead.
+  { grep -v '^DRIVE_BACKUP_DIR=' .env; echo "DRIVE_BACKUP_DIR=$HOME/Documents/fitness-backups/drive-pendiente"; } > .env.nuevo && cat .env.nuevo > .env && rm -f .env.nuevo
 fi
 ls -d "$HOME"/Library/CloudStorage/GoogleDrive-*/"My Drive" > /dev/null 2>&1 ||
   echo "Aviso: no encuentro Google Drive para escritorio. Instálalo e inicia sesión para que las copias diarias lleguen a Drive."
