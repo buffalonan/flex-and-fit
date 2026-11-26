@@ -94,8 +94,8 @@ test("a stretching session comes back paused at the start of the stretch it was 
   await abrirApp(page);
   await page.click('#hoyCard [data-abrir="F1"]');
   await page.click("#detEmpezar");
-  // Get ready (5 s) and the full minute of breathing: the first stretch is done. Then halfway into the next one.
-  await page.clock.fastForward(6000);
+  // Get ready (10 s) and the full minute of breathing: the first stretch is done. Then halfway into the next one.
+  await page.clock.fastForward(11000);
   await page.clock.fastForward(60000);
   await expect(page.locator("#repTitulo")).toHaveText("Gato-camello");
   await page.clock.fastForward(10000);

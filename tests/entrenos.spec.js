@@ -114,9 +114,10 @@ test("the stretching player times each stretch, changes side, pauses, and logs t
   await expect(page.locator("#repTitulo")).toHaveText("Respiración boca arriba");
   await expect(page.locator("#repSerie")).toHaveText("Prepárate");
   await expect(page.locator("#repSig")).toContainText("Después: Gato-camello · 2 × 8 lentas");
+  await expect(page.locator("#repTiempo")).toHaveText("0:10");
 
-  // 5 s to get ready, then the 1-minute breathing, then the next exercise.
-  await page.clock.fastForward(6000);
+  // 10 s to get ready, then the 1-minute breathing, then the next exercise.
+  await page.clock.fastForward(11000);
   await expect(page.locator("#repTiempo")).toHaveText("0:59");
   await page.click("#repPausa");
   await page.clock.fastForward(30000);
@@ -129,11 +130,11 @@ test("the stretching player times each stretch, changes side, pauses, and logs t
   await page.click("#repSaltar");
   await page.click("#repSaltar");
   await expect(page.locator("#repTitulo")).toHaveText("Isquios con toalla");
-  await page.clock.fastForward(6000);
+  await page.clock.fastForward(11000);
   await expect(page.locator("#repLado .on")).toHaveText("Lado izquierdo");
   await page.clock.fastForward(30000);
   await expect(page.locator("#repSerie")).toHaveText("Cambia de lado");
-  await page.clock.fastForward(5000);
+  await page.clock.fastForward(10000);
   await expect(page.locator("#repLado .on")).toHaveText("Lado derecho");
 
   for (let i = 0; i < 12 && (await page.locator("#reproductor").isVisible()); i++) await page.click("#repSaltar");
@@ -521,4 +522,15 @@ test("a cable held with a rope reaches both hands in the 2D figure (face pull, t
   });
   expect(r.face_pull).toBeLessThan(0.2);
   expect(r.triceps_polea).toBeLessThan(0.2);
+});
+
+test("the plan's 30-second holds are one continuous minute, on each side", async ({ page }) => {
+  await abrirApp(page);
+  const r = await page.evaluate(async () => {
+    const { RUTINAS_FLEX, pasos } = await import("./datos.js");
+    const dosis = RUTINAS_FLEX.flatMap((w) => w.items.map((it) => it[1]));
+    return { quedan: dosis.filter((d) => /^2 × 30 s/.test(d)), fig4: pasos(["fig4", "1 × 60 s /lado"], 0).map((p) => [p.lado, p.seg]) };
+  });
+  expect(r.quedan).toEqual([]);
+  expect(r.fig4).toEqual([["izq", 60], ["der", 60]]);
 });
