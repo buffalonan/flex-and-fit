@@ -729,7 +729,7 @@ export default {
   "Recuperada: está otra vez en Historial.": "Recuperada: torna a ser a l'Historial.",
   /* ---------- Google Drive ---------- */
   "Google Drive": "Google Drive",
-  "Guarda una copia de todo tu historial, desde la primera sesión, en tu Google Drive, en una carpeta privada de la app que no ve nadie más. Si instalas la app de nuevo, conecta la misma cuenta y lo recupera todo.": "Desa una còpia de tot el teu historial, des de la primera sessió, al teu Google Drive, en una carpeta privada de l'app que no veu ningú més. Si tornes a instal·lar l'app, connecta el mateix compte i ho recupera tot.",
+  "Guarda una copia de todo tu historial, desde la primera sesión, en tu Google Drive, en una carpeta privada de la app que no ve nadie más. Incluye tus datos de salud (entrenos, frecuencia cardiaca, calorías y peso), que se suben así a Google. Si instalas la app de nuevo, conecta la misma cuenta y lo recupera todo.": "Desa una còpia de tot el teu historial, des de la primera sessió, al teu Google Drive, en una carpeta privada de l'app que no veu ningú més. Inclou les teves dades de salut (entrenaments, freqüència cardíaca, calories i pes), que així es pugen a Google. Si tornes a instal·lar l'app, connecta el mateix compte i ho recupera tot.",
   "Conectar con Google": "Connecta amb Google",
   "Copiar ahora": "Copia ara",
   "Desconectar": "Desconnecta",
@@ -749,4 +749,5 @@ export default {
   "Recuperado {n} registro de tu copia en Drive.": "Recuperat {n} registre de la teva còpia a Drive.",
   "Recuperados {n} registros de tu copia en Drive.": "Recuperats {n} registres de la teva còpia a Drive.",
   "Desconectada. La copia sigue en tu Drive: vuelve a conectar la misma cuenta para recuperarla.": "Desconnectada. La còpia continua al teu Drive: torna a connectar el mateix compte per recuperar-la.",
+  "No se pudo quitar el permiso en Google: quítalo en tu cuenta de Google → Seguridad → Conexiones con apps. La copia sigue en tu Drive.": "No s'ha pogut treure el permís a Google: treu-lo al teu compte de Google → Seguretat → Connexions amb apps. La còpia continua al teu Drive.",
 };

@@ -729,7 +729,7 @@ export default {
   "Recuperada: está otra vez en Historial.": "Restored: it's back in History.",
   /* ---------- Google Drive ---------- */
   "Google Drive": "Google Drive",
-  "Guarda una copia de todo tu historial, desde la primera sesión, en tu Google Drive, en una carpeta privada de la app que no ve nadie más. Si instalas la app de nuevo, conecta la misma cuenta y lo recupera todo.": "Keeps a copy of your whole history, from the very first session, in your Google Drive, in a private app folder nobody else sees. If you install the app again, connect the same account and it gets everything back.",
+  "Guarda una copia de todo tu historial, desde la primera sesión, en tu Google Drive, en una carpeta privada de la app que no ve nadie más. Incluye tus datos de salud (entrenos, frecuencia cardiaca, calorías y peso), que se suben así a Google. Si instalas la app de nuevo, conecta la misma cuenta y lo recupera todo.": "Keeps a copy of your whole history, from the very first session, in your Google Drive, in a private app folder nobody else sees. It includes your health data (workouts, heart rate, calories and weight), which is uploaded to Google this way. If you install the app again, connect the same account and it gets everything back.",
   "Conectar con Google": "Connect with Google",
   "Copiar ahora": "Copy now",
   "Desconectar": "Disconnect",
@@ -749,4 +749,5 @@ export default {
   "Recuperado {n} registro de tu copia en Drive.": "Restored {n} record from your Drive copy.",
   "Recuperados {n} registros de tu copia en Drive.": "Restored {n} records from your Drive copy.",
   "Desconectada. La copia sigue en tu Drive: vuelve a conectar la misma cuenta para recuperarla.": "Disconnected. The copy stays in your Drive: connect the same account again to get it back.",
+  "No se pudo quitar el permiso en Google: quítalo en tu cuenta de Google → Seguridad → Conexiones con apps. La copia sigue en tu Drive.": "Couldn't take the permission back at Google: remove it in your Google Account → Security → Connections to apps. The copy stays in your Drive.",
 };

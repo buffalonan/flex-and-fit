@@ -212,3 +212,17 @@ test("the Drive card speaks the app's language", async ({ page }) => {
   const faltan = await page.evaluate(async () => [...(await import("./i18n.js")).faltan]);
   expect(faltan).toEqual([]);
 });
+
+test("Perfil says before connecting that health data goes to Google, and says so if Google doesn't take the permission back", async ({ page }) => {
+  driveFalso(page);
+  await page.route("https://oauth2.googleapis.com/revoke", (route) => route.request().method() === "OPTIONS"
+    ? route.fulfill({ status: 204, headers: CORS }) : route.fulfill({ status: 500, json: {}, headers: CORS }));
+  await abrirComoAndroid(page);
+  await page.click('[data-tab="perfil"]');
+  await expect(page.locator("#driveCard")).toContainText("Incluye tus datos de salud (entrenos, frecuencia cardiaca, calorías y peso), que se suben así a Google.");
+  await page.click("#driveConectar");
+  await page.click("#driveDesconectar");
+  await expect(page.locator("#driveEstado")).toContainText("No se pudo quitar el permiso en Google");
+  await expect(page.locator("#driveEstado")).toHaveClass(/error/);
+  await expect(page.locator("#driveConectar")).toBeVisible();
+});

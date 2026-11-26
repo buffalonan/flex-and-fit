@@ -1840,15 +1840,17 @@ $("driveConectar").addEventListener("click", () => copiaDrive({ forzar: true, in
 $("driveCopiar").addEventListener("click", () => copiaDrive({ forzar: true }));
 $("driveDesconectar").addEventListener("click", async () => {
   if (driveCorriendo) return;
+  let quitado = true;
   try {
     const { token } = await drivePl.token({ interactivo: false });
-    await revocarDrive(token);
+    quitado = await revocarDrive(token);
     await drivePl.olvidar({ token });
   } catch (e) { /* no token: nothing to take back here */ }
   ajustes.drive = null;
   saveAjustes();
   await store.setMeta("drive", null);
-  driveEstado = { texto: t("Desconectada. La copia sigue en tu Drive: vuelve a conectar la misma cuenta para recuperarla."), error: false, login: false };
+  driveEstado = quitado ? { texto: t("Desconectada. La copia sigue en tu Drive: vuelve a conectar la misma cuenta para recuperarla."), error: false, login: false }
+    : { texto: t("No se pudo quitar el permiso en Google: quítalo en tu cuenta de Google → Seguridad → Conexiones con apps. La copia sigue en tu Drive."), error: true, login: false };
   renderDrive();
 });
 let driveTimer = null;

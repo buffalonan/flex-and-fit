@@ -78,10 +78,13 @@ export async function copiar(token, store) {
   return { recuperados, registros: subida ? local.registros.length : enCopia, subida, ultimo: Math.max(ultimo(local.registros), ultimoCopia) };
 }
 
-/** Takes back Google's permission (Perfil → Desconectar). The copy stays in Drive. */
+/** Takes back Google's permission (Perfil → Desconectar). The copy stays in Drive. Returns whether Google took it. */
 export async function revocar(token) {
   try {
-    await fetch("https://oauth2.googleapis.com/revoke", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    const r = await fetch("https://oauth2.googleapis.com/revoke", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ token }).toString() });
-  } catch (e) { /* offline: the permission stays until revoked in the Google account */ }
+    return r.ok;
+  } catch (e) {
+    return false; // offline: the permission stays until revoked in the Google account
+  }
 }

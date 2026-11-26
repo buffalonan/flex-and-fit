@@ -729,7 +729,7 @@ export default {
   "Recuperada: está otra vez en Historial.": "Wiederhergestellt: sie ist wieder im Verlauf.",
   /* ---------- Google Drive ---------- */
   "Google Drive": "Google Drive",
-  "Guarda una copia de todo tu historial, desde la primera sesión, en tu Google Drive, en una carpeta privada de la app que no ve nadie más. Si instalas la app de nuevo, conecta la misma cuenta y lo recupera todo.": "Speichert eine Kopie deines gesamten Verlaufs, ab der ersten Einheit, in deinem Google Drive, in einem privaten App-Ordner, den sonst niemand sieht. Installierst du die App neu, verbinde dasselbe Konto und sie holt alles zurück.",
+  "Guarda una copia de todo tu historial, desde la primera sesión, en tu Google Drive, en una carpeta privada de la app que no ve nadie más. Incluye tus datos de salud (entrenos, frecuencia cardiaca, calorías y peso), que se suben así a Google. Si instalas la app de nuevo, conecta la misma cuenta y lo recupera todo.": "Speichert eine Kopie deines gesamten Verlaufs, ab der ersten Einheit, in deinem Google Drive, in einem privaten App-Ordner, den sonst niemand sieht. Sie enthält deine Gesundheitsdaten (Trainings, Herzfrequenz, Kalorien und Gewicht), die so zu Google hochgeladen werden. Installierst du die App neu, verbinde dasselbe Konto und sie holt alles zurück.",
   "Conectar con Google": "Mit Google verbinden",
   "Copiar ahora": "Jetzt kopieren",
   "Desconectar": "Trennen",
@@ -749,4 +749,5 @@ export default {
   "Recuperado {n} registro de tu copia en Drive.": "{n} Datensatz aus deiner Drive-Kopie wiederhergestellt.",
   "Recuperados {n} registros de tu copia en Drive.": "{n} Datensätze aus deiner Drive-Kopie wiederhergestellt.",
   "Desconectada. La copia sigue en tu Drive: vuelve a conectar la misma cuenta para recuperarla.": "Getrennt. Die Kopie bleibt in deinem Drive: Verbinde dasselbe Konto erneut, um sie zurückzuholen.",
+  "No se pudo quitar el permiso en Google: quítalo en tu cuenta de Google → Seguridad → Conexiones con apps. La copia sigue en tu Drive.": "Die Berechtigung konnte bei Google nicht entzogen werden: Entferne sie in deinem Google-Konto → Sicherheit → Verbindungen zu Apps. Die Kopie bleibt in deinem Drive.",
 };
