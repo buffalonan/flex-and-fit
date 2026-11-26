@@ -143,3 +143,20 @@ test("the player keeps to the clock after the page was asleep, as the native cue
   await expect(page.locator("#repTitulo")).toHaveText("Gato-camello");
   await expect(page.locator("#repSerie")).not.toHaveText("Prepárate");
 });
+
+test("the screen stays on during a session: the wake lock is asked for again after the page was hidden", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__wake = 0;
+    Object.defineProperty(navigator, "wakeLock", { value: { request: async () => { window.__wake++; return { release: async () => {} }; } } });
+  });
+  await abrirApp(page);
+  await page.click('#hoyCard [data-abrir="F1"]');
+  await page.click("#detEmpezar");
+  await expect.poll(() => page.evaluate(() => window.__wake)).toBe(1);
+  // Hidden and back (the browser drops the lock meanwhile).
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(() => page.evaluate(() => window.__wake)).toBe(2);
+});

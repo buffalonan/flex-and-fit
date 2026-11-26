@@ -423,7 +423,8 @@ $("contSeguir").addEventListener("click", () => retomar());
 $("contGuardar").addEventListener("click", () => { if (retomar()) terminar(); });
 $("contDescartar").addEventListener("click", () => { pendienteEnCurso = null; borrarEnCurso(); $("continuarPanel").hidden = true; });
 // Also on the way to the background, in case a change didn't get its own save.
-document.addEventListener("visibilitychange", () => { if (document.hidden) guardarEnCurso(); });
+// The browser drops the screen's wake lock whenever the page is hidden, so it's asked for again on the way back.
+document.addEventListener("visibilitychange", () => { if (document.hidden) guardarEnCurso(); else if (sesion) pantallaEncendida(true); });
 window.addEventListener("pagehide", () => guardarEnCurso());
 
 // In the Android app, a foreground service with an ongoing notification ("Entreno en curso") while a session is
