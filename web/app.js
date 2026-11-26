@@ -599,9 +599,9 @@ function construirPasos(r) {
     const ps = pasos(it, i);
     for (const [k, p] of ps.entries()) {
       const prev = ps[k - 1];
-      if (k === 0) out.push({ ...p, tipo: "prep", seg: 5, texto: t("Prepárate") });
-      else if (p.lado && prev.lado !== p.lado) out.push({ ...p, tipo: "prep", seg: 4, texto: t("Cambia de lado") });
-      else out.push({ ...p, tipo: "prep", seg: 3, texto: t("Suelta y respira") });
+      if (k === 0) out.push({ ...p, tipo: "prep", seg: 10, texto: t("Prepárate") });
+      else if (p.lado && prev.lado !== p.lado) out.push({ ...p, tipo: "prep", seg: 10, texto: t("Cambia de lado") });
+      else out.push({ ...p, tipo: "prep", seg: 10, texto: t("Suelta y respira") });
       out.push({ ...p, tipo: "work" });
     }
   }

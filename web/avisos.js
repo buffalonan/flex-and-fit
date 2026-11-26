@@ -20,18 +20,17 @@ export const SONIDOS = {
 export const PARCIALES = [[1, 1, 2.6], [2, 0.42, 4.5], [3, 0.16, 7], [4, 0.06, 11]];
 
 // The stretching player. `pasos`: its steps ({ tipo: "prep" | "work", seg, lado }), `idx`: the current one, which
-// started at `inicio` (ms, pauses already taken out). Before the end of a stretch of 8 s or more, "pronto" 3 s
-// before; at its end "acaba"; at the end of a prep step (every stretch has one before it) "empieza", or "lado" for
-// the right side.
+// started at `inicio` (ms, pauses already taken out). 3 s before the end of any step of 8 s or more, "pronto" (so
+// also before the next stretch starts, the rests between them being 10 s); at the end of a stretch "acaba"; at the
+// end of a rest (every stretch has one before it) "empieza", or "lado" for the right side.
 export function avisosFlex(pasos, idx, inicio, ahora = Date.now()) {
   const out = [];
   let t0 = inicio;
   for (let j = idx; j < pasos.length; j++) {
     const p = pasos[j], fin = t0 + p.seg * 1000;
-    if (p.tipo === "work") {
-      if (p.seg >= 8) out.push({ en: fin - 3000, s: "pronto" });
-      out.push({ en: fin, s: "acaba" });
-    } else if (pasos[j + 1]?.tipo === "work") out.push({ en: fin, s: pasos[j + 1].lado === "der" ? "lado" : "empieza" });
+    if (p.seg >= 8) out.push({ en: fin - 3000, s: "pronto" });
+    if (p.tipo === "work") out.push({ en: fin, s: "acaba" });
+    else if (pasos[j + 1]?.tipo === "work") out.push({ en: fin, s: pasos[j + 1].lado === "der" ? "lado" : "empieza" });
     t0 = fin;
   }
   return out.filter((a) => a.en > ahora);

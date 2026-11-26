@@ -31,28 +31,28 @@ async function abrirApp(page, { android = false } = {}) {
 const vib = (page) => page.evaluate(() => window.__vib.map(([, p]) => p));
 const notas = (page) => page.evaluate(() => window.__notas.map(([, f]) => Math.round(f * 100) / 100));
 
-test("the cues follow the steps: 'pronto' 3 s before a long stretch ends, 'acaba' at its end, 'empieza' or 'lado' after the prep", async ({ page }) => {
+test("the cues follow the steps: 'pronto' 3 s before a long step ends, 'acaba' at a stretch's end, 'empieza' or 'lado' after the rest", async ({ page }) => {
   await page.goto("/");
   const r = await page.evaluate(async () => {
     const { avisosFlex, avisosDescanso } = await import("./avisos.js");
     const pasos = [
-      { tipo: "prep", seg: 5 }, { tipo: "work", seg: 30, lado: "izq" },
-      { tipo: "prep", seg: 4 }, { tipo: "work", seg: 30, lado: "der" },
-      { tipo: "prep", seg: 3 }, { tipo: "work", seg: 5 },
+      { tipo: "prep", seg: 10 }, { tipo: "work", seg: 30, lado: "izq" },
+      { tipo: "prep", seg: 10 }, { tipo: "work", seg: 30, lado: "der" },
+      { tipo: "prep", seg: 5 }, { tipo: "work", seg: 5 },
     ];
     return {
       todo: avisosFlex(pasos, 0, 0, -1),
-      luego: avisosFlex(pasos, 1, 5000, 33000),
+      luego: avisosFlex(pasos, 1, 10000, 38000),
       descanso: avisosDescanso({ fin: 90000, total: 90 }, 0),
       corto: avisosDescanso({ fin: 10000, total: 10 }, 0),
     };
   });
   expect(r.todo).toEqual([
-    { en: 5000, s: "empieza" }, { en: 32000, s: "pronto" }, { en: 35000, s: "acaba" },
-    { en: 39000, s: "lado" }, { en: 66000, s: "pronto" }, { en: 69000, s: "acaba" },
-    { en: 72000, s: "empieza" }, { en: 77000, s: "acaba" }, // a 5 s stretch has no "pronto"
+    { en: 7000, s: "pronto" }, { en: 10000, s: "empieza" }, { en: 37000, s: "pronto" }, { en: 40000, s: "acaba" },
+    { en: 47000, s: "pronto" }, { en: 50000, s: "lado" }, { en: 77000, s: "pronto" }, { en: 80000, s: "acaba" },
+    { en: 85000, s: "empieza" }, { en: 90000, s: "acaba" }, // steps under 8 s have no "pronto"
   ]);
-  expect(r.luego[0]).toEqual({ en: 35000, s: "acaba" });
+  expect(r.luego[0]).toEqual({ en: 40000, s: "acaba" });
   expect(r.descanso).toEqual([{ en: 85000, s: "pronto" }, { en: 90000, s: "empieza" }]);
   expect(r.corto).toEqual([{ en: 10000, s: "empieza" }]);
 });
@@ -64,8 +64,12 @@ test("in the browser the player plays harp notes and vibrates, and stays quiet w
   await expect(page.locator("#repSerie")).toHaveText("Prepárate");
   expect(await vib(page)).toEqual([]);
 
-  // 5 s to get ready: the breathing starts with a rising arpeggio and a vibration.
-  await page.clock.fastForward(5300);
+  // 10 s to get ready: a soft falling pair 3 s before the end, then the breathing starts with a rising arpeggio
+  // and a vibration.
+  await page.clock.fastForward(7300);
+  await expect.poll(() => notas(page)).toContain(E5);
+  expect(await vib(page)).toEqual([]);
+  await page.clock.fastForward(3000);
   await expect.poll(() => vib(page)).toEqual([[150]]);
   expect((await notas(page)).filter((f) => f < 800)).toEqual(expect.arrayContaining([C5, E5]));
 
@@ -93,15 +97,16 @@ test("in the app the cues go to the native plugin, and pausing or leaving clears
   const ultima = () => page.evaluate(() => window.__pitidos.at(-1));
   await expect.poll(async () => (await ultima())?.lista.length).toBeGreaterThan(10);
   const l = (await ultima()).lista;
-  const t0 = l[0].en - 5000; // when the player started
+  const t0 = l[1].en - 10000; // when the player started
   expect(t0 - MIERCOLES.getTime()).toBeLessThan(5000);
-  expect(l[0]).toEqual({ en: t0 + 5000, notas: [[0, C5], [110, E5], [220, 783.99]], vib: [150] });
-  expect(l[1]).toEqual({ en: t0 + 62000, notas: [[0, E5], [220, C5]], vib: [] }); // 3 s before the breathing ends
-  expect(l[2]).toMatchObject({ en: t0 + 65000, vib: [180] });
+  expect(l[0]).toEqual({ en: t0 + 7000, notas: [[0, E5], [220, C5]], vib: [] }); // 3 s before the rest ends
+  expect(l[1]).toEqual({ en: t0 + 10000, notas: [[0, C5], [110, E5], [220, 783.99]], vib: [150] });
+  expect(l[2]).toEqual({ en: t0 + 67000, notas: [[0, E5], [220, C5]], vib: [] }); // 3 s before the breathing ends
+  expect(l[3]).toMatchObject({ en: t0 + 70000, vib: [180] });
   expect((await ultima()).parciales.length).toBeGreaterThan(1);
 
   // The web side doesn't play them too.
-  await page.clock.fastForward(5300);
+  await page.clock.fastForward(10300);
   expect(await vib(page)).toEqual([]);
 
   await page.click("#repPausa");
@@ -109,7 +114,7 @@ test("in the app the cues go to the native plugin, and pausing or leaving clears
   await page.click("#repPausa");
   await expect.poll(async () => (await ultima()).lista.length).toBeGreaterThan(10);
   // Still on the clock: the breathing's end moved by the pause only.
-  expect((await ultima()).lista[1].en).toBeGreaterThanOrEqual(t0 + 62000);
+  expect((await ultima()).lista[0].en).toBeGreaterThanOrEqual(t0 + 67000);
 
   await page.click("#repSalir");
   await page.click("#salirDescartar");
@@ -138,8 +143,8 @@ test("the player keeps to the clock after the page was asleep, as the native cue
   await abrirApp(page);
   await page.click('#hoyCard [data-abrir="F1"]');
   await page.click("#detEmpezar");
-  // One jump of 70 s (timers fire once, like a frozen web view waking up): 5 s prep + 60 s breathing + 5 s prep.
-  await page.clock.fastForward(70000);
+  // One jump of 85 s (timers fire once, like a frozen web view waking up): 10 s rest + 60 s breathing + 10 s rest + 5 s.
+  await page.clock.fastForward(85000);
   await expect(page.locator("#repTitulo")).toHaveText("Gato-camello");
   await expect(page.locator("#repSerie")).not.toHaveText("Prepárate");
 });
