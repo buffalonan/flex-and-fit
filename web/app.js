@@ -384,7 +384,7 @@ function guardarEnCurso() {
   if (!s?.rutina) return;
   const d = s.tipo === "gym"
     ? { tipo: "gym", rutina: s.rutina, inicio: s.inicio, valores: s.valores, pag: s.pag, desc: s.desc, cardio: s.cardio }
-    : { tipo: "flex", rutina: s.rutina, inicio: s.inicio, idx: s.idx, hechos: [...s.hechos], seg: s.seg };
+    : { tipo: "flex", rutina: s.rutina, inicio: s.inicio, idx: s.idx, hechos: [...s.hechos], seg: s.seg, cardio: s.cardio };
   try { localStorage.setItem(EN_CURSO, JSON.stringify({ ...d, guardado: Date.now() })); } catch (e) { /* no storage */ }
 }
 function borrarEnCurso() { try { localStorage.removeItem(EN_CURSO); } catch (e) { /* no storage */ } }
@@ -491,6 +491,9 @@ async function terminar() {
     const antes = sesiones.find((x) => x.id === `plan-${fecha}`);
     if (antes?.inicio) datos.inicio = antes.inicio;
     if (antes?.reloj) datos.reloj = antes.reloj;
+    // Cardio: that day's earlier one stays, this session's is added.
+    const cardio = [...cardioDe(antes), ...s.cardio];
+    if (cardio.length) datos.cardio = cardio;
     resumenId = `plan-${fecha}`;
     await store.put("sesiones", resumenId, datos);
   } else {
@@ -525,7 +528,8 @@ async function terminar() {
     <ul class="recs">${recs.map((r) => html`<li><span class="n">${t(r.n)}</span><span class="v num">${r.v}</span><span class="sub">${t("{que} · antes {v}", { que: t(r.t), v: r.antes })}</span></li>`)}</ul>`;
   $("resRecords").hidden = !recs.length;
   pintarEsfuerzo(null);
-  resCardio = s.tipo === "flex" ? null : [...(datos.cardio || [])];
+  resCardio = [...(datos.cardio || [])];
+  resFlex = s.tipo === "flex";
   renderResCardio();
   $("resumen").classList.toggle("flex", s.tipo === "flex");
   $("resumen").hidden = false;
@@ -568,7 +572,7 @@ $("resEsf").addEventListener("click", async (e) => {
   await cambiarSesion(resumenId, { esfuerzo: v });
 });
 // Cardio after the weights can still be added from the summary, saved on the session at once.
-let resCardio = null;
+let resCardio = null, resFlex = false;
 function renderResCardio() {
   const c = resCardio;
   $("resCardio").hidden = !c;
@@ -576,7 +580,7 @@ function renderResCardio() {
   $("resCardio").innerHTML = html`<div class="hd"><h3>${t("Cardio")}</h3>${c.length ? html`<span class="sub">${t("{n} min", { n: num(cardioMin(c)) })}</span>` : ""}</div>
     <div class="cardio-reg" data-cardio="res">${listaCardio(c)}<button type="button" class="add" data-cardio-add>${t("+ Añadir cardio")}</button></div>`;
 }
-$("resCardio").addEventListener("click", (e) => accionCardio(e, resCardio, "despues", (lista) => {
+$("resCardio").addEventListener("click", (e) => accionCardio(e, resCardio, "despues", resFlex, (lista) => {
   resCardio = lista;
   renderResCardio();
   if (resumenId) cambiarSesion(resumenId, { cardio: lista.length ? lista : null });
@@ -605,7 +609,8 @@ function construirPasos(r) {
 // "get ready" before a stretch), paused, so there's time to get back into position.
 function empezarFlex(id, previo = null) {
   const r = rutinaFlex(id);
-  sesion = { tipo: "flex", pasos: construirPasos(r), idx: 0, hechos: new Set(), seg: {}, pausa: null, pausado: 0 };
+  sesion = { tipo: "flex", pasos: construirPasos(r), idx: 0, hechos: new Set(), seg: {}, pausa: null, pausado: 0,
+    cardio: Array.isArray(previo?.cardio) ? previo.cardio.filter((c) => c && c.min > 0) : [] };
   let i = 0;
   if (previo) {
     const n = r.items.length;
@@ -620,6 +625,7 @@ function empezarFlex(id, previo = null) {
   $("reproductor").hidden = false;
   window.scrollTo(0, 0);
   irA(i);
+  renderCardioReg();
   sesion.timer = setInterval(tick, 200);
 }
 const ahora = () => (sesion.pausa ?? Date.now());
@@ -878,35 +884,46 @@ const listaCardio = (lista) => lista.map((c, i) => {
   const n = t(maquina(c.tipo).n);
   return html`<span class="cardio-it"><button type="button" class="edit" data-cardio-ed="${i}" aria-label="${t("Cambiar {x}", { x: n })}">${n} · ${t("{n} min", { n: num(c.min) })}</button><button type="button" class="del" data-cardio-del="${i}" aria-label="${t("Quitar {x}", { x: n })}">✕</button></span>`;
 });
-function accionCardio(e, lista, momento, guardar) {
+function accionCardio(e, lista, momento, flex, guardar) {
   const b = e.target.closest("[data-cardio-add], [data-cardio-ed], [data-cardio-del]");
   if (!b || !lista) return;
   if (b.dataset.cardioDel != null) { guardar(lista.filter((_, i) => i !== Number(b.dataset.cardioDel))); return; }
-  abrirCardio({ lista, i: b.dataset.cardioEd != null ? Number(b.dataset.cardioEd) : null, momento, guardar });
+  abrirCardio({ lista, i: b.dataset.cardioEd != null ? Number(b.dataset.cardioEd) : null, momento, flex, guardar });
 }
-// In the logger: on every page, under the sets. Before any set is ticked it's warm-up cardio, after that it's after.
+// "Before the weights" or "before stretching", as the session is.
+const momentoTxt = (m, flex) => t(flex ? (m === "antes" ? "Antes de estirar" : "Después de estirar") : m === "antes" ? "Antes de la fuerza" : "Después de la fuerza");
+// In the logger (on every page, under the sets) and in the stretching player (under what comes next). Before any set
+// is ticked or stretch done it's warm-up cardio, after that it's after.
 function renderCardioReg() {
   const s = sesion;
-  if (s?.tipo !== "gym") return;
-  $("regCardio").innerHTML = html`${listaCardio(s.cardio)}<button type="button" class="add" data-cardio-add>${t("+ Cardio")}</button>`;
+  if (!s) return;
+  $(s.tipo === "gym" ? "regCardio" : "repCardio").innerHTML = html`${listaCardio(s.cardio)}<button type="button" class="add" data-cardio-add>${t("+ Cardio")}</button>`;
 }
-$("regCardio").addEventListener("click", (e) => {
-  if (sesion?.tipo !== "gym") return;
-  const momento = Object.values(sesion.valores).some((v) => v.hecho) ? "despues" : "antes";
-  accionCardio(e, sesion.cardio, momento, (lista) => {
-    if (sesion?.tipo !== "gym") return;
-    sesion.cardio = lista;
+function cardioEnSesion(e) {
+  const s = sesion;
+  if (!s) return;
+  const flex = s.tipo === "flex";
+  const empezado = flex ? s.hechos.size > 0 : Object.values(s.valores).some((v) => v.hecho);
+  // The stretching player stops while the form is open (SEGUIR carries on).
+  if (flex && !s.pausa && e.target.closest("[data-cardio-add], [data-cardio-ed]")) pausar();
+  accionCardio(e, s.cardio, empezado ? "despues" : "antes", flex, (lista) => {
+    if (sesion !== s) return;
+    s.cardio = lista;
     renderCardioReg();
     guardarEnCurso();
   });
-});
+}
+$("regCardio").addEventListener("click", cardioEnSesion);
+$("repCardio").addEventListener("click", cardioEnSesion);
 // The form: the machine, before or after, the minutes and what that machine's display shows.
 let cardioForm = null;
-function abrirCardio({ lista, i = null, momento, guardar }) {
+function abrirCardio({ lista, i = null, momento, flex = false, guardar }) {
   const ultimo = cardioDe(sesiones.find((x) => cardioDe(x).length)).at(-1)?.tipo;
   const d = i != null && lista[i] ? { ...lista[i] } : { tipo: lista.at(-1)?.tipo || ultimo || CARDIO[0].id, momento };
   cardioForm = { lista, i, guardar, d };
   $("cardioError").textContent = "";
+  $("cardioAntes").textContent = momentoTxt("antes", flex);
+  $("cardioDespues").textContent = momentoTxt("despues", flex);
   pintarCardio();
   $("cardioPanel").hidden = false;
   $("cardioCampos").querySelector("input")?.focus({ preventScroll: true });
@@ -1351,16 +1368,16 @@ function renderSesion() {
     }
     if (hechos) man = html`${maniqui(musc, "x", { titulo: t("Músculos estirados"), etiquetas: etiquetasTop(musc, 4, fmtMin) })}
       <div class="leyenda"><span><i style="background:var(--flex1)"></i>&lt; 1 min</span><span><i style="background:var(--flex2)"></i>1–3 min</span><span><i style="background:var(--flex3)"></i>3+ min</span></div>`;
-    $("sesStats").innerHTML = html`${ejs.length ? stat(`${hechos}/${ejs.length}`, t("Ejercicios")) : ""}${ejs.length ? stat(Math.round(seg / 60), t("Estirando"), "min") : ""}${stat(min || "—", t("Duración"), min ? "min" : "")}${esf}${reloj}`;
+    $("sesStats").innerHTML = html`${ejs.length ? stat(`${hechos}/${ejs.length}`, t("Ejercicios")) : ""}${ejs.length ? stat(Math.round(seg / 60), t("Estirando"), "min") : ""}${stat(min || "—", t("Duración"), min ? "min" : "")}${cardioMin(cardioDe(s)) ? stat(num(cardioMin(cardioDe(s))), t("Cardio"), "min") : ""}${esf}${reloj}`;
     lista = ejs.filter((e) => EX[e?.id]).map((e) => html`<li class="${`ej ses${e.hecho ? "" : " saltado"}`}"><span class="th">${figura(e.id)}</span><div class="meta">
       <span class="name">${t(EX[e.id].n)}</span><span class="dosis">${tDosis(e.dosis || "")}</span><span class="zona">${t(e.hecho ? "Hecho ✓" : "Saltado")}</span></div></li>`);
   }
   $("sesMan").innerHTML = html`${man}`;
   $("sesMan").hidden = !man;
-  // Cardio before the weights first, then after.
+  // Cardio before the weights (or stretching) first, then after.
   const cs = cardioDe(s).map((c, i) => [c, i]).sort(([a, i], [b, j]) => (a.momento === "antes" ? 0 : 1) - (b.momento === "antes" ? 0 : 1) || i - j).map(([c]) => c);
   $("sesCardio").innerHTML = html`${cs.length ? html`<div class="hd"><h3>${t("Cardio")}</h3><span class="sub">${t("{n} min", { n: num(cardioMin(cs)) })}</span></div>
-    <ul class="cardio-lista">${cs.map((c) => html`<li><span class="n">${t(maquina(c.tipo).n)}</span><span class="sub">${t(c.momento === "antes" ? "Antes de la fuerza" : "Después de la fuerza")} · ${lineaCardio(c)}</span></li>`)}</ul>` : ""}`;
+    <ul class="cardio-lista">${cs.map((c) => html`<li><span class="n">${t(maquina(c.tipo).n)}</span><span class="sub">${momentoTxt(c.momento, !g)} · ${lineaCardio(c)}</span></li>`)}</ul>` : ""}`;
   $("sesCardio").hidden = !cs.length;
   $("sesFc").innerHTML = html`${grafFc(r)}`;
   $("sesFc").hidden = !$("sesFc").innerHTML;
@@ -1431,12 +1448,11 @@ function abrirEdicion() {
   edicion = { id: s.id, gym: g, rutina: s.rutina,
     ejercicios: g ? ejs.filter((e) => e?.n).map((e) => ({ n: e.n, series: (e.series || []).map((x) => ({ kg: x?.kg ?? null, n: x?.seg ?? x?.reps ?? null, hecho: !!x?.hecho })) }))
       // Every stretch is kept, the ones this app no longer knows too (only the known ones are shown).
-      : ejs.map((e) => (e && typeof e === "object" ? { ...e, hecho: !!e.hecho } : e)), cardio: g ? cardioDe(s).map((c) => ({ ...c })) : null };
+      : ejs.map((e) => (e && typeof e === "object" ? { ...e, hecho: !!e.hecho } : e)), cardio: cardioDe(s).map((c) => ({ ...c })) };
   $("edFecha").textContent = `${s.fecha ? fechaLarga(s.fecha) : t("Sin fecha")} · ${$("sesTitle").textContent}`;
   $("edMin").value = s.duracionMin ?? "";
   $("edNotas").value = s.notas || "";
   $("edAnadirBox").hidden = !g;
-  $("edCardioBox").hidden = !g;
   renderEdCardio();
   $("editar").hidden = false;
   document.body.classList.add("en-sesion");
@@ -1481,8 +1497,8 @@ function renderEdCardio() {
   const c = edicion?.cardio;
   $("edCardio").innerHTML = html`${c ? html`${listaCardio(c)}<button type="button" class="add" data-cardio-add>${t("+ Añadir cardio")}</button>` : ""}`;
 }
-$("edCardio").addEventListener("click", (e) => accionCardio(e, edicion?.cardio, "despues", (lista) => {
-  if (!edicion?.gym) return;
+$("edCardio").addEventListener("click", (e) => accionCardio(e, edicion?.cardio, "despues", !edicion?.gym, (lista) => {
+  if (!edicion) return;
   edicion.cardio = lista;
   renderEdCardio();
 }));
@@ -1545,8 +1561,8 @@ async function guardarEdicion() {
     // logged later no longer takes it).
     if (d.origen === "reloj" && d.ejercicios.length) delete d.origen;
     if (!d.ejercicios.length && !Array.isArray(s.ejercicios)) delete d.ejercicios;
-    if (ed.cardio.length) d.cardio = ed.cardio; else delete d.cardio;
   } else if (Array.isArray(s.ejercicios)) d.ejercicios = ed.ejercicios;
+  if (ed.cardio.length) d.cardio = ed.cardio; else delete d.cardio;
   cerrarEdicion();
   await store.put("sesiones", ed.id, d);
 }

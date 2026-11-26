@@ -216,6 +216,7 @@
   </div>
   <div class="cue"><b id="repCueT">Siente</b><span id="repCue"></span></div>
   <div class="next" id="repSig"></div>
+  <div class="cardio-reg" id="repCardio"></div>
   <div class="full-btns"><button type="button" class="btn-sec" id="repPausa">PAUSA</button><button type="button" class="btn-go x" id="repSaltar">SALTAR</button></div>
 </section>
 
@@ -240,7 +241,7 @@
   <h2 id="edTitulo">Editar la sesión</h2>
   <ol class="ed-lista" id="edLista"></ol>
   <label class="f" id="edAnadirBox">Añadir un ejercicio <select id="edAnadir"></select></label>
-  <div class="card" id="edCardioBox" hidden><h3>Cardio</h3><div class="cardio-reg" id="edCardio"></div></div>
+  <div class="card" id="edCardioBox"><h3>Cardio</h3><div class="cardio-reg" id="edCardio"></div></div>
   <div class="row">
     <label class="f">Minutos <input type="number" id="edMin" min="1" max="600" inputmode="numeric"></label>
   </div>
@@ -285,8 +286,8 @@
     <h3 id="cardioTit">Añadir cardio</h3>
     <div class="maquinas" id="cardioTipos" role="group" aria-label="Máquina"></div>
     <div class="seg" role="radiogroup" aria-label="Cuándo">
-      <label><input type="radio" name="momento" value="antes"><span>Antes de la fuerza</span></label>
-      <label><input type="radio" name="momento" value="despues"><span>Después de la fuerza</span></label>
+      <label><input type="radio" name="momento" value="antes"><span id="cardioAntes">Antes de la fuerza</span></label>
+      <label><input type="radio" name="momento" value="despues"><span id="cardioDespues">Después de la fuerza</span></label>
     </div>
     <div class="cardio-campos" id="cardioCampos"></div>
     <p class="sub" id="cardioError" role="alert"></p>

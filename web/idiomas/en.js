@@ -701,6 +701,8 @@ export default {
   "cardio {n} min": "cardio {n} min",
   "Antes de la fuerza": "Before strength",
   "Después de la fuerza": "After strength",
+  "Antes de estirar": "Before stretching",
+  "Después de estirar": "After stretching",
   "Máquina": "Machine",
   "Cuándo": "When",
   "Guardar": "Save",
