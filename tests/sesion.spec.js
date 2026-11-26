@@ -98,6 +98,7 @@ test("a stretching session and one logged by hand open too; deleting from the li
   await expect(page.locator("#sesMan")).toBeHidden();
   await page.click("#sesVolver");
   await page.click('#lista [data-del="m"]');
+  await page.click("#borrarSi");
   await expect(page.locator('#lista [data-ver="m"]')).toHaveCount(0);
   await expect(page.locator("#historial")).toBeVisible();
 });

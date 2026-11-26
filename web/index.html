@@ -182,6 +182,13 @@
       </div>
     </div>
 
+    <div class="card" id="papeleraCard" hidden>
+      <h3>Sesiones borradas</h3>
+      <p class="sub">Las sesiones que borras en este dispositivo se guardan aquí 30 días.</p>
+      <ul class="papelera" id="papelera"></ul>
+      <p class="status" id="papeleraEstado"></p>
+    </div>
+
     <div class="card">
       <h3>Copia de seguridad</h3>
       <p class="sub">Descarga todos tus datos en un archivo JSON, o importa una copia. También acepta el JSON copiado del plan de flexibilidad de 6 meses.</p>
@@ -259,6 +266,16 @@
     <button type="button" class="btn-main" id="salirGuardar">Guardar lo hecho</button>
     <button type="button" class="btn" id="salirSeguir">Seguir</button>
     <button type="button" class="btn ghost" id="salirDescartar">Descartar</button>
+  </div>
+</div>
+
+<!-- Deleting a session from Historial: asked first. -->
+<div class="salir" id="borrarPanel" role="dialog" aria-labelledby="borrarTitulo" hidden>
+  <div class="card">
+    <h3 id="borrarTitulo">¿Borrar esta sesión?</h3>
+    <p class="sub" id="borrarTexto"></p>
+    <button type="button" class="btn-main peligro" id="borrarSi">Borrar</button>
+    <button type="button" class="btn ghost" id="borrarNo">Cancelar</button>
   </div>
 </div>
 

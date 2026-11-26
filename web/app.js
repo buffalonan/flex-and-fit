@@ -172,7 +172,8 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
 
 const capApp = native ? window.Capacitor.registerPlugin("App") : null;
 capApp?.addListener("backButton", () => {
-  if (!$("cardioPanel").hidden) cerrarCardio();
+  if (!$("borrarPanel").hidden) cerrarBorrar();
+  else if (!$("cardioPanel").hidden) cerrarCardio();
   else if (!$("actPanel").hidden) $("actPanel").hidden = true;
   else if (!$("continuarPanel").hidden) $("continuarPanel").hidden = true;
   else if (!$("salirPanel").hidden) cerrarSalir();
@@ -1125,9 +1126,55 @@ function renderHistorial() {
 }
 $("lista").addEventListener("click", async (e) => {
   const id = e.target.closest("[data-del]")?.dataset.del;
-  if (id) { await store.remove("sesiones", id); return; }
+  if (id) { pedirBorrar(id); return; }
   const ver = e.target.closest("[data-ver]")?.dataset.ver;
   if (ver) verSesion(ver);
+});
+
+/* ---------- Deleting a session: asked first, and kept 30 days in this device's bin (Perfil → Sesiones borradas) ---------- */
+// The bin is meta `papelera` ([{ id, data, borrada }], newest first), this device only: deleting syncs an empty record,
+// so the session's content would otherwise be gone everywhere. Recuperar writes it back as a newer record, which syncs.
+const PAPELERA_DIAS = 30, PAPELERA_MAX = 50;
+let aBorrar = null;
+function pedirBorrar(id) {
+  const s = sesiones.find((x) => x.id === id);
+  if (!s) return;
+  aBorrar = id;
+  const nombre = nombreSesion(s) || t(s.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad");
+  $("borrarTexto").textContent = t("{n}, {f}. Podrás recuperarla en Perfil → Sesiones borradas durante 30 días.", { n: nombre, f: s.fecha ? fechaLarga(s.fecha) : t("sin fecha") });
+  $("borrarPanel").hidden = false;
+  $("borrarNo").focus();
+}
+function cerrarBorrar() { aBorrar = null; $("borrarPanel").hidden = true; }
+async function leerPapelera() {
+  const lista = (await store.getMeta("papelera")) || [];
+  return lista.filter((x) => x?.id && x.data && Date.now() - x.borrada < PAPELERA_DIAS * 864e5);
+}
+$("borrarNo").addEventListener("click", cerrarBorrar);
+$("borrarSi").addEventListener("click", async () => {
+  const s = sesiones.find((x) => x.id === aBorrar);
+  cerrarBorrar();
+  if (!s) return;
+  const { id, _actualizado, ...data } = s; // eslint-disable-line no-unused-vars
+  const lista = (await leerPapelera()).filter((x) => x.id !== id);
+  await store.setMeta("papelera", [{ id, data, borrada: Date.now() }, ...lista].slice(0, PAPELERA_MAX));
+  await store.remove("sesiones", id);
+});
+async function renderPapelera() {
+  const lista = await leerPapelera();
+  $("papeleraCard").hidden = !lista.length;
+  $("papelera").innerHTML = html`${lista.map((x) => html`<li><span>${nombreSesion(x.data) || t(x.data.tipo === "gimnasio" ? "Gimnasio" : "Flexibilidad")} · ${x.data.fecha ? fechaLarga(x.data.fecha) : t("sin fecha")}</span>
+    <button type="button" class="btn" data-recuperar="${x.id}">${t("Recuperar")}</button></li>`)}`;
+}
+$("papelera").addEventListener("click", async (e) => {
+  const id = e.target.closest("[data-recuperar]")?.dataset.recuperar;
+  if (!id) return;
+  const lista = await leerPapelera();
+  const x = lista.find((y) => y.id === id);
+  if (!x) return;
+  await store.setMeta("papelera", lista.filter((y) => y.id !== id));
+  await store.put("sesiones", id, x.data);
+  $("papeleraEstado").textContent = t("Recuperada: está otra vez en Historial.");
 });
 
 /* ---------- One session of the history (tap it in Historial) ---------- */
@@ -1531,6 +1578,7 @@ $("pesoPermiso").addEventListener("click", async () => {
 });
 function renderPerfil() {
   renderPeso();
+  renderPapelera();
   if (document.activeElement !== $("planInicio")) $("planInicio").value = inicioPlan || "";
   const ep = enPlan(inicioPlan, iso(new Date()));
   $("planEstado").textContent = !inicioPlan ? t("Empieza con tu primera sesión de flexibilidad, o elige la fecha aquí.")

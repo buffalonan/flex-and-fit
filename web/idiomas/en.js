@@ -717,4 +717,12 @@ export default {
   "Quitar la serie {n}": "Remove set {n}",
   "+ Añadir una serie": "+ Add a set",
   "Elige un ejercicio…": "Pick an exercise…",
+
+  /* ---------- Papelera ---------- */
+  "¿Borrar esta sesión?": "Delete this session?",
+  "{n}, {f}. Podrás recuperarla en Perfil → Sesiones borradas durante 30 días.": "{n}, {f}. You can get it back in Profile → Deleted sessions for 30 days.",
+  "Sesiones borradas": "Deleted sessions",
+  "Las sesiones que borras en este dispositivo se guardan aquí 30 días.": "Sessions you delete on this device are kept here for 30 days.",
+  "Recuperar": "Restore",
+  "Recuperada: está otra vez en Historial.": "Restored: it's back in History.",
 };
