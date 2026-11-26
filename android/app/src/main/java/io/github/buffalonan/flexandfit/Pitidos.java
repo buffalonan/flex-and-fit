@@ -57,6 +57,7 @@ final class Pitidos {
     private static void tocar(Context ctx, JSONArray notas, JSONArray vib, JSONArray parciales) {
         vibrar(ctx, vib);
         if (notas == null || notas.length() == 0 || parciales == null) return;
+        AudioTrack pista = null;
         try {
             double ultima = 0;
             for (int i = 0; i < notas.length(); i++) ultima = Math.max(ultima, notas.getJSONArray(i).getDouble(0));
@@ -82,7 +83,7 @@ final class Pitidos {
                 double cola = Math.min(1, (double) (n - s) / (HZ * 0.05));
                 pcm[s] = (short) Math.max(-32767, Math.min(32767, mezcla[s] * cola * 0.22 * 32767));
             }
-            AudioTrack pista = new AudioTrack.Builder()
+            pista = new AudioTrack.Builder()
                     .setAudioAttributes(new AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_MEDIA)
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -97,9 +98,13 @@ final class Pitidos {
                     .build();
             pista.write(pcm, 0, n);
             pista.play();
-            handler().postDelayed(pista::release, (long) n * 1000 / HZ + 300);
+            AudioTrack sonando = pista;
+            pista = null;
+            handler().postDelayed(sonando::release, (long) n * 1000 / HZ + 300);
         } catch (Exception e) {
             // No sound this time; the vibration has gone already.
+        } finally {
+            if (pista != null) pista.release(); // it failed after being made
         }
     }
 
