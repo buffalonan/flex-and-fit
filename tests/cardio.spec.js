@@ -143,3 +143,48 @@ test("cardio can be added to, changed in or removed from a past gym session by e
   expect(s.cardio).toEqual([{ tipo: "remo", momento: "despues", min: 6 }]);
   expect(s.volumenKg).toBe(320);
 });
+
+test("stretching sessions take cardio too: in the player, the summary and when editing", async ({ page }) => {
+  await abrirApp(page);
+  await page.locator('#listaFlex [data-abrir="F1"]').click();
+  await page.click("#detEmpezar");
+  await expect(page.locator("#reproductor")).toBeVisible();
+  // Before any stretch: before stretching; the player stops while the form is open.
+  await page.click("#repCardio [data-cardio-add]");
+  await expect(page.locator("#cardioAntes")).toHaveText("Antes de estirar");
+  await expect(page.locator('#cardioForm input[value="antes"]')).toBeChecked();
+  await expect(page.locator("#repPausa")).toHaveText("SEGUIR");
+  await page.click('#cardioTipos [data-tipo="bici"]');
+  await campo(page, "min", "10");
+  await page.click("#cardioGuardar");
+  await expect(page.locator("#repCardio .cardio-it")).toHaveText(["Bici estática · 10 min✕"]);
+  // The app closing keeps it.
+  await page.reload();
+  await page.click("#contSeguir");
+  await expect(page.locator("#repCardio .cardio-it")).toHaveText(["Bici estática · 10 min✕"]);
+  await page.click("#repSalir");
+  await page.click("#salirGuardar");
+  await expect(page.locator("#resCardio")).toBeVisible();
+  await page.click("#resCardio [data-cardio-add]");
+  await expect(page.locator("#cardioDespues")).toHaveText("Después de estirar");
+  await page.click('#cardioTipos [data-tipo="eliptica"]');
+  await campo(page, "min", "15");
+  await page.click("#cardioGuardar");
+  await expect.poll(async () => (await guardadas(page))[0]?.cardio?.length).toBe(2);
+  expect((await guardadas(page))[0].cardio).toEqual([{ tipo: "bici", momento: "antes", min: 10 }, { tipo: "eliptica", momento: "despues", min: 15 }]);
+
+  await page.click("#resListo");
+  await expect(page.locator("#lista li").first()).toContainText("cardio 25 min");
+  await page.locator("#lista [data-ver]").first().click();
+  await expect(page.locator("#sesStats")).toContainText("25minCardio");
+  await expect(page.locator("#sesCardio li")).toHaveText(["Bici estáticaAntes de estirar · 10 min", "ElípticaDespués de estirar · 15 min"]);
+  // Editing it: take the bike out.
+  await page.click("#sesEditar");
+  await expect(page.locator("#edCardioBox")).toBeVisible();
+  await page.click('#edCardio [data-cardio-del="0"]');
+  await page.click("#edGuardar");
+  await expect(page.locator("#sesCardio li")).toHaveText(["ElípticaDespués de estirar · 15 min"]);
+  const [s] = await guardadas(page);
+  expect(s.cardio).toEqual([{ tipo: "eliptica", momento: "despues", min: 15 }]);
+  expect(s.ejercicios.length).toBeGreaterThan(0);
+});

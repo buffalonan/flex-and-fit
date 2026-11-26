@@ -701,6 +701,8 @@ export default {
   "cardio {n} min": "Cardio {n} Min.",
   "Antes de la fuerza": "Vor dem Krafttraining",
   "Después de la fuerza": "Nach dem Krafttraining",
+  "Antes de estirar": "Vor dem Dehnen",
+  "Después de estirar": "Nach dem Dehnen",
   "Máquina": "Gerät",
   "Cuándo": "Wann",
   "Guardar": "Speichern",

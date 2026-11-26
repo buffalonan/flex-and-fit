@@ -701,6 +701,8 @@ export default {
   "cardio {n} min": "cardio {n} min",
   "Antes de la fuerza": "Abans de la força",
   "Después de la fuerza": "Després de la força",
+  "Antes de estirar": "Abans d'estirar",
+  "Después de estirar": "Després d'estirar",
   "Máquina": "Màquina",
   "Cuándo": "Quan",
   "Guardar": "Desar",
