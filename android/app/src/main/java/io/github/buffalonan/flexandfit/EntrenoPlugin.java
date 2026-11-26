@@ -15,7 +15,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  * Keeps the app alive during a session: while one is open (stretching player or gym logger) a foreground service
  * shows an ongoing notification, so Android (and Samsung's battery manager) is much less likely to close the app
  * when the phone is locked. The session is also saved on every change in the web code, in case it closes anyway.
- * JS: Capacitor.registerPlugin("Entreno").empezar({ titulo, inicio }) and .terminar().
+ * It also plays the session's sound cues natively (Pitidos.java), so they sound with the phone locked.
+ * JS: Capacitor.registerPlugin("Entreno").empezar({ titulo, inicio }), .pitidos({ lista, parciales }) and .terminar().
  */
 @CapacitorPlugin(name = "Entreno")
 public class EntrenoPlugin extends Plugin {
@@ -41,8 +42,16 @@ public class EntrenoPlugin extends Plugin {
         }
     }
 
+    /** Replaces the cues to play: lista = [{ en (ms, wall clock), notas: [[ms, Hz]], vib: [ms on, off, on…] }]. */
+    @PluginMethod
+    public void pitidos(PluginCall call) {
+        Pitidos.programar(getContext().getApplicationContext(), call.getArray("lista"), call.getArray("parciales"));
+        call.resolve();
+    }
+
     @PluginMethod
     public void terminar(PluginCall call) {
+        Pitidos.cancelar();
         getContext().stopService(new Intent(getContext(), EntrenoServicio.class));
         call.resolve();
     }

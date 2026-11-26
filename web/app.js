@@ -9,6 +9,7 @@ import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
 import { importar as importarReloj, importarPeso, unirPesos, partesDe, unirA, separar } from "./reloj.js";
 import { ultimaRelease, codigoDe } from "./actualizar.js";
+import { avisador, avisosFlex, avisosDescanso } from "./avisos.js";
 import { t, tn, dosis as tDosis, num, locale, idioma, IDIOMAS, traducirPagina } from "./i18n.js";
 // The 3D figure (figura3d.js and Three.js, ~700 KB) loads the first time a sheet needs it; until then, and wherever
 // WebGL isn't available, the SVG figure stays.
@@ -52,7 +53,6 @@ const haceDias = (f) => { const n = Math.round((parse(iso(new Date())) - parse(f
 // A muscle's name, and a side ("izq"/"der") after an exercise's name.
 const M = (m) => t(NOMBRES[m]);
 const lado = (e) => (e.lado ? ` (${t(e.lado === "izq" ? "izquierda" : "derecha")})` : "");
-const vibrar = (p) => { try { navigator.vibrate?.(p); } catch (e) { /* not supported */ } };
 
 const rutinaFlex = (id) => RUTINAS_FLEX.find((r) => r.id === id);
 const gym = (id) => GYM.find((w) => w.id === id);
@@ -352,14 +352,13 @@ async function pantallaEncendida(on) {
     else { await wake?.release(); wake = null; }
   } catch (e) { /* not allowed or not supported */ }
 }
-let audio = null;
-function pitido(f = 880) {
-  try {
-    audio ||= new AudioContext();
-    const o = audio.createOscillator(), g = audio.createGain();
-    o.frequency.value = f; g.gain.setValueAtTime(0.15, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.25);
-    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.25);
-  } catch (e) { /* no audio */ }
+// Harp-like cues before a stretch or a rest ends and when the next one starts (avisos.js). Worked out again on every
+// change of the session's timing; in the app they're played natively, so they sound with the phone locked too.
+function programarAvisos() {
+  const s = sesion;
+  if (!s) avisos.parar();
+  else if (s.tipo === "flex") avisos.programar(s.pausa ? [] : avisosFlex(s.pasos, s.idx, s.t0 + s.pausado));
+  else avisos.programar(avisosDescanso(s.desc));
 }
 function entrar(id, inicio = Date.now()) {
   document.body.classList.add("en-sesion");
@@ -367,6 +366,7 @@ function entrar(id, inicio = Date.now()) {
   sesion.rutina = id;
   abierto = id;
   pantallaEncendida(true);
+  avisos.preparar();
   fcEnVivo();
   sesion.timerFc = setInterval(fcEnVivo, 30000);
   entreno?.empezar({ titulo: titulo(id), inicio, cabecera: t("Entreno en curso") }).catch(() => {});
@@ -429,6 +429,7 @@ window.addEventListener("pagehide", () => guardarEnCurso());
 // In the Android app, a foreground service with an ongoing notification ("Entreno en curso") while a session is
 // open, so Android is much less likely to close the app with the phone locked (EntrenoPlugin.java).
 const entreno = native ? window.Capacitor.registerPlugin("Entreno") : null;
+const avisos = avisador(entreno);
 // While training: the latest heart rate in Health Connect, if the watch writes it during the workout (COROS usually
 // writes everything when the workout ends and syncs, so this mostly stays hidden).
 async function fcEnVivo() {
@@ -446,6 +447,7 @@ function salirSesion() {
   clearInterval(sesion?.timer);
   clearInterval(sesion?.timerFc);
   sesion = null;
+  avisos.parar();
   borrarEnCurso();
   entreno?.terminar().catch(() => {});
   document.body.classList.remove("en-sesion");
@@ -631,12 +633,14 @@ function empezarFlex(id, previo = null) {
 const ahora = () => (sesion.pausa ?? Date.now());
 const transcurrido = () => (ahora() - sesion.t0 - sesion.pausado) / 1000;
 
-function irA(i) {
+// `desde`: when the step started. A step that ends on its own hands over its exact end time, so the player keeps to
+// the clock (and to the cues already played natively) even after the web view was frozen with the phone locked.
+function irA(i, desde = Date.now()) {
   const s = sesion;
   const r = rutinaFlex(s.rutina);
   if (i >= s.pasos.length) { terminar(); return; }
   s.idx = i;
-  s.t0 = Date.now();
+  s.t0 = desde;
   s.pausado = 0;
   if (s.pausa) s.pausa = s.t0;
   const p = s.pasos[i];
@@ -664,13 +668,14 @@ function irA(i) {
   const sig = s.pasos.slice(i + 1).find((q) => q.tipo === "work" && q.i !== p.i);
   $("repSig").innerHTML = html`${sig ? html`<span class="th">${figura(sig.ex)}</span><span>${t("Después:")} <b>${t(EX[sig.ex].n)}</b> · ${tDosis(r.items[sig.i][1])}</span>` : html`<span>${t("Es la última postura.")}</span>`}`;
   animar($("repSig"));
-  if (p.tipo === "work" && !s.pausa) { vibrar(p.lado ? [120, 80, 120] : 150); pitido(p.lado === "der" ? 990 : 880); }
+  programarAvisos();
   guardarEnCurso();
   tick();
 }
 function tick() {
   const s = sesion;
   if (!s || s.tipo !== "flex") return;
+  avisos.tick();
   const p = s.pasos[s.idx];
   const t = transcurrido();
   $("repTiempo").textContent = mmss(p.seg - t);
@@ -679,13 +684,14 @@ function tick() {
   $("repArco").setAttribute("stroke", p.tipo === "prep" ? "var(--amber)" : "var(--flex3)");
   if (t >= p.seg) {
     if (p.tipo === "work") { s.hechos.add(p.i); s.seg[p.i] = (s.seg[p.i] || 0) + p.seg; }
-    irA(s.idx + 1);
+    irA(s.idx + 1, s.t0 + s.pausado + p.seg * 1000);
   }
 }
 function pausar() {
   const s = sesion;
   if (s.pausa) { s.pausado += Date.now() - s.pausa; s.pausa = null; } else s.pausa = Date.now();
   $("repPausa").textContent = t(s.pausa ? "SEGUIR" : "PAUSA");
+  programarAvisos();
 }
 $("repPausa").addEventListener("click", pausar);
 // Skipping goes to the next exercise (a work step skipped halfway doesn't count as done).
@@ -754,6 +760,7 @@ function empezarGym(id, previo = null) {
   $("registro").hidden = false;
   pagina(pag);
   renderCardioReg();
+  programarAvisos();
   sesion.timer = setInterval(tickGym, 250);
 }
 // The kg cell of a set. Bodyweight exercises (and any set already negative) get a ± button that turns "20" into
@@ -843,6 +850,7 @@ $("regFilas").addEventListener("click", (e) => {
   if (v.hecho) {
     const ej = gym(sesion.rutina).ej[Number(k.split("-")[0])];
     sesion.desc = { fin: Date.now() + ej.desc * 1000, total: ej.desc };
+    programarAvisos();
     tickGym();
   }
   guardarEnCurso();
@@ -850,6 +858,7 @@ $("regFilas").addEventListener("click", (e) => {
 function tickGym() {
   const s = sesion;
   if (!s || s.tipo !== "gym") return;
+  avisos.tick();
   $("regReloj").textContent = mmss((Date.now() - s.inicio) / 1000);
   const d = s.desc;
   $("regDescanso").hidden = !d;
@@ -857,11 +866,11 @@ function tickGym() {
   const quedan = (d.fin - Date.now()) / 1000;
   $("regDescT").textContent = mmss(quedan);
   $("regDescBar").style.width = `${Math.max(0, Math.min(100, (quedan / d.total) * 100))}%`;
-  if (quedan <= 0) { s.desc = null; $("regDescanso").hidden = true; vibrar([200, 100, 200]); pitido(); }
+  if (quedan <= 0) { s.desc = null; $("regDescanso").hidden = true; }
 }
-$("regMenos").addEventListener("click", () => { if (sesion?.desc) { sesion.desc.fin -= 15000; tickGym(); guardarEnCurso(); } });
-$("regMas").addEventListener("click", () => { if (sesion?.desc) { sesion.desc.fin += 15000; sesion.desc.total += 15; tickGym(); guardarEnCurso(); } });
-$("regFinDesc").addEventListener("click", () => { if (sesion) { sesion.desc = null; tickGym(); guardarEnCurso(); } });
+$("regMenos").addEventListener("click", () => { if (sesion?.desc) { sesion.desc.fin -= 15000; programarAvisos(); tickGym(); guardarEnCurso(); } });
+$("regMas").addEventListener("click", () => { if (sesion?.desc) { sesion.desc.fin += 15000; sesion.desc.total += 15; programarAvisos(); tickGym(); guardarEnCurso(); } });
+$("regFinDesc").addEventListener("click", () => { if (sesion) { sesion.desc = null; programarAvisos(); tickGym(); guardarEnCurso(); } });
 $("regAnt").addEventListener("click", () => sesion.pag > 0 && pagina(sesion.pag - 1));
 $("regSig").addEventListener("click", () => (sesion.pag < sesion.paginas.length - 1 ? pagina(sesion.pag + 1) : terminar()));
 
