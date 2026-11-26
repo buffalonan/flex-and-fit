@@ -154,6 +154,7 @@ export default {
   "izq.": "li.",
   "der.": "re.",
   "Kg, serie {n}": "Kg, Satz {n}",
+  "Asistida (kg en negativo), serie {n}": "Assistiert (negative kg), Satz {n}",
   "Segundos, serie {n}": "Sekunden, Satz {n}",
   "Repeticiones, serie {n}": "Wiederholungen, Satz {n}",
   "Serie {n} hecha": "Satz {n} erledigt",

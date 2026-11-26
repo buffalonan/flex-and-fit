@@ -159,3 +159,17 @@ test("a stretching session's exercises are marked done or skipped", async ({ pag
   expect(r.ejercicios.map((e) => [e.id, e.hecho])).toEqual([["gato", false], ["viejo", true], ["isquio_toalla", true]]);
   expect(r.rutina).toBe("F1");
 });
+
+test("an assisted set is made negative with ± when editing, since the phone's keyboard has no minus", async ({ page }) => {
+  await abrirApp(page);
+  await poner(page, "d", { tipo: "gimnasio", fecha: "2026-11-24", inicio: h(24, 18), fin: h(24, 19), rutina: "g3", nombre: "Tren superior · Tirón", ejercicios: [{ n: "Dominadas", series: series(2, 20, 8) }] });
+  await page.click('[data-tab="historial"]');
+  await page.click('#lista [data-ver="d"]');
+  await page.click("#sesEditar");
+  await page.locator('#edLista tr[data-k="0-0"] [data-signo]').click();
+  await expect(page.locator('#edLista tr[data-k="0-0"] input[data-c="kg"]')).toHaveValue("-20");
+  await expect(page.locator('#edLista tr[data-k="0-1"] input[data-c="kg"]')).toHaveValue("20");
+  await page.click("#edGuardar");
+  const r = await registro(page, "d");
+  expect(r.ejercicios[0].series.map((x) => x.kg)).toEqual([-20, 20]);
+});

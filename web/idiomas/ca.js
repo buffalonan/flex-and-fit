@@ -154,6 +154,7 @@ export default {
   "izq.": "esq.",
   "der.": "dta.",
   "Kg, serie {n}": "Kg, sèrie {n}",
+  "Asistida (kg en negativo), serie {n}": "Assistida (kg en negatiu), sèrie {n}",
   "Segundos, serie {n}": "Segons, sèrie {n}",
   "Repeticiones, serie {n}": "Repeticions, sèrie {n}",
   "Serie {n} hecha": "Sèrie {n} feta",

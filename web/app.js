@@ -749,6 +749,28 @@ function empezarGym(id, previo = null) {
   renderCardioReg();
   sesion.timer = setInterval(tickGym, 250);
 }
+// The kg cell of a set. Bodyweight exercises (and any set already negative) get a ± button that turns "20" into
+// "−20" (assisted: the machine takes 20 kg off), since the phone's number keyboard has no minus key.
+function celdaKg(kg, def, lbl, ph) {
+  const inp = html`<input type="number" step="0.5" data-c="kg" value="${kg ?? ""}" aria-label="${t("Kg, serie {n}", { n: lbl })}" placeholder="${ph}">`;
+  if (!corporal(def) && !(Number(kg) < 0)) return html`<td>${inp}</td>`;
+  return html`<td class="kg-signo"><span>${inp}<button type="button" class="signo" data-signo aria-pressed="${String(Number(kg) < 0)}" aria-label="${t("Asistida (kg en negativo), serie {n}", { n: lbl })}">±</button></span></td>`;
+}
+// The ± button looks pressed while its kg is negative, however the number got there.
+function marcarSigno(i) {
+  i.closest("td")?.querySelector("[data-signo]")?.setAttribute("aria-pressed", String(Number(String(i.value).replace(",", ".")) < 0));
+}
+document.addEventListener("input", (e) => { if (e.target.matches?.('.kg-signo input[data-c="kg"]')) marcarSigno(e.target); });
+// ± flips the sign of the kg next to it and tells the table as if it had been typed. Empty: just focus the field.
+function cambiarSigno(b) {
+  const i = b.closest("td")?.querySelector('input[data-c="kg"]');
+  if (!i) return false;
+  const v = Number(String(i.value).replace(",", "."));
+  if (i.value === "" || !Number.isFinite(v) || v === 0) { i.focus(); return true; }
+  i.value = String(-v);
+  i.dispatchEvent(new Event("input", { bubbles: true }));
+  return true;
+}
 function pagina(n) {
   const s = sesion, w = gym(s.rutina);
   s.pag = n;
@@ -764,13 +786,13 @@ function pagina(n) {
   $("regMusc").innerHTML = html`${[...ms].map((m) => html`<span class="chip f">${M(m)}</span>`)}${[...ss].filter((m) => !ms.has(m)).map((m) => html`<span class="chip">${M(m)}</span>`)}`;
   const timed = pg.ej.every((i) => w.ej[i].seg);
   $("regColReps").textContent = t(timed ? "SEG" : pg.ej.every((i) => w.ej[i].porLado) ? "REPS/LADO" : "REPS");
-  // Kg can be negative (assisted pull-ups on the machine), so the kg field has no min and no inputmode="decimal",
-  // whose keyboard on Android has no minus key. Negative kg add nothing to the volume.
+  // Kg can be negative (assisted pull-ups on the machine), so the kg field has no min. The phone's number keyboard
+  // has no minus key, so bodyweight exercises get a ± button (celdaKg). Negative kg add nothing to the volume.
   $("regFilas").innerHTML = html`${pg.filas.map((f) => {
     const e = w.ej[f.e], v = s.valores[f.k];
     const nombre = f.ronda ? `${f.lbl} · ${t(e.n)}${e.lado ? ` ${t(e.lado === "izq" ? "izq." : "der.")}` : ""}` : f.lbl;
     return html`<tr data-k="${f.k}" class="${v.hecho ? "done" : ""}"><td class="${f.ronda ? "lbl" : "num"}">${nombre}</td><td class="prev">${v.prev}</td>
-      <td><input type="number" step="0.5" data-c="kg" value="${v.kg ?? ""}" aria-label="${t("Kg, serie {n}", { n: f.lbl })}" placeholder="${e.kg == null ? "—" : ""}"></td>
+      ${celdaKg(v.kg, e, f.lbl, e.kg == null ? "—" : "")}
       <td><input type="number" inputmode="numeric" min="0" data-c="n" value="${v.n ?? ""}" aria-label="${t(e.seg ? "Segundos, serie {n}" : "Repeticiones, serie {n}", { n: f.lbl })}"></td>
       <td><button type="button" class="ck" data-ck="${f.k}" aria-pressed="${v.hecho}" aria-label="${t("Serie {n} hecha", { n: f.lbl })}">✓</button></td></tr>`;
   })}`;
@@ -797,11 +819,13 @@ $("regFilas").addEventListener("input", (e) => {
     if (g.e !== f.e || g.si <= f.si || sesion.valores[g.k].hecho) continue;
     sesion.valores[g.k].kg = val;
     const inp = $("regFilas").querySelector(`tr[data-k="${g.k}"] input[data-c="kg"]`);
-    if (inp) inp.value = val ?? "";
+    if (inp) { inp.value = val ?? ""; marcarSigno(inp); }
   }
 });
 $("regFilas").addEventListener("input", () => guardarEnCurso());
 $("regFilas").addEventListener("click", (e) => {
+  const sg = e.target.closest("[data-signo]");
+  if (sg) { cambiarSigno(sg); return; }
   const k = e.target.closest("[data-ck]")?.dataset.ck;
   if (!k) return;
   const v = sesion.valores[k];
@@ -1397,7 +1421,7 @@ function renderEdicion() {
         <button type="button" class="del" data-quitar="${ei}" aria-label="${t("Quitar {x}", { x: t(e.n) })}">${t("Quitar")}</button></div>
       ${e.series.length ? html`<table class="sets"><thead><tr><th>${t("SERIE")}</th><th>${t("KG")}</th><th>${t(def?.seg ? "SEG" : def?.porLado ? "REPS/LADO" : "REPS")}</th><th><span class="sr">${t("Hecha")}</span>✓</th><th><span class="sr">${t("Quitar")}</span></th></tr></thead>
       <tbody>${e.series.map((x, si) => html`<tr data-k="${`${ei}-${si}`}" class="${x.hecho ? "done" : ""}"><td class="num">${si + 1}</td>
-        <td><input type="number" step="0.5" data-c="kg" value="${x.kg ?? ""}" placeholder="—" aria-label="${t("Kg, serie {n}", { n: si + 1 })}"></td>
+        ${celdaKg(x.kg, def, si + 1, "—")}
         <td><input type="number" inputmode="numeric" min="0" data-c="n" value="${x.n ?? ""}" aria-label="${t(def?.seg ? "Segundos, serie {n}" : "Repeticiones, serie {n}", { n: si + 1 })}"></td>
         <td><button type="button" class="ck" data-ck="${`${ei}-${si}`}" aria-pressed="${String(x.hecho)}" aria-label="${t("Serie {n} hecha", { n: si + 1 })}">✓</button></td>
         <td><button type="button" class="ck quita" data-quita="${`${ei}-${si}`}" aria-label="${t("Quitar la serie {n}", { n: si + 1 })}">✕</button></td></tr>`)}</tbody></table>` : ""}
@@ -1435,6 +1459,7 @@ $("edLista").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   const d = b.dataset;
+  if (d.signo != null) { cambiarSigno(b); return; }
   if (d.hecho != null) { const x = ed.ejercicios[Number(d.hecho)]; x.hecho = !x.hecho; }
   else if (d.ck) { const x = celda(d.ck); x.hecho = !x.hecho; }
   else if (d.quita) { const [ei, si] = d.quita.split("-").map(Number); ed.ejercicios[ei].series.splice(si, 1); }

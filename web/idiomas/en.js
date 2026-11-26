@@ -154,6 +154,7 @@ export default {
   "izq.": "left",
   "der.": "right",
   "Kg, serie {n}": "Kg, set {n}",
+  "Asistida (kg en negativo), serie {n}": "Assisted (negative kg), set {n}",
   "Segundos, serie {n}": "Seconds, set {n}",
   "Repeticiones, serie {n}": "Reps, set {n}",
   "Serie {n} hecha": "Set {n} done",
