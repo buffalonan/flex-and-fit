@@ -20,4 +20,17 @@ if [ -f .env ] && ! grep -qx "DIRECCIONES=$dirs" .env; then
   echo "Direcciones: $dirs"
 fi
 
+# Google Drive: the server's daily copies (BACKUP_DIR) go to My Drive/Backups/Fitness from here, outside Docker,
+# because colima can't write into Google Drive's File Provider folder. The newest 30 are kept there too.
+backup_dir="$(sed -n 's/^BACKUP_DIR=//p' .env 2> /dev/null | head -1)"
+drive="$(ls -d "$HOME"/Library/CloudStorage/GoogleDrive-*/"My Drive" 2> /dev/null | head -1 || true)"
+if [ -n "$backup_dir" ] && [ -d "$backup_dir" ] && [ -n "$drive" ]; then
+  mkdir -p "$drive/Backups/Fitness"
+  for f in "$backup_dir"/flexfit-????-??-??.db; do
+    [ -f "$f" ] || continue
+    [ -f "$drive/Backups/Fitness/$(basename "$f")" ] || { cp "$f" "$drive/Backups/Fitness/" && echo "Drive: $(basename "$f")"; }
+  done
+  ls "$drive/Backups/Fitness"/flexfit-????-??-??.db 2> /dev/null | sort | awk '{ f[NR] = $0 } END { for (i = 1; i <= NR - 30; i++) print f[i] }' | while read -r f; do rm -f "$f"; done
+fi
+
 docker compose pull --quiet && docker compose up -d
