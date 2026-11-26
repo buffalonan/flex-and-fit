@@ -522,3 +522,14 @@ test("a cable held with a rope reaches both hands in the 2D figure (face pull, t
   expect(r.face_pull).toBeLessThan(0.2);
   expect(r.triceps_polea).toBeLessThan(0.2);
 });
+
+test("the plan's 30-second holds are one continuous minute, on each side", async ({ page }) => {
+  await abrirApp(page);
+  const r = await page.evaluate(async () => {
+    const { RUTINAS_FLEX, pasos } = await import("./datos.js");
+    const dosis = RUTINAS_FLEX.flatMap((w) => w.items.map((it) => it[1]));
+    return { quedan: dosis.filter((d) => /^2 × 30 s/.test(d)), fig4: pasos(["fig4", "1 × 60 s /lado"], 0).map((p) => [p.lado, p.seg]) };
+  });
+  expect(r.quedan).toEqual([]);
+  expect(r.fig4).toEqual([["izq", 60], ["der", 60]]);
+});

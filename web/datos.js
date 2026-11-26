@@ -40,15 +40,15 @@ export const EX = {
 export const PH = [
   { n: 1, name: "Despertar", weeks: [1, 4], min: "10–12 min", int: "3–4 / 10", hold: "2 × 20–30 s",
     goal: "Crear el hábito y que el cuerpo pierda el miedo a estirar. Casi todo es tumbado, sin posturas difíciles.",
-    items: [["resp", "1 min"], ["gato", "2 × 8 lentas"], ["rodpecho", "2 × 30 s"], ["isquio_toalla", "2 × 20–30 s /lado", "Rodilla doblada todo lo que necesites"], ["fig4", "2 × 30 s /lado"], ["flex_cadera", "2 × 20 s /lado"], ["gemelo", "2 × 30 s /lado"], ["pecho_puerta", "2 × 20 s"], ["nino", "1 × 45 s"]],
+    items: [["resp", "1 min"], ["gato", "2 × 8 lentas"], ["rodpecho", "1 × 60 s"], ["isquio_toalla", "2 × 20–30 s /lado", "Rodilla doblada todo lo que necesites"], ["fig4", "1 × 60 s /lado"], ["flex_cadera", "2 × 20 s /lado"], ["gemelo", "1 × 60 s /lado"], ["pecho_puerta", "2 × 20 s"], ["nino", "1 × 45 s"]],
     adv: ["Has hecho al menos 20 sesiones en el mes", "Puedes mantener cada postura respirando tranquilo", "Al día siguiente no hay agujetas ni molestias en articulaciones"] },
   { n: 2, name: "Ampliar", weeks: [5, 8], min: "15 min", int: "4–5 / 10", hold: "2 × 30–45 s",
     goal: "Alargar los tiempos y sumar caderas, tobillos y hombros. Aparecen los primeros ejercicios de pie.",
-    items: [["gato", "2 × 10"], ["puente", "2 × 10", "Activa glúteos antes de estirar caderas"], ["isquio_toalla", "2 × 40 s /lado"], ["flex_cadera", "2 × 40 s /lado", "Sube el brazo del lado de atrás"], ["fig4", "2 × 40 s /lado"], ["mariposa", "2 × 40 s"], ["tobillo_pared", "2 × 10 /lado"], ["cuad_pie", "2 × 30 s /lado"], ["hombro_cruz", "2 × 30 s /lado"], ["angeles", "2 × 8"], ["torsion", "1 × 45 s /lado"]],
+    items: [["gato", "2 × 10"], ["puente", "2 × 10", "Activa glúteos antes de estirar caderas"], ["isquio_toalla", "2 × 40 s /lado"], ["flex_cadera", "2 × 40 s /lado", "Sube el brazo del lado de atrás"], ["fig4", "2 × 40 s /lado"], ["mariposa", "2 × 40 s"], ["tobillo_pared", "2 × 10 /lado"], ["cuad_pie", "1 × 60 s /lado"], ["hombro_cruz", "1 × 60 s /lado"], ["angeles", "2 × 8"], ["torsion", "1 × 45 s /lado"]],
     adv: ["20 o más sesiones en el mes", "Con la toalla, la pierna sube unos 10° más que en la semana 1", "Haces los ángeles sin despegar la zona lumbar"] },
   { n: 3, name: "Integrar", weeks: [9, 13], min: "15–20 min", int: "5 / 10", hold: "2–3 × 45 s",
     goal: "Introducir la técnica contrae-relaja y posturas que mueven varias zonas a la vez, como la sentadilla profunda.",
-    items: [["gato", "1 × 10"], ["aguja", "2 × 6 /lado"], ["esfinge", "2 × 30 s"], ["isquio_toalla", "3 ciclos /lado", "Contrae-relaja: empuja la toalla 5 s al 20 % de fuerza, suelta, respira y gana rango. Repite 3 veces"], ["pinza_pie", "2 × 30 s"], ["flex_cadera", "2 × 45 s /lado"], ["nov90", "5 cambios + 30 s /lado"], ["sentadilla", "3 × 30 s"], ["tobillo_pared", "2 × 12 /lado"], ["pecho_puerta", "2 × 45 s", "Una con el codo a la altura del hombro y otra más alto"], ["cuello", "1 × 30 s /lado"]],
+    items: [["gato", "1 × 10"], ["aguja", "2 × 6 /lado"], ["esfinge", "1 × 60 s"], ["isquio_toalla", "3 ciclos /lado", "Contrae-relaja: empuja la toalla 5 s al 20 % de fuerza, suelta, respira y gana rango. Repite 3 veces"], ["pinza_pie", "1 × 60 s"], ["flex_cadera", "2 × 45 s /lado"], ["nov90", "5 cambios + 30 s /lado"], ["sentadilla", "3 × 30 s"], ["tobillo_pared", "2 × 12 /lado"], ["pecho_puerta", "2 × 45 s", "Una con el codo a la altura del hombro y otra más alto"], ["cuello", "1 × 30 s /lado"]],
     adv: ["Llegas al menos 5 cm más cerca del suelo que en el primer test", "Aguantas 30 s en la sentadilla con apoyo", "Los cambios del 90/90 salen fluidos con manos atrás"] },
   { n: 4, name: "Fuerza en rango", weeks: [14, 17], min: "20 min", int: "5–6 / 10", hold: "2 × 45 s",
     goal: "Ser fuerte en las posiciones nuevas para que el rango se quede. Se suman ejercicios activos (sin ayuda) y la paloma.",
@@ -56,11 +56,11 @@ export const PH = [
     adv: ["La pierna activa sube al menos hasta 60°", "Paloma con el tronco erguido sin dolor en la rodilla", "Paso de toalla completo con agarre ancho"] },
   { n: 5, name: "Profundizar", weeks: [18, 22], min: "20–25 min", int: "5–6 / 10", hold: "2 × 60 s",
     goal: "Mantener más tiempo y profundizar en las zonas más rígidas: isquios, caderas y hombros.",
-    items: [["gato", "1 × 10"], ["estocada_rot", "2 × 5 /lado"], ["cobra", "2 × 30 s"], ["pinza_sentado", "2 × 60 s"], ["isquio_toalla", "3 ciclos /lado", "Contrae-relaja, rodilla más recta"], ["paloma", "2 × 60 s /lado", "Inclínate hacia delante"], ["nov90", "8 cambios sin manos"], ["aductor", "2 × 45 s /lado"], ["sentadilla", "3 × 60 s"], ["tobillo_pared", "2 × 12 /lado"], ["paso_toalla", "2 × 10", "Agarre un poco más estrecho"], ["pecho_puerta", "2 × 60 s"], ["torsion", "1 × 60 s /lado"]],
+    items: [["gato", "1 × 10"], ["estocada_rot", "2 × 5 /lado"], ["cobra", "1 × 60 s"], ["pinza_sentado", "2 × 60 s"], ["isquio_toalla", "3 ciclos /lado", "Contrae-relaja, rodilla más recta"], ["paloma", "2 × 60 s /lado", "Inclínate hacia delante"], ["nov90", "8 cambios sin manos"], ["aductor", "2 × 45 s /lado"], ["sentadilla", "3 × 60 s"], ["tobillo_pared", "2 × 12 /lado"], ["paso_toalla", "2 × 10", "Agarre un poco más estrecho"], ["pecho_puerta", "2 × 60 s"], ["torsion", "1 × 60 s /lado"]],
     adv: ["Tocas o casi tocas los tobillos en la pinza de pie", "Sentadilla de 60 s con talones abajo", "Test de rodilla a pared mejor que el del mes 3 en ambos lados"] },
   { n: 6, name: "Consolidar", weeks: [23, 26], min: "25 min", int: "6 / 10", hold: "2 × 60–90 s",
     goal: "Unir todo en una sesión completa y dejar listo un plan de mantenimiento para después.",
-    items: [["resp", "1 min"], ["gato", "1 × 10"], ["aguja", "1 × 6 /lado"], ["estocada_rot", "3 × 5 /lado"], ["slr_activa", "2 × 10 /lado"], ["pinza_pie", "2 × 60 s", "Rodillas rectas si puedes"], ["pinza_sentado", "2 × 90 s"], ["paloma", "2 × 90 s /lado"], ["nov90", "10 cambios sin manos"], ["sentadilla", "2 × 90 s"], ["aductor", "2 × 60 s /lado"], ["paso_toalla", "2 × 10"], ["angeles", "2 × 12"], ["cobra", "2 × 30 s"], ["nino", "1 × 60 s"]],
+    items: [["resp", "1 min"], ["gato", "1 × 10"], ["aguja", "1 × 6 /lado"], ["estocada_rot", "3 × 5 /lado"], ["slr_activa", "2 × 10 /lado"], ["pinza_pie", "2 × 60 s", "Rodillas rectas si puedes"], ["pinza_sentado", "2 × 90 s"], ["paloma", "2 × 90 s /lado"], ["nov90", "10 cambios sin manos"], ["sentadilla", "2 × 90 s"], ["aductor", "2 × 60 s /lado"], ["paso_toalla", "2 × 10"], ["angeles", "2 × 12"], ["cobra", "1 × 60 s"], ["nino", "1 × 60 s"]],
     adv: ["Test final: compara con el de la fase 1", "Mantenimiento: esta rutina 3–4 días por semana más la de domingo", "Si quieres seguir mejorando, elige 2 zonas y dales 10 min extra al día"] },
 ];
 
@@ -77,7 +77,7 @@ export const TESTS = [
 export const RUTINAS_FLEX = [...PH.map((p) => ({ ...p, id: `F${p.n}` })), { ...SUAVE, id: "suave" }];
 
 /* ---------- Turning a dose into timed steps ---------- */
-// "2 × 30 s /lado" → izq 30, der 30, izq 30, der 30. Reps are timed at the exercise's pace (s per rep).
+// "1 × 60 s /lado" → izq 30, der 30, izq 30, der 30. Reps are timed at the exercise's pace (s per rep).
 // Each step: { ex, i (item index), lado, seg, reps, texto }.
 export function pasos(item, i) {
   const [ex, dosis] = item;
