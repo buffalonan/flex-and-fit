@@ -11,7 +11,7 @@ App personal de Ferran para apuntar sus entrenos de gimnasio y sus sesiones de f
 - **Repo:** `buffalonan/flex-and-fit`, **público**. Rama `main`; cada merge publica la app y la imagen del Mac. Repo de referencia con el mismo montaje: `buffalonan/german-learning` (no accesible desde las sesiones de Claude).
 - **Mac de Ferran** (Apple Silicon, Docker con colima): contenedor `flex-and-fit` (imagen `ghcr.io/buffalonan/flex-and-fit:latest`, puerto 3334, datos SQLite en el volumen `flexfit-data`), instalado en la carpeta `flex-and-fit` de su usuario con `scripts/mac/install.sh`. Su `.env` (fuera de git) guarda las carpetas de copias, `SYNC_TOKEN` y `DIRECCIONES`.
 - **Tareas programadas en el Mac (launchd):** cada hora `update.sh` (escribe las direcciones del Mac en `.env`, sube las copias nuevas a Google Drive, `docker compose pull && up -d`); un agente que anuncia el Mac por Bonjour (`_flexandfit._tcp`).
-- **Proxy:** un nginx en Docker en el Mac (config local, fuera de git) sirve la app bajo `/fitness/` junto a otros proyectos de Ferran (Recetas, Ghostfolio), quitando el prefijo.
+- **Proxy:** un nginx en Docker en el Mac (config local, fuera de git) sirve la app bajo `/fitness/` junto a otros servicios del Mac, quitando el prefijo.
 - **Red:** el móvil llega al Mac por la wifi de casa o por Tailscale. El Mac tiene que estar despierto.
 - **Móvil:** app Android `io.github.buffalonan.flexandfit`, local primero (IndexedDB); se actualiza desde las releases de GitHub.
 - **Releases:** APK en GitHub Releases (`app-v1.<run>`, `flex-and-fit.apk`); imagen en ghcr.io (paquete público); demo sin datos en GitHub Pages (`buffalonan.github.io/flex-and-fit`).
@@ -79,7 +79,7 @@ No hecho o sin verificar:
 
 ## Decisiones
 
-- 2026-11-22: datos en una base de datos en Docker en el Mac, como Ghostfolio; el móvil local primero y sincroniza al ver el Mac. Así los datos de salud no salen a un servicio externo.
+- 2026-11-22: datos en una base de datos en Docker en el Mac, como otros servicios que ya tiene; el móvil local primero y sincroniza al ver el Mac. Así los datos de salud no salen a un servicio externo.
 - 2026-11-22: HTML/JS sin build + Capacitor, igual que `german-learning`, para que cada merge publique web y APK sin mantenimiento extra.
 - 2026-11-22: la dirección del Mac nunca en el repo; la pone el usuario o se descubre. El repo es público.
 - 2026-11-22: maniquí al estilo COROS (diseño propio, nunca recursos de COROS) y guía de diseño siempre oscura.
@@ -96,13 +96,13 @@ No hecho o sin verificar:
 - 2026-11-26: avisos con sonido suave de arpa, no pitidos repetidos (Ferran).
 - 2026-11-26: copia del historial en Drive desde el móvil, con inicio de sesión de Google explícito en vez del backup automático de Android. Solo el ámbito `drive.appdata`. Ferran acepta que sus datos de salud vayan a su Drive.
 - 2026-11-27: sesiones de flexibilidad de 30 min como mínimo, con la duración calculada a partir de los pasos (Ferran).
-- 2026-11-27: las copias del Mac suben a Drive con rclone, como las de Recetas y Ghostfolio (Ferran; PR #47). Si no hay remoto de rclone, usa Google Drive para escritorio; nunca los dos, para no duplicar archivos.
+- 2026-11-27: las copias del Mac suben a Drive con rclone, como las de otros proyectos del Mac (Ferran; PR #47). Si no hay remoto de rclone, usa Google Drive para escritorio; nunca los dos, para no duplicar archivos.
 - 2026-11-27: vídeos de YouTube solo incrustados (youtube-nocookie), de PureGym, Nuffield Health y Onnit; nunca descargados, porque las condiciones de YouTube no lo permiten (PR #46).
 
 ## Pendiente
 
 - PR #46 (vídeos): probar en el S23. Riesgo: el error 153 de YouTube dentro del WebView de Android; queda el enlace "Abrir en YouTube".
-- PR #47 (rclone): el remoto de rclone usa el client ID compartido de rclone, que dejará de funcionar en 2026. Hace falta un client ID propio, y afecta también a las copias de Recetas y Ghostfolio.
+- PR #47 (rclone): el remoto de rclone usa el client ID compartido de rclone, que dejará de funcionar en 2026. Hace falta un client ID propio, y afecta también a las copias de otros proyectos del Mac.
 - Límite conocido: todos los pesos corporales están en un solo registro (`ajustes/peso`). Dos dispositivos sin sincronizar pueden pisarse las entradas a mano. Si pasa, hay que pasar a un registro por día.
 - Ideas aprobadas sin hacer (doc de ideas de COROS): carga propia (sRPE × min, 7 días frente a 4 semanas) y recuperación por músculo.
 - Pregunta para Ferran: ¿Play Protect sigue avisando con las versiones posteriores al PR #32? Si sí, la apelación se hace en el formulario de Google Play Protect con el APK nuevo.
