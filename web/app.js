@@ -4,7 +4,7 @@ import * as store from "./store.js";
 import { syncNow } from "./sync.js";
 import { elegir, salud, buscarEnWifi, unir } from "./direccion.js";
 import { html } from "./html.js";
-import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, CARDIO, CAMPOS_CARDIO, pasos, resumenFlex, resumenGym, enPlan } from "./datos.js";
+import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, CARDIO, CAMPOS_CARDIO, pasos, PREP_SEG, resumenFlex, resumenGym, enPlan } from "./datos.js";
 import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
 import { importar as importarReloj, importarPeso, unirPesos, partesDe, unirA, separar } from "./reloj.js";
@@ -596,9 +596,9 @@ function construirPasos(r) {
     const ps = pasos(it, i);
     for (const [k, p] of ps.entries()) {
       const prev = ps[k - 1];
-      if (k === 0) out.push({ ...p, tipo: "prep", seg: 10, texto: t("Prepárate") });
-      else if (p.lado && prev.lado !== p.lado) out.push({ ...p, tipo: "prep", seg: 10, texto: t("Cambia de lado") });
-      else out.push({ ...p, tipo: "prep", seg: 10, texto: t("Suelta y respira") });
+      if (k === 0) out.push({ ...p, tipo: "prep", seg: PREP_SEG, texto: t("Prepárate") });
+      else if (p.lado && prev.lado !== p.lado) out.push({ ...p, tipo: "prep", seg: PREP_SEG, texto: t("Cambia de lado") });
+      else out.push({ ...p, tipo: "prep", seg: PREP_SEG, texto: t("Suelta y respira") });
       out.push({ ...p, tipo: "work" });
     }
   }
