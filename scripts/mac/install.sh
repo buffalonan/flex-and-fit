@@ -17,15 +17,19 @@ curl -fsSL "$RAW/scripts/mac/update.sh" -o update.sh
 chmod +x update.sh
 
 if [ ! -f .env ]; then
-  drive="$(ls -d "$HOME"/Library/CloudStorage/GoogleDrive-*/"My Drive" 2> /dev/null | head -1 || true)"
-  if [ -n "$drive" ]; then drive_backup="$drive/Backups/Fitness"; else drive_backup="$HOME/Documents/fitness-backups/drive-pendiente"; fi
+  # The container's second copy stays on this disk: colima can't write into Google Drive's folder, so update.sh
+  # copies each day's file to My Drive/Backups/Fitness itself.
   {
     echo "BACKUP_DIR=$HOME/Documents/fitness-backups/weekly"
-    echo "DRIVE_BACKUP_DIR=$drive_backup"
+    echo "DRIVE_BACKUP_DIR=$HOME/Documents/fitness-backups/drive-pendiente"
     echo "SYNC_TOKEN="
   } > .env
-  [ -n "$drive" ] || echo "Aviso: no encuentro Google Drive en ~/Library/CloudStorage. Cambia DRIVE_BACKUP_DIR en $DIR/.env."
+elif grep -q '^DRIVE_BACKUP_DIR=.*/Library/CloudStorage/' .env; then
+  # Older installs mounted Google Drive's folder in the container; update.sh copies there now instead.
+  { grep -v '^DRIVE_BACKUP_DIR=' .env; echo "DRIVE_BACKUP_DIR=$HOME/Documents/fitness-backups/drive-pendiente"; } > .env.nuevo && cat .env.nuevo > .env && rm -f .env.nuevo
 fi
+ls -d "$HOME"/Library/CloudStorage/GoogleDrive-*/"My Drive" > /dev/null 2>&1 ||
+  echo "Aviso: no encuentro Google Drive para escritorio. Instálalo e inicia sesión para que las copias diarias lleguen a Drive."
 set -a; . ./.env; set +a
 mkdir -p "$BACKUP_DIR" "$DRIVE_BACKUP_DIR"
 

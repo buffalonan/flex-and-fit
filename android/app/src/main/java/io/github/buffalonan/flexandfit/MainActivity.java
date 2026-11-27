@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SaludPlugin.class);
         registerPlugin(EntrenoPlugin.class);
         registerPlugin(ActualizarPlugin.class);
+        registerPlugin(DrivePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

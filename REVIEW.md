@@ -8,7 +8,7 @@ What reviewers (human or Claude) should check on pull requests in this repo. Rea
 
 - **The owner's host names, Tailscale or LAN IPs, ports of other services on the Mac, personal paths** (`/Users/<name>/…`, `~/Documents/<real folder>`), e-mail addresses or real health data, anywhere: code, tests, fixtures, docs, comments, screenshots, workflow files, commit messages. Placeholders like `<mac>`, `100.x.y.z` or `example.local` are fine. Server addresses must come from the user (Perfil), Bonjour or the server's `DIRECCIONES` env at run time, never from a default in the code.
 - **Secrets** committed to the repo (`.env`, keystores, tokens), or a workflow that prints one.
-- **Health data leaving the user's devices.** Workouts, heart rate and calories may go only to the user's own Mac through `/api/sync`. No analytics, no third-party requests, no CDN at run time (the APK must work offline: libraries are vendored in `web/vendor/`). Health Connect permissions must stay read-only and limited to what the app shows.
+- **Health data leaving the user's devices.** Workouts, heart rate and calories may go only to the user's own Mac through `/api/sync`, and, only after the user connects it in Perfil (opt-in, Android app), to the app's hidden folder of the user's own Google Drive (`drive.js`, scope `drive.appdata` only; no other Google scope or service). No analytics, no third-party requests, no CDN at run time (the APK must work offline: libraries are vendored in `web/vendor/`). Health Connect permissions must stay read-only and limited to what the app shows.
 
 ### Data
 
