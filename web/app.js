@@ -4,13 +4,14 @@ import * as store from "./store.js";
 import { syncNow } from "./sync.js";
 import { elegir, salud, buscarEnWifi, unir } from "./direccion.js";
 import { html } from "./html.js";
-import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, CARDIO, CAMPOS_CARDIO, pasos, PREP_SEG, resumenFlex, resumenGym, enPlan } from "./datos.js";
+import { EX, RUTINAS_FLEX, GYM, TESTS, FIG_FUERZA, VIDEOS, CARDIO, CAMPOS_CARDIO, pasos, PREP_SEG, resumenFlex, resumenGym, enPlan } from "./datos.js";
 import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
 import { importar as importarReloj, importarPeso, unirPesos, partesDe, unirA, separar } from "./reloj.js";
 import { ultimaRelease, codigoDe } from "./actualizar.js";
 import { copiar as copiarDrive, cuenta as cuentaDrive, revocar as revocarDrive } from "./drive.js";
 import { avisador, avisosFlex, avisosDescanso } from "./avisos.js";
+import { urlVideo, urlYoutube, enBucle } from "./video.js";
 import { t, tn, dosis as tDosis, num, locale, idioma, IDIOMAS, traducirPagina } from "./i18n.js";
 // The 3D figure (figura3d.js and Three.js, ~700 KB) loads the first time a sheet needs it; until then, and wherever
 // WebGL isn't available, the SVG figure stays.
@@ -308,6 +309,7 @@ function verFicha(i) {
     $("fichaTitulo").textContent = t(e.n);
     $("fichaFig").innerHTML = html`<div class="fig3d">${figura(ex, { clase: "grande" })}</div>`;
     en3d($("fichaFig").querySelector(".fig3d"), ex, { musculos: e });
+    ponerVideo(ex, e.n);
     $("fichaDosis").textContent = tDosis(dosis);
     $("fichaCuerpo").innerHTML = html`<p class="zona">${t("Lo notas en:")} <b>${t(e.z)}</b></p>
       ${extra ? html`<p class="extra">${t(extra)}</p>` : ""}
@@ -320,6 +322,7 @@ function verFicha(i) {
     $("fichaFig").innerHTML = html`${FIG_FUERZA[e.n] ? html`<div class="fig3d">${figura(FIG_FUERZA[e.n], { clase: "grande" })}</div>` : ""}${maniqui({ p, s: sec }, "f", { titulo: t("Músculos de {x}", { x: t(e.n) }) })}
       <div class="leyenda"><span><i style="background:var(--prim)"></i>${t("Principales")}</span><span><i style="background:var(--sec)"></i>${t("Secundarios")}</span></div>`;
     if (FIG_FUERZA[e.n]) en3d($("fichaFig").querySelector(".fig3d"), FIG_FUERZA[e.n], { musculos: e });
+    ponerVideo(FIG_FUERZA[e.n], e.n);
     $("fichaDosis").textContent = `${dosisGym(e)} · ${e.kg ? `${num(e.kg)} kg` : t(e.elige ? "peso a elegir" : "peso corporal")}`;
     const ult = ultimasSeries(w, i)?.series.filter((x) => x?.hecho) || [];
     const rec = mejorDe(sesiones.filter(gimnasio), e.n, !!e.seg);
@@ -333,7 +336,43 @@ function verFicha(i) {
   $("ficha").scrollTo?.(0, 0);
   animar($("ficha"));
 }
-function cerrarFicha() { $("ficha").hidden = true; $("fichaFig").innerHTML = ""; ficha = null; }
+// The exercise's YouTube clip (VIDEOS in datos.js), under a button over its figure: it loads only when tapped, and
+// offline (or when the clip can't play) the animated figure stays. The button toggles back to the figure.
+let pararBucle = null;
+function quitarVideo() { pararBucle?.(); pararBucle = null; }
+function ponerVideo(fig, nombre) {
+  quitarVideo();
+  const v = fig && VIDEOS[fig], host = $("fichaFig"), caja3d = host.querySelector(".fig3d");
+  if (!v || !caja3d) return;
+  const barra = document.createElement("div");
+  barra.className = "video-barra";
+  barra.innerHTML = html`<button type="button" class="btn-sec" id="fichaVideo" aria-pressed="false">${t("▶ Vídeo")}</button>`;
+  host.prepend(barra);
+  barra.querySelector("button").addEventListener("click", (ev) => {
+    const b = ev.currentTarget, abierto = host.querySelector(".video");
+    if (abierto) {
+      quitarVideo(); abierto.remove(); caja3d.hidden = false;
+      b.textContent = t("▶ Vídeo"); b.setAttribute("aria-pressed", "false");
+      return;
+    }
+    const caja = document.createElement("div");
+    caja.className = "video";
+    if (navigator.onLine === false) {
+      caja.innerHTML = html`<p class="sub">${t("Sin conexión: el vídeo necesita internet. Mientras, tienes la figura.")}</p>`;
+      barra.after(caja);
+      setTimeout(() => caja.remove(), 4000);
+      return;
+    }
+    caja.innerHTML = html`<div class="video-marco"><iframe src="${urlVideo(v)}" title="${t("Vídeo de {x}", { x: t(nombre) })}"
+        allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+      <p class="sub video-pie">${t("Vídeo: {canal}", { canal: v.canal })} · <a href="${urlYoutube(v)}" ${native ? "" : html`target="_blank"`} rel="noopener">${t("Abrir en YouTube")}</a></p>`;
+    caja3d.hidden = true;
+    barra.after(caja);
+    pararBucle = enBucle(caja.querySelector("iframe"), v);
+    b.textContent = t("Ver la figura"); b.setAttribute("aria-pressed", "true");
+  });
+}
+function cerrarFicha() { quitarVideo(); $("ficha").hidden = true; $("fichaFig").innerHTML = ""; ficha = null; }
 $("detLista").addEventListener("click", (e) => {
   const li = e.target.closest?.("li.ej[data-i]");
   if (li) verFicha(Number(li.dataset.i));

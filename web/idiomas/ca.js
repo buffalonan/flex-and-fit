@@ -728,6 +728,13 @@ export default {
   "Las sesiones que borras en este dispositivo se guardan aquí 30 días.": "Les sessions que esborres en aquest dispositiu es guarden aquí 30 dies.",
   "Recuperar": "Recuperar",
   "Recuperada: está otra vez en Historial.": "Recuperada: torna a ser a l'Historial.",
+  /* ---------- Exercise videos ---------- */
+  "▶ Vídeo": "▶ Vídeo",
+  "Ver la figura": "Veure la figura",
+  "Vídeo de {x}": "Vídeo de {x}",
+  "Vídeo: {canal}": "Vídeo: {canal}",
+  "Abrir en YouTube": "Obrir a YouTube",
+  "Sin conexión: el vídeo necesita internet. Mientras, tienes la figura.": "Sense connexió: el vídeo necessita internet. Mentrestant, tens la figura.",
   /* ---------- Google Drive ---------- */
   "Google Drive": "Google Drive",
   "Guarda una copia de todo tu historial, desde la primera sesión, en tu Google Drive, en una carpeta privada de la app que no ve nadie más. Incluye tus datos de salud (entrenos, frecuencia cardiaca, calorías y peso), que se suben así a Google. Si instalas la app de nuevo, conecta la misma cuenta y lo recupera todo.": "Desa una còpia de tot el teu historial, des de la primera sessió, al teu Google Drive, en una carpeta privada de l'app que no veu ningú més. Inclou les teves dades de salut (entrenaments, freqüència cardíaca, calories i pes), que així es pugen a Google. Si tornes a instal·lar l'app, connecta el mateix compte i ho recupera tot.",

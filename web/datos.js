@@ -282,6 +282,65 @@ export const FIG_FUERZA = {
   "Swing a una mano": "kb_swing1", "Cargada a una mano": "kb_cargada", "Molino": "kb_molino", "Levantamiento turco": "kb_turco",
 };
 
+// A short YouTube clip of each exercise (video.js), by its figure's id (EX's keys, FIG_FUERZA's values): the video's id
+// and the seconds it loops between. All from channels that allow embedding (checked 2026-11-27): PureGym and
+// Nuffield Health (UK gyms' "how to" clips), Onnit and Onnit Academy (kettlebell). An exercise with no clip that
+// shows it well has none (the figure is enough). YouTube allows embedding them, not downloading them.
+export const VIDEOS = {
+  banca: { id: "CjHIKDQ4RQo", ini: 0, fin: 15, canal: "PureGym" },
+  inclinado: { id: "oZVCBM9f8Eo", ini: 0, fin: 15, canal: "PureGym" },
+  press_hombro: { id: "poD_-zaG9hk", ini: 1, fin: 26, canal: "Nuffield Health" },
+  laterales: { id: "z-kOn7flIZg", ini: 0, fin: 15, canal: "PureGym" },
+  fondos: { id: "2HYAeF6o7Bc", ini: 0, fin: 12, canal: "PureGym" },
+  triceps_polea: { id: "LXkCrxn3caQ", ini: 0, fin: 16, canal: "PureGym" },
+  sentadilla_barra: { id: "rrJIyZGlK8c", ini: 0, fin: 23, canal: "PureGym" },
+  rumano: { id: "zU-f6DMCdAI", ini: 0, fin: 21, canal: "PureGym" },
+  bulgara: { id: "TEXl2b3__S4", ini: 0, fin: 15, canal: "PureGym" },
+  prensa: { id: "q4W4_VJbKW0", ini: 0, fin: 10, canal: "PureGym" },
+  curl_femoral: { id: "SbSNUXPRkc8", ini: 0, fin: 15, canal: "PureGym" },
+  talones: { id: "Zep-wKHWkNM", ini: 0, fin: 15, canal: "PureGym" },
+  peso_muerto: { id: "6TA4VaweLWk", ini: 1, fin: 26, canal: "Nuffield Health" },
+  dominadas: { id: "PHdHnZcbsB8", ini: 0, fin: 11, canal: "PureGym" },
+  remo_barra: { id: "FsK19s8eGFs", ini: 0, fin: 12, canal: "PureGym" },
+  remo_manc: { id: "ZRSGpBUVcNw", ini: 0, fin: 10, canal: "PureGym" },
+  face_pull: { id: "0Po47vvj9g4", ini: 0, fin: 15, canal: "PureGym" },
+  curl: { id: "MtXdEcW3Eog", ini: 4, fin: 24, canal: "PureGym" },
+  hip_thrust: { id: "aweBS7K71l8", ini: 0, fin: 16, canal: "PureGym" },
+  zancadas: { id: "g8-Ge9S0aUw", ini: 0, fin: 25, canal: "PureGym" },
+  kb_swing: { id: "1FjAoO5McVI", ini: 0, fin: 19, canal: "PureGym" },
+  piernas_colgado: { id: "Yrtvs-nEnk0", ini: 0, fin: 11, canal: "PureGym" },
+  plancha: { id: "q4rDeHYMcIg", ini: 0, fin: 12, canal: "PureGym" },
+  plancha_lateral: { id: "Oe9Tp9SvTCE", ini: 0, fin: 18, canal: "PureGym" },
+  press_militar: { id: "-5MmFTKLC-0", ini: 4, fin: 24, canal: "PureGym" },
+  press_pecho: { id: "CIykDiF4sfg", ini: 0, fin: 15, canal: "PureGym" },
+  jalon: { id: "JGeRYIZdojU", ini: 0, fin: 13, canal: "PureGym" },
+  remo_polea: { id: "lJoozxC0Rns", ini: 0, fin: 15, canal: "PureGym" },
+  ext_cuadriceps: { id: "4ZDm5EbiFI8", ini: 0, fin: 14, canal: "PureGym" },
+  kb_halo: { id: "wJcmanVh5EE", ini: 0, fin: 22, canal: "Onnit Academy" },
+  kb_pm: { id: "l6gDwf3xC6s", ini: 0, fin: 15, canal: "Onnit" },
+  kb_goblet: { id: "deJb-jp8rDo", ini: 1, fin: 25, canal: "Nuffield Health" },
+  kb_press: { id: "gjr-QAdsq4o", ini: 0, fin: 20, canal: "Onnit" },
+  kb_remo: { id: "Yx7231gDH9M", ini: 1, fin: 24, canal: "Nuffield Health" },
+  kb_swing1: { id: "sxtfgmzhXvE", ini: 0, fin: 14, canal: "PureGym" },
+  kb_cargada: { id: "xZyGP55NkAo", ini: 0, fin: 10, canal: "PureGym" },
+  kb_molino: { id: "ITSmgn_BQgY", ini: 0, fin: 21, canal: "Onnit" },
+  kb_turco: { id: "IBqUhKn977o", ini: 0, fin: 18, canal: "Onnit Academy" },
+  gato: { id: "aPKFmsTrnEg", ini: 1, fin: 26, canal: "Nuffield Health" },
+  isquio_toalla: { id: "5P3E8Pec_L8", ini: 0, fin: 25, canal: "PureGym" },
+  flex_cadera: { id: "iZ1eZBY4fwM", ini: 4, fin: 24, canal: "PureGym" },
+  fig4: { id: "YBV6d5TluFA", ini: 1, fin: 26, canal: "Nuffield Health" },
+  gemelo: { id: "TVwffV2M_hQ", ini: 1, fin: 25, canal: "Nuffield Health" },
+  cuad_pie: { id: "kzAsm4WQqvQ", ini: 4, fin: 24, canal: "PureGym" },
+  pecho_puerta: { id: "TJ4fI47CVWo", ini: 4, fin: 24, canal: "PureGym" },
+  angeles: { id: "W7eEZO-IyU0", ini: 22, fin: 40, canal: "Nuffield Health" },
+  nov90: { id: "f_7qIPxw6nE", ini: 10, fin: 30, canal: "PureGym" },
+  paloma: { id: "wePPX_zzYKY", ini: 4, fin: 24, canal: "PureGym" },
+  paso_toalla: { id: "GTf_xy8QJi8", ini: 4, fin: 24, canal: "PureGym" },
+  slr_activa: { id: "Zr-PtqcpeWM", ini: 1, fin: 26, canal: "Nuffield Health" },
+  puente: { id: "tqp5XQPpTxY", ini: 0, fin: 21, canal: "PureGym" },
+  cobra: { id: "YYudWYM5Q9g", ini: 4, fin: 24, canal: "PureGym" },
+};
+
 /** Total sets of a gym workout (a circuit counts once per round), and sets per muscle. */
 export function resumenGym(w) {
   let series = 0;

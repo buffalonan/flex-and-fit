@@ -728,6 +728,13 @@ export default {
   "Las sesiones que borras en este dispositivo se guardan aquí 30 días.": "Einheiten, die du auf diesem Gerät löschst, bleiben hier 30 Tage.",
   "Recuperar": "Wiederherstellen",
   "Recuperada: está otra vez en Historial.": "Wiederhergestellt: sie ist wieder im Verlauf.",
+  /* ---------- Exercise videos ---------- */
+  "▶ Vídeo": "▶ Video",
+  "Ver la figura": "Figur zeigen",
+  "Vídeo de {x}": "Video: {x}",
+  "Vídeo: {canal}": "Video: {canal}",
+  "Abrir en YouTube": "Auf YouTube öffnen",
+  "Sin conexión: el vídeo necesita internet. Mientras, tienes la figura.": "Offline: Das Video braucht Internet. Bis dahin hast du die Figur.",
   /* ---------- Google Drive ---------- */
   "Google Drive": "Google Drive",
   "Guarda una copia de todo tu historial, desde la primera sesión, en tu Google Drive, en una carpeta privada de la app que no ve nadie más. Incluye tus datos de salud (entrenos, frecuencia cardiaca, calorías y peso), que se suben así a Google. Si instalas la app de nuevo, conecta la misma cuenta y lo recupera todo.": "Speichert eine Kopie deines gesamten Verlaufs, ab der ersten Einheit, in deinem Google Drive, in einem privaten App-Ordner, den sonst niemand sieht. Sie enthält deine Gesundheitsdaten (Trainings, Herzfrequenz, Kalorien und Gewicht), die so zu Google hochgeladen werden. Installierst du die App neu, verbinde dasselbe Konto und sie holt alles zurück.",

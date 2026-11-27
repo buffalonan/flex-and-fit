@@ -193,6 +193,13 @@ body.en-sesion .tabs, body.en-sesion .top, body.en-sesion main { display: none; 
 .ficha-fig { background: var(--card); border-radius: 14px; padding: 8px; }
 .ficha-fig .maniqui { max-width: 320px; margin: 0 auto; display: block; }
 .ficha-fig .fig { max-width: 420px; margin: 0 auto 8px; }
+/* The exercise's YouTube clip (video.js), on demand over its figure. */
+.video-barra { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.video-barra button { min-height: 44px; padding: 0 14px; }
+.video-marco { position: relative; max-width: 520px; margin: 0 auto; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #000; }
+.video-marco iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.video-pie { margin: 6px 0 4px; text-align: center; }
+.video-pie a { color: var(--flex3); display: inline-block; min-height: 44px; line-height: 44px; }
 .reg-fig { background: var(--card); border-radius: 12px; max-width: 260px; margin: 0 auto; width: 100%; }
 .ficha-cuerpo h3 { margin: 12px 0 4px; font-size: 1rem; }
 .ficha-cuerpo .pasos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
