@@ -27,20 +27,37 @@ if [ -f .env ] && grep -q '^DRIVE_BACKUP_DIR=.*/Library/CloudStorage/' .env; the
   echo "DRIVE_BACKUP_DIR pasa a ~/Documents/fitness-backups/drive-pendiente"
 fi
 
-# Google Drive: the server's daily copies (BACKUP_DIR) go to My Drive/Backups/Fitness from here, outside Docker,
-# because colima can't write into Google Drive's File Provider folder. The newest 30 are kept there too.
+# Google Drive: the server's daily copies (BACKUP_DIR) go to Backups/Fitness in Google Drive from here, outside Docker,
+# and the newest 30 are kept there too. With rclone (a Google Drive remote, as the Mac's other backups use) it uploads
+# straight to Drive; RCLONE_DESTINO in .env picks the remote and folder, else the first "drive" remote and Backups/Fitness.
+# Without rclone it copies into Google Drive for desktop's folder (colima can't write there, so not from the container).
 backup_dir="$(sed -n 's/^BACKUP_DIR=//p' .env 2> /dev/null | head -1)"
-drive="$(ls -d "$HOME"/Library/CloudStorage/GoogleDrive-*/"My Drive" 2> /dev/null | head -1 || true)"
-if [ -n "$backup_dir" ] && [ -d "$backup_dir" ] && [ -z "$drive" ]; then
-  echo "Aviso: no encuentro Google Drive para escritorio; las copias diarias se quedan en este Mac"
+rclone="$(command -v rclone || true)"
+destino="$(sed -n 's/^RCLONE_DESTINO=//p' .env 2> /dev/null | head -1)"
+if [ -n "$rclone" ] && [ -z "$destino" ]; then
+  remoto="$("$rclone" listremotes --long 2> /dev/null | awk '$2 == "drive" { print $1; exit }')"
+  [ -n "$remoto" ] && destino="${remoto}Backups/Fitness"
 fi
-if [ -n "$backup_dir" ] && [ -d "$backup_dir" ] && [ -n "$drive" ]; then
-  mkdir -p "$drive/Backups/Fitness"
-  for f in "$backup_dir"/flexfit-????-??-??.db; do
-    [ -f "$f" ] || continue
-    [ -f "$drive/Backups/Fitness/$(basename "$f")" ] || { if cp "$f" "$drive/Backups/Fitness/"; then echo "Drive: $(basename "$f")"; else echo "Aviso: no he podido copiar $(basename "$f") a Google Drive"; fi; }
-  done
-  ls "$drive/Backups/Fitness"/flexfit-????-??-??.db 2> /dev/null | sort | awk '{ f[NR] = $0 } END { for (i = 1; i <= NR - 30; i++) print f[i] }' | while read -r f; do rm -f "$f"; done
+drive="$(ls -d "$HOME"/Library/CloudStorage/GoogleDrive-*/"My Drive" 2> /dev/null | head -1 || true)"
+if [ -n "$backup_dir" ] && [ -d "$backup_dir" ]; then
+  if [ -n "$destino" ]; then
+    if "$rclone" copy "$backup_dir" "$destino" --include 'flexfit-????-??-??.db' --stats-one-line -q; then
+      "$rclone" lsf "$destino" --include 'flexfit-????-??-??.db' 2> /dev/null | sort | awk '{ f[NR] = $0 } END { for (i = 1; i <= NR - 30; i++) print f[i] }' |
+        while read -r f; do "$rclone" deletefile "$destino/$f" && echo "Drive: borrada $f"; done
+      echo "Drive (rclone): $("$rclone" lsf "$destino" --include 'flexfit-????-??-??.db' 2> /dev/null | wc -l | tr -d ' ') copias en $destino"
+    else
+      echo "Aviso: rclone no ha podido subir las copias a $destino"
+    fi
+  elif [ -n "$drive" ]; then
+    mkdir -p "$drive/Backups/Fitness"
+    for f in "$backup_dir"/flexfit-????-??-??.db; do
+      [ -f "$f" ] || continue
+      [ -f "$drive/Backups/Fitness/$(basename "$f")" ] || { if cp "$f" "$drive/Backups/Fitness/"; then echo "Drive: $(basename "$f")"; else echo "Aviso: no he podido copiar $(basename "$f") a Google Drive"; fi; }
+    done
+    ls "$drive/Backups/Fitness"/flexfit-????-??-??.db 2> /dev/null | sort | awk '{ f[NR] = $0 } END { for (i = 1; i <= NR - 30; i++) print f[i] }' | while read -r f; do rm -f "$f"; done
+  else
+    echo "Aviso: ni rclone ni Google Drive para escritorio; las copias diarias se quedan en este Mac"
+  fi
 fi
 
 docker compose pull --quiet && docker compose up -d
