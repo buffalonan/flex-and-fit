@@ -3,4 +3,5 @@
 !server/db.js
 !server/backup.js
 !server/server.js
+!server/check-backup.js
 !scripts/build-app-web.js
