@@ -11,9 +11,11 @@
         android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
 
+        <!-- Portrait only: the screens are laid out for a phone held upright (Ferran asked to turn rotation off). -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
+            android:screenOrientation="portrait"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
@@ -62,12 +64,14 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- The stretching player and the rest timer vibrate on a side change and when a rest ends. -->
+    <!-- The session's cues vibrate when a stretch or a set starts (Pitidos.java, web/avisos.js). -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- The "Entreno en curso" foreground service and its notification (EntrenoServicio.java). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Keeps the CPU awake during a session so the sound cues play on time with the phone locked (EntrenoServicio). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Health Connect, read only: the watch's workouts (COROS), their heart rate and calories (SaludPlugin.java). -->
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />

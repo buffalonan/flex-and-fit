@@ -304,3 +304,12 @@ test("the Android app keeps the /fitness path of a typed address", async ({ page
     await proxy.close();
   }
 });
+
+test("the app stays in portrait: no rotation in the Android app or the installed web app", async ({ request }) => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const xml = fs.readFileSync(path.join(__dirname, "../android/app/src/main/AndroidManifest.xml"), "utf8");
+  expect(xml).toMatch(/android:name="\.MainActivity"\s+android:screenOrientation="portrait"/);
+  const m = await (await request.get("/manifest.webmanifest")).json();
+  expect(m.orientation).toBe("portrait");
+});
