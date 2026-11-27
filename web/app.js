@@ -9,6 +9,7 @@ import { maniqui, NOMBRES } from "./maniqui.js";
 import { figura, animar, enPaso } from "./figura.js";
 import { importar as importarReloj, importarPeso, unirPesos, partesDe, unirA, separar } from "./reloj.js";
 import { ultimaRelease, codigoDe } from "./actualizar.js";
+import { copiar as copiarDrive, cuenta as cuentaDrive, revocar as revocarDrive } from "./drive.js";
 import { avisador, avisosFlex, avisosDescanso } from "./avisos.js";
 import { t, tn, dosis as tDosis, num, locale, idioma, IDIOMAS, traducirPagina } from "./i18n.js";
 // The 3D figure (figura3d.js and Three.js, ~700 KB) loads the first time a sheet needs it; until then, and wherever
@@ -1605,6 +1606,7 @@ $("pesoPermiso").addEventListener("click", async () => {
 function renderPerfil() {
   renderPeso();
   renderPapelera();
+  renderDrive();
   if (document.activeElement !== $("planInicio")) $("planInicio").value = inicioPlan || "";
   const ep = enPlan(inicioPlan, iso(new Date()));
   $("planEstado").textContent = !inicioPlan ? t("Empieza con tu primera sesión de flexibilidad, o elige la fecha aquí.")
@@ -1762,6 +1764,110 @@ $("actSi").addEventListener("click", instalarActualizacion);
 $("actNo").addEventListener("click", () => { $("actPanel").hidden = true; if (nueva) { act.ignorada = nueva.codigo; saveAct(); } });
 capApp?.addListener("resume", () => buscarActualizacion());
 
+/* ---------- Google Drive ---------- */
+// Only in the Android app: a copy of the whole history in the app's own folder of the user's Google Drive (drive.js,
+// DrivePlugin.java). Connecting runs a copy at once, which on a fresh install brings the whole history back. Then it
+// copies after changes (a minute later at most once a minute), on start and on resume (at most hourly if nothing changed).
+// The account is kept in this device's settings (ajustes.drive = { email }); the last copy in meta `drive`.
+const drivePl = native && window.Capacitor.isPluginAvailable?.("Drive") ? window.Capacitor.registerPlugin("Drive") : null;
+let driveDisponible = false;
+let driveCorriendo = null;
+let driveIntento = 0;
+let driveEstado = { texto: "", error: false, login: false };
+const ERRORES_DRIVE = {
+  permiso: "Google pide iniciar sesión otra vez: pulsa Conectar con Google.",
+  cancelado: "Inicio de sesión cancelado.",
+  red: "Sin conexión a internet: la copia se hará más tarde.",
+  copia: "El archivo de Drive no es una copia de Flex & Fit.",
+};
+async function comprobarDrive() {
+  if (!drivePl) return;
+  try { driveDisponible = !!(await drivePl.disponible()).disponible; } catch (e) { driveDisponible = false; }
+  renderDrive();
+}
+async function copiaDrive({ forzar = false, interactivo = false } = {}) {
+  if (!drivePl || !driveDisponible || (!ajustes.drive && !interactivo)) return null;
+  if (driveCorriendo) return forzar ? driveCorriendo.then(() => copiaDrive({ forzar, interactivo })) : driveCorriendo;
+  if (!forzar) {
+    if (driveEstado.login || Date.now() - driveIntento < 60000) return null;
+    const meta = (await store.getMeta("drive")) || {};
+    const ultimoLocal = (await store.exportAll()).registros.reduce((m, r) => Math.max(m, r.actualizado || 0), 0);
+    if (ultimoLocal <= (meta.ultimo || 0) && Date.now() - (meta.fecha || 0) < 3600 * 1000) return null;
+  }
+  driveIntento = Date.now();
+  driveCorriendo = (async () => {
+    renderDrive();
+    const una = async (token) => {
+      const quien = ajustes.drive?.email && !interactivo ? ajustes.drive : await cuentaDrive(token);
+      return { quien, r: await copiarDrive(token, store) };
+    };
+    try {
+      let token = (await drivePl.token({ interactivo })).token;
+      let hecho;
+      try { hecho = await una(token); } catch (e) {
+        if (e?.code !== "token") throw e;
+        // Google no longer takes this token: drop it and ask for a fresh one, once.
+        await drivePl.olvidar({ token });
+        token = (await drivePl.token({ interactivo })).token;
+        hecho = await una(token);
+      }
+      const { quien, r } = hecho;
+      ajustes.drive = { email: quien.email || "" };
+      saveAjustes();
+      await store.setMeta("drive", { fecha: Date.now(), registros: r.registros, ultimo: r.ultimo });
+      driveEstado = { texto: r.recuperados ? tn(r.recuperados, "Recuperado {n} registro de tu copia en Drive.", "Recuperados {n} registros de tu copia en Drive.") : "", error: false, login: false };
+      return r;
+    } catch (e) {
+      driveEstado = { texto: t(ERRORES_DRIVE[e?.code] || "No se pudo hablar con Google Drive. Se intentará más tarde."), error: true, login: e?.code === "permiso" };
+      return null;
+    } finally {
+      driveCorriendo = null;
+      renderDrive();
+    }
+  })();
+  return driveCorriendo;
+}
+async function renderDrive() {
+  $("driveCard").hidden = !drivePl;
+  if (!drivePl) return;
+  const st = $("driveEstado");
+  const con = !!ajustes.drive;
+  $("driveConectar").hidden = !driveDisponible || (con && !driveEstado.login);
+  $("driveCopiar").hidden = !driveDisponible || !con || driveEstado.login;
+  $("driveDesconectar").hidden = !driveDisponible || !con;
+  for (const b of ["driveConectar", "driveCopiar", "driveDesconectar"]) $(b).disabled = !!driveCorriendo;
+  st.classList.toggle("error", !driveDisponible || driveEstado.error);
+  if (!driveDisponible) { st.textContent = t("Google Play Services no está disponible en este teléfono."); return; }
+  if (driveCorriendo) { st.textContent = t("Copiando con Google Drive…"); return; }
+  const meta = con ? (await store.getMeta("drive")) || {} : {};
+  if (driveCorriendo) return;
+  const partes = [con ? t("Conectada: {e}.", { e: ajustes.drive.email || t("tu cuenta de Google") }) : t("Sin conectar.")];
+  if (con && meta.fecha) partes.push(t("Última copia: {f}, {n}.", { f: new Date(meta.fecha).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }), n: tn(meta.registros || 0, "{n} registro", "{n} registros") }));
+  if (driveEstado.texto) partes.push(driveEstado.texto);
+  st.textContent = partes.join(" ");
+}
+$("driveConectar").addEventListener("click", () => copiaDrive({ forzar: true, interactivo: true }));
+$("driveCopiar").addEventListener("click", () => copiaDrive({ forzar: true }));
+$("driveDesconectar").addEventListener("click", async () => {
+  if (driveCorriendo) return;
+  let quitado = true;
+  try {
+    const { token } = await drivePl.token({ interactivo: false });
+    quitado = await revocarDrive(token);
+    await drivePl.olvidar({ token });
+  } catch (e) { /* no token: nothing to take back here */ }
+  ajustes.drive = null;
+  saveAjustes();
+  await store.setMeta("drive", null);
+  driveEstado = quitado ? { texto: t("Desconectada. La copia sigue en tu Drive: vuelve a conectar la misma cuenta para recuperarla."), error: false, login: false }
+    : { texto: t("No se pudo quitar el permiso en Google: quítalo en tu cuenta de Google → Seguridad → Conexiones con apps. La copia sigue en tu Drive."), error: true, login: false };
+  renderDrive();
+});
+let driveTimer = null;
+store.onChange(() => { clearTimeout(driveTimer); driveTimer = setTimeout(() => copiaDrive(), 60 * 1000); });
+capApp?.addListener("resume", () => copiaDrive());
+setInterval(() => copiaDrive(), 5 * 60 * 1000);
+
 /* ---------- Sync ---------- */
 const ERRORES = { "sin-conexion": "No encuentro el Mac. Se sincronizará cuando esté encendido y a tu alcance.", clave: "La clave no coincide con la del Mac.", "sin-servidor": "Sin servidor: los datos se quedan solo en este dispositivo." };
 let timer = null;
@@ -1912,4 +2018,5 @@ await renderSync();
 ofrecerContinuar();
 comprobarSalud().then(() => leerReloj());
 buscarActualizacion();
+comprobarDrive().then(() => copiaDrive());
 sync();

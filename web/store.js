@@ -102,6 +102,28 @@ export async function exportAll() {
     registros: rows.map(({ tabla, id, data, actualizado, borrado }) => ({ tabla, id, data, actualizado, borrado })) };
 }
 
+/**
+ * Merges a copy's records (the Drive copy): the newest `actualizado` wins, and what came in is marked pending so it
+ * reaches the Mac too. Unlike importJSON it doesn't mark records that were already the same. Returns how many changed.
+ */
+export async function unir(registros) {
+  let n = 0;
+  await tx(["registros"], "readwrite", async (t) => {
+    const s = t.objectStore("registros");
+    for (const c of registros) {
+      if (!c || typeof c.tabla !== "string" || typeof c.id !== "string" || !Number.isFinite(c.actualizado)) continue;
+      const key = `${c.tabla}:${c.id}`;
+      const cur = await done(s.get(key));
+      if (cur && cur.actualizado >= c.actualizado) continue;
+      await done(s.put({ key, tabla: c.tabla, id: c.id, data: c.data || {}, actualizado: c.actualizado, borrado: !!c.borrado, pendiente: 1 }));
+      lastStamp = Math.max(lastStamp, c.actualizado);
+      n++;
+    }
+  });
+  if (n) changed("local");
+  return n;
+}
+
 /** Imports a Flex & Fit backup, or the JSON copied from the 6-month flexibility plan. Returns how many records changed. */
 export async function importJSON(obj) {
   if (obj?.app === "flex-and-fit" && Array.isArray(obj.registros)) {
