@@ -95,16 +95,18 @@ test("serves the web app and nothing outside it", async () => {
   assert.equal((await fetch(`${base}/no-existe.js`)).status, 404);
 });
 
-test("weekly backups: one per week per folder, newest twelve kept", () => {
+test("daily backups: one per day per folder, newest thirty kept", () => {
   db.sync(0, [rec("a", 1)]);
   const a = path.join(dir, "local"), b = path.join(dir, "drive");
   const t0 = Date.parse("2026-01-05T10:00:00Z");
   assert.equal(backup.runDue(db, [a, b], t0).length, 2);
-  assert.equal(backup.runDue(db, [a, b], t0 + 3 * 864e5).length, 0);
-  for (let w = 1; w <= 14; w++) backup.runDue(db, [a], t0 + w * 7 * 864e5);
+  assert.equal(backup.runDue(db, [a, b], t0 + 13 * 3600e3).length, 0); // 23:00 the same day
+  assert.equal(backup.runDue(db, [a, b], t0 + 14 * 3600e3).length, 2); // 00:00 the next day
+  for (let d = 2; d <= 40; d++) backup.runDue(db, [a], t0 + d * 864e5);
   const files = fs.readdirSync(a).sort();
   assert.equal(files.length, backup.KEEP);
-  assert.equal(files.at(-1), "flexfit-2026-04-13.db");
+  assert.equal(files[0], "flexfit-2026-01-16.db");
+  assert.equal(files.at(-1), "flexfit-2026-02-14.db");
   const copy = store.open(path.join(a, files.at(-1)));
   assert.equal(copy.count(), 1);
   copy.close();

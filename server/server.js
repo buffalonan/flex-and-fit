@@ -4,7 +4,7 @@
 //   PORT          default 3334
 //   DATA_DIR      where flexfit.db lives (default ./data)
 //   WEB_DIR       the web app to serve (default ./web)
-//   BACKUP_DIRS   comma-separated folders for the weekly backups (none by default)
+//   BACKUP_DIRS   comma-separated folders for the daily backups (none by default)
 //   SYNC_TOKEN    if set, /api/sync needs "Authorization: Bearer <token>"
 //   DIRECCIONES   comma-separated addresses of this Mac (http://<ip>:3334, or a proxy's http://<ip>/fitness), sent to the app in /api/salud
 //
