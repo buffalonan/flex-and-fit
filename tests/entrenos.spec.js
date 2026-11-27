@@ -523,6 +523,48 @@ test("a cable held with a rope reaches both hands in the 2D figure (face pull, t
   expect(r.triceps_polea).toBeLessThan(0.2);
 });
 
+test("the glute bridge lifts only the hips: shoulders, head and feet stay on the floor", async ({ page }) => {
+  await abrirApp(page);
+  const r = await page.evaluate(async () => {
+    const { estado } = await import("./figura.js");
+    const out = [];
+    for (const p of [0, 0.25, 0.5, 0.75, 1]) {
+      const { j } = estado("puente", p);
+      out.push({ S: j.S, head: j.head, H: j.H, K: j.K1, A: j.A1 });
+    }
+    return out;
+  });
+  const [a, , , , b] = r;
+  for (const f of r) {
+    expect(Math.abs(f.S[1] - a.S[1])).toBeLessThan(0.5); // shoulders don't rise
+    expect(Math.abs(f.head[1] - a.head[1])).toBeLessThan(0.5);
+    expect(Math.abs(f.A[0] - a.A[0]) + Math.abs(f.A[1] - a.A[1])).toBeLessThan(0.5); // feet don't slide
+    expect(f.H[1]).toBeLessThanOrEqual(a.H[1] + 0.01);
+  }
+  expect(a.H[1] - b.H[1]).toBeGreaterThan(10); // hips rise
+  // At the top, shoulder, hip and knee are in a line.
+  const u = [b.S[0] - b.H[0], b.S[1] - b.H[1]], v = [b.K[0] - b.H[0], b.K[1] - b.H[1]];
+  const ang = (Math.acos((u[0] * v[0] + u[1] * v[1]) / Math.hypot(...u) / Math.hypot(...v)) * 180) / Math.PI;
+  expect(ang).toBeGreaterThan(170);
+});
+
+test("a start pose without its own head angle looks where its trunk points (standing forward fold starts head up)", async ({ page }) => {
+  await abrirApp(page);
+  const r = await page.evaluate(async () => {
+    const { estado, FIGURAS } = await import("./figura.js");
+    const out = {};
+    for (const id of FIGURAS) {
+      const { j } = estado(id, 0);
+      // Standing or sitting upright: the head is above the shoulders.
+      if (Math.abs(j.tr) < 20 && !estado(id, 0).d.vista) out[id] = j.head[1] < j.S[1];
+    }
+    return out;
+  });
+  expect(r.pinza_pie).toBe(true);
+  expect(r.pinza_sentado).toBe(true);
+  expect(Object.entries(r).filter(([, ok]) => !ok)).toEqual([]);
+});
+
 test("the plan's 30-second holds are one continuous minute, on each side", async ({ page }) => {
   await abrirApp(page);
   const r = await page.evaluate(async () => {

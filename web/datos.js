@@ -33,7 +33,7 @@ export const EX = {
   paso_toalla: { n: "Paso de hombros con toalla", z: "Hombros y pecho", p: ["hombros", "pecho"], s: ["biceps"], ritmo: 5, c: ["Toalla bien estirada, agarre muy ancho", "Sube los brazos rectos por delante y llévalos hacia atrás", "Si no pasan, abre más el agarre; cierra un poco cada semana"] },
   slr_activa: { n: "Elevación activa de pierna", z: "Isquios (y fuerza del muslo)", p: ["isquios"], s: ["cuadriceps", "abdominales"], ritmo: 6, c: ["Boca arriba, sube una pierna recta sin ayuda", "Pausa 2 s arriba y baja en 3 s", "La otra pierna se queda pegada al suelo"] },
   aguja: { n: "Enhebrar la aguja", z: "Espalda alta y hombro", p: ["trapecio", "hombros"], s: ["dorsales"], ritmo: 6, c: ["A cuatro patas, pasa un brazo por debajo del otro", "Apoya hombro y sien en el suelo", "Respira hacia la espalda alta; cambia de lado"] },
-  puente: { n: "Puente de glúteo", z: "Glúteos (activa) y delante de la cadera", p: ["gluteos"], s: ["isquios", "cuadriceps"], ritmo: 5, c: ["Boca arriba, pies apoyados", "Aprieta glúteos y sube la cadera hasta alinear rodilla, cadera y hombro", "2 s arriba, baja lento"] },
+  puente: { n: "Puente de glúteo", z: "Glúteos (activa) y delante de la cadera", p: ["gluteos"], s: ["isquios", "cuadriceps"], ritmo: 5, c: ["Boca arriba, rodillas dobladas y pies apoyados", "Hombros y cabeza se quedan en el suelo: solo sube la cadera", "Aprieta glúteos y sube la cadera hasta alinear rodilla, cadera y hombro", "2 s arriba, baja lento"] },
   cobra: { n: "Cobra suave", z: "Abdomen y zona lumbar", p: ["abdominales"], s: ["lumbar"], c: ["Boca abajo, manos bajo los hombros", "Estira los brazos solo hasta donde la espalda esté cómoda", "Pubis en el suelo y glúteos relajados"] },
 };
 
