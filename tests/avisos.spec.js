@@ -64,6 +64,9 @@ test("in the browser the player plays harp notes and vibrates, and stays quiet w
   await page.click('#hoyCard [data-abrir="F1"]');
   await page.click("#detEmpezar");
   await expect(page.locator("#repSerie")).toHaveText("Prepárate");
+  // Stop the clock: from here time moves only with fastForward, so a slow machine can't reach the next cue
+  // while a check waits.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 50));
   expect(await vib(page)).toEqual([]);
 
   // 10 s to get ready: a soft falling pair 3 s before the end, then the breathing starts with a rising arpeggio
