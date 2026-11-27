@@ -19,6 +19,9 @@ App personal de Ferran para apuntar sus entrenos de gimnasio y sus sesiones de f
   - El servidor escribe cada día `flexfit-AAAA-MM-DD.db` y guarda 30, en una carpeta de copias de Documents del Mac.
   - `update.sh` las sube a Google Drive, `Backups/Fitness`, y guarda 30 allí (hoy con Google Drive para escritorio; pasa a rclone con el PR #47).
   - Desde el móvil, opcional: copia de todo el historial en la carpeta oculta de la app en su Google Drive (`flex-and-fit-copia.json`).
+  - Comprobación de restauración: `server/check-backup.js <copia.db>` abre la copia en solo lectura y comprueba que
+    SQLite la ve íntegra, que tiene registros y que sus datos son JSON. `update.sh` la ejecuta con la imagen de la app
+    una vez por cada copia diaria nueva y, si falla, avisa con una notificación de macOS (detalle en `update.log`).
   - Perfil → Exportar JSON da una copia completa a mano.
 - **Secretos (dónde, nunca cuáles):** firma del APK en los secretos del repo `ANDROID_KEYSTORE_BASE64` y `ANDROID_KEYSTORE_PASSWORD` (alias `flexandfit`); el `.p12` y su contraseña, en Proton Pass. `CLAUDE_CODE_OAUTH_TOKEN` en los secretos del repo (revisión de Claude). `SYNC_TOKEN`, si hay, en el `.env` del Mac y en Perfil del móvil. El cliente OAuth de Google es de tipo Android, en el proyecto de Google Cloud de Ferran; no hay client id ni secret en el repo.
 - **Documentos de diseño (artifacts de claude.ai):** propuesta de arquitectura https://claude.ai/artifact/91xtGjZy26UdwRYwkTv3kG · guía de diseño https://claude.ai/artifact/CkekWik1jW3c5HiwC4w247 · plan de flexibilidad de 6 meses https://claude.ai/artifact/3bHE8X1RKMQYQmgHBk5Zf3 · prototipos de animación https://claude.ai/artifact/THgMTxZnYsemnpDAJfECMX · maniquí 3D https://claude.ai/artifact/8cNUj2Pb4pqX6B5FvgKJJu · ideas de COROS para fuerza https://claude.ai/artifact/34TVtNbKjkbU5n3jKYzDCY.

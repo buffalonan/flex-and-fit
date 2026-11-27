@@ -8,3 +8,4 @@ _site/
 # Local server data (npm run serve)
 data/
 .env
+.copia-comprobada

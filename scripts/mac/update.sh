@@ -60,4 +60,24 @@ if [ -n "$backup_dir" ] && [ -d "$backup_dir" ]; then
   fi
 fi
 
+# Restore check: once per new daily copy, open it with the app's own image (read-only, outside the live data) and
+# make sure it could be restored. On a problem, a macOS notification, so a broken backup doesn't go unnoticed.
+if [ -n "$backup_dir" ] && [ -d "$backup_dir" ]; then
+  ultima="$(ls "$backup_dir"/flexfit-????-??-??.db 2> /dev/null | sort | tail -1)"
+  if [ -n "$ultima" ] && [ "$(cat .copia-comprobada 2> /dev/null)" != "$(basename "$ultima")" ]; then
+    salida="$(docker run --rm -v "$backup_dir":/copias:ro --entrypoint node ghcr.io/buffalonan/flex-and-fit:latest \
+      server/check-backup.js "/copias/$(basename "$ultima")" 2>&1)"
+    codigo=$?
+    echo "$salida"
+    if printf '%s' "$salida" | grep -q "Cannot find module"; then
+      echo "La imagen aún no trae la comprobación de copias; se hará con la siguiente"
+    elif [ "$codigo" -eq 0 ]; then
+      basename "$ultima" > .copia-comprobada
+    else
+      basename "$ultima" > .copia-comprobada # notify once per copy, not every hour
+      osascript -e "display notification \"La copia $(basename "$ultima") no se puede restaurar. Mira ~/flex-and-fit/update.log\" with title \"Flex & Fit: copia de seguridad\"" 2> /dev/null || true
+    fi
+  fi
+fi
+
 docker compose pull --quiet && docker compose up -d
