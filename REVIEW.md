@@ -1,6 +1,6 @@
 # Review guide
 
-What reviewers (human or Claude) should check on pull requests in this repo. Read AGENTS.md first: it says how sync, the sub-path, the releases and the figures work. Each rule below comes from something that already went wrong here or in `buffalonan/german-learning`.
+What reviewers (human or Claude) should check on pull requests in this repo. Read AGENTS.md first, and docs/referencia.md for how sync, the sub-path, the releases and the figures work. Each rule below comes from something that already went wrong here or in `buffalonan/german-learning`.
 
 ## Blocking
 
@@ -52,7 +52,7 @@ What reviewers (human or Claude) should check on pull requests in this repo. Rea
 ## Worth a suggestion
 
 - Copy that's unclear or not in natural Spanish (Spain), or a term that doesn't match the rest of the app (series, repeticiones, descanso, entreno).
-- AGENTS.md not updated when the PR changes how something works.
+- AGENTS.md or docs/referencia.md not updated when the PR changes how something works.
 - Slow paths on the phone: large re-renders, too many IndexedDB transactions, a WebGL canvas or animation frame left running when its screen is closed.
 - Colours outside the CSS variables on `:root`, elements shown or hidden with `style.display` instead of `el.hidden`, `localStorage` without try/catch.
 
