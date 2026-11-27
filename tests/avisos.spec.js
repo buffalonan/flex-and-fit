@@ -5,6 +5,8 @@ const { test, expect } = require("@playwright/test");
 
 const MIERCOLES = new Date("2026-11-25T10:00:00");
 const C5 = 523.25, E5 = 659.25;
+// F1 starts with "Respiración boca arriba", 2 min, after a 10 s rest to get ready; then Gato-camello.
+const RESP = 120000;
 async function abrirApp(page, { android = false } = {}) {
   await page.clock.install({ time: MIERCOLES });
   await page.addInitScript((android) => {
@@ -73,9 +75,9 @@ test("in the browser the player plays harp notes and vibrates, and stays quiet w
   await expect.poll(() => vib(page)).toEqual([[150]]);
   expect((await notas(page)).filter((f) => f < 800)).toEqual(expect.arrayContaining([C5, E5]));
 
-  // 3 s before the minute ends, a soft falling pair (no vibration); at the end, a falling arpeggio that vibrates.
+  // 3 s before the breathing ends, a soft falling pair (no vibration); at the end, a falling arpeggio that vibrates.
   await page.evaluate(() => { window.__notas = []; });
-  await page.clock.fastForward(57000);
+  await page.clock.fastForward(RESP - 3000);
   await expect.poll(() => notas(page)).toContain(E5);
   expect(await vib(page)).toEqual([[150]]);
   await page.clock.fastForward(3000);
@@ -101,8 +103,8 @@ test("in the app the cues go to the native plugin, and pausing or leaving clears
   expect(t0 - MIERCOLES.getTime()).toBeLessThan(5000);
   expect(l[0]).toEqual({ en: t0 + 7000, notas: [[0, E5], [220, C5]], vib: [] }); // 3 s before the rest ends
   expect(l[1]).toEqual({ en: t0 + 10000, notas: [[0, C5], [110, E5], [220, 783.99]], vib: [150] });
-  expect(l[2]).toEqual({ en: t0 + 67000, notas: [[0, E5], [220, C5]], vib: [] }); // 3 s before the breathing ends
-  expect(l[3]).toMatchObject({ en: t0 + 70000, vib: [180] });
+  expect(l[2]).toEqual({ en: t0 + 7000 + RESP, notas: [[0, E5], [220, C5]], vib: [] }); // 3 s before the breathing ends
+  expect(l[3]).toMatchObject({ en: t0 + 10000 + RESP, vib: [180] });
   expect((await ultima()).parciales.length).toBeGreaterThan(1);
 
   // The web side doesn't play them too.
@@ -114,7 +116,7 @@ test("in the app the cues go to the native plugin, and pausing or leaving clears
   await page.click("#repPausa");
   await expect.poll(async () => (await ultima()).lista.length).toBeGreaterThan(10);
   // Still on the clock: the breathing's end moved by the pause only.
-  expect((await ultima()).lista[0].en).toBeGreaterThanOrEqual(t0 + 67000);
+  expect((await ultima()).lista[0].en).toBeGreaterThanOrEqual(t0 + 7000 + RESP);
 
   await page.click("#repSalir");
   await page.click("#salirDescartar");
@@ -143,8 +145,8 @@ test("the player keeps to the clock after the page was asleep, as the native cue
   await abrirApp(page);
   await page.click('#hoyCard [data-abrir="F1"]');
   await page.click("#detEmpezar");
-  // One jump of 85 s (timers fire once, like a frozen web view waking up): 10 s rest + 60 s breathing + 10 s rest + 5 s.
-  await page.clock.fastForward(85000);
+  // One jump (timers fire once, like a frozen web view waking up): 10 s rest + the breathing + 10 s rest + 5 s.
+  await page.clock.fastForward(25000 + RESP);
   await expect(page.locator("#repTitulo")).toHaveText("Gato-camello");
   await expect(page.locator("#repSerie")).not.toHaveText("Prepárate");
 });
