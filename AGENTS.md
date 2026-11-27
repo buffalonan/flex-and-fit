@@ -17,7 +17,7 @@ App personal de Ferran para apuntar sus entrenos de gimnasio y sus sesiones de f
 - **Releases:** APK en GitHub Releases (`app-v1.<run>`, `flex-and-fit.apk`); imagen en ghcr.io (paquete público); demo sin datos en GitHub Pages (`buffalonan.github.io/flex-and-fit`).
 - **Copias de seguridad:**
   - El servidor escribe cada día `flexfit-AAAA-MM-DD.db` y guarda 30, en una carpeta de copias de Documents del Mac.
-  - `update.sh` las sube a Google Drive, `Backups/Fitness`, y guarda 30 allí (hoy con Google Drive para escritorio; el PR #47 pasa a rclone, ver Pendiente).
+  - `update.sh` las sube a Google Drive, `Backups/Fitness`, y guarda 30 allí (hoy con Google Drive para escritorio; pasa a rclone con el PR #47).
   - Desde el móvil, opcional: copia de todo el historial en la carpeta oculta de la app en su Google Drive (`flex-and-fit-copia.json`).
   - Perfil → Exportar JSON da una copia completa a mano.
 - **Secretos (dónde, nunca cuáles):** firma del APK en los secretos del repo `ANDROID_KEYSTORE_BASE64` y `ANDROID_KEYSTORE_PASSWORD` (alias `flexandfit`); el `.p12` y su contraseña, en Proton Pass. `CLAUDE_CODE_OAUTH_TOKEN` en los secretos del repo (revisión de Claude). `SYNC_TOKEN`, si hay, en el `.env` del Mac y en Perfil del móvil. El cliente OAuth de Google es de tipo Android, en el proyecto de Google Cloud de Ferran; no hay client id ni secret en el repo.
@@ -96,13 +96,13 @@ No hecho o sin verificar:
 - 2026-11-26: avisos con sonido suave de arpa, no pitidos repetidos (Ferran).
 - 2026-11-26: copia del historial en Drive desde el móvil, con inicio de sesión de Google explícito en vez del backup automático de Android. Solo el ámbito `drive.appdata`. Ferran acepta que sus datos de salud vayan a su Drive.
 - 2026-11-27: sesiones de flexibilidad de 30 min como mínimo, con la duración calculada a partir de los pasos (Ferran).
+- 2026-11-27: las copias del Mac suben a Drive con rclone, como las de Recetas y Ghostfolio (Ferran; PR #47). Si no hay remoto de rclone, usa Google Drive para escritorio; nunca los dos, para no duplicar archivos.
 - 2026-11-27: vídeos de YouTube solo incrustados (youtube-nocookie), de PureGym, Nuffield Health y Onnit; nunca descargados, porque las condiciones de YouTube no lo permiten (PR #46).
 
 ## Pendiente
 
 - PR #46 (vídeos): probar en el S23. Riesgo: el error 153 de YouTube dentro del WebView de Android; queda el enlace "Abrir en YouTube".
 - PR #47 (rclone): el remoto de rclone usa el client ID compartido de rclone, que dejará de funcionar en 2026. Hace falta un client ID propio, y afecta también a las copias de Recetas y Ghostfolio.
-- Pregunta para Ferran: ¿las copias del Mac van a Drive con rclone (PR #47) o con Google Drive para escritorio, que ya funciona desde el 2026-11-27? El PR usa rclone si hay remoto y si no Drive para escritorio, nunca los dos.
 - Límite conocido: todos los pesos corporales están en un solo registro (`ajustes/peso`). Dos dispositivos sin sincronizar pueden pisarse las entradas a mano. Si pasa, hay que pasar a un registro por día.
 - Ideas aprobadas sin hacer (doc de ideas de COROS): carga propia (sRPE × min, 7 días frente a 4 semanas) y recuperación por músculo.
 - Pregunta para Ferran: ¿Play Protect sigue avisando con las versiones posteriores al PR #32? Si sí, la apelación se hace en el formulario de Google Play Protect con el APK nuevo.
