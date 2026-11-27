@@ -66,8 +66,9 @@ Funciona y está en uso (2026-11-27):
 - Registro de series con los pesos de la última vez, subida sugerida, récords (1RM de Epley), esfuerzo 1–10, cardio, kg negativos (dominadas asistidas).
 - Maniquí 3D en la ficha, el reproductor y el registro; figuras SVG en las listas.
 - Historial con detalle, edición y papelera de 30 días. Progreso: calendario, test mensual, series por músculo, peso corporal.
-- Reloj COROS por Health Connect (Android 14+): FC, kcal, curva, peso. COROS escribe al acabar el entreno, no en directo.
-- Actualizaciones de la app desde GitHub (abre el APK en el navegador). Idiomas es/en/de/ca.
+- Reloj COROS por Health Connect (Android 14+): FC, kcal (COROS las escribe, comprobado en el S23), curva, peso. COROS escribe al acabar el entreno, no en directo.
+- Actualizaciones de la app desde GitHub (abre el APK en el navegador). Play Protect ya no avisa desde el PR #32. Idiomas es/en/de/ca.
+- La sesión borrada el 2026-11-25 y las demás están rescatadas y se ven bien en la app.
 - Copia del móvil en Google Drive: conectada y funcionando desde el 2026-11-27.
 - Copias diarias del Mac a Drive: funcionando desde el 2026-11-27, con Google Drive para escritorio (File Provider activado en macOS).
 
@@ -105,9 +106,6 @@ No hecho o sin verificar:
 - PR #47 (rclone): el remoto de rclone usa el client ID compartido de rclone, que dejará de funcionar en 2026. Hace falta un client ID propio, y afecta también a las copias de otros proyectos del Mac.
 - Límite conocido: todos los pesos corporales están en un solo registro (`ajustes/peso`). Dos dispositivos sin sincronizar pueden pisarse las entradas a mano. Si pasa, hay que pasar a un registro por día.
 - Ideas aprobadas sin hacer (doc de ideas de COROS): carga propia (sRPE × min, 7 días frente a 4 semanas) y recuperación por músculo.
-- Pregunta para Ferran: ¿Play Protect sigue avisando con las versiones posteriores al PR #32? Si sí, la apelación se hace en el formulario de Google Play Protect con el APK nuevo.
-- Pregunta para Ferran: ¿COROS escribe las kcal en Health Connect y sus tipos de entreno se emparejan bien? No consta que se haya comprobado en el móvil.
-- Sesión G3 del 2026-11-25: rescatada en los archivos del proyecto (`rescate/`). Pregunta para Ferran: ¿se reimportó ya?
 
 ## Historial
 
