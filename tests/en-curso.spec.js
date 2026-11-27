@@ -94,13 +94,13 @@ test("a stretching session comes back paused at the start of the stretch it was 
   await abrirApp(page);
   await page.click('#hoyCard [data-abrir="F1"]');
   await page.click("#detEmpezar");
-  // Get ready (10 s) and the full minute of breathing: the first stretch is done. Then halfway into the next one.
+  // Get ready (10 s) and the full 2 minutes of breathing: the first stretch is done. Then halfway into the next one.
   await page.clock.fastForward(11000);
-  await page.clock.fastForward(60000);
+  await page.clock.fastForward(120000);
   await expect(page.locator("#repTitulo")).toHaveText("Gato-camello");
   await page.clock.fastForward(10000);
   await page.reload();
-  await expect(page.locator("#contTexto")).toContainText("1 de 9 posturas");
+  await expect(page.locator("#contTexto")).toContainText("1 de 17 posturas");
   await page.click("#contSeguir");
   await expect(page.locator("#reproductor")).toBeVisible();
   await expect(page.locator("#repTitulo")).toHaveText("Gato-camello");
@@ -111,7 +111,7 @@ test("a stretching session comes back paused at the start of the stretch it was 
   await expect(page.locator("#repTiempo")).toHaveText(t);
   await page.click("#repSalir");
   await page.click("#salirGuardar");
-  await expect(page.locator("#resStats")).toContainText("1/9");
+  await expect(page.locator("#resStats")).toContainText("1/17");
 });
 
 test("in the Android app a session keeps a foreground notification while it's open", async ({ page }) => {

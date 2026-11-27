@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.PowerManager;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 
@@ -16,6 +17,8 @@ import androidx.core.app.ServiceCompat;
 public class EntrenoServicio extends Service {
     private static final String CANAL = "entreno";
     private static final int ID = 7300;
+    // Keeps the CPU (not the screen) awake during the session, so the sound cues play on time with the phone locked.
+    private PowerManager.WakeLock despierto;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -42,8 +45,20 @@ public class EntrenoServicio extends Service {
                 .build();
         int tipo = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ? ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE : 0;
         ServiceCompat.startForeground(this, ID, n, tipo);
+        if (despierto == null) {
+            despierto = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "flexfit:entreno");
+            despierto.setReferenceCounted(false);
+        }
+        despierto.acquire(4 * 60 * 60 * 1000L); // a session forgotten open lets go after 4 hours
         // If Android stops it anyway, don't bring it back by itself: the app starts it again with the session.
         return START_NOT_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        if (despierto != null && despierto.isHeld()) despierto.release();
+        Pitidos.cancelar();
+        super.onDestroy();
     }
 
     @Override

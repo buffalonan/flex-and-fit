@@ -45,7 +45,8 @@ const P = {
   paso_toalla: { vista: "frente", modo: "reps", T: 6, hl: ["sho1", "sho2"], toalla2: true, a: { x: 100, tr: 0, l1: [175, 180], l2: [185, 180], a1: [140, 140], a2: [220, 220] }, b: { a1: [35, 35], a2: [325, 325] } },
   slr_activa: { modo: "reps", T: 7, hl: ["th1"], a: { x: 100, tr: 270, l1: [90, 90], l2: [91, 91], f1: 0, f2: 0, a1: [95, 92], a2: [97, 94] }, b: { l1: [22, 22] } },
   aguja: { modo: "reps", T: 7, hl: ["dor", "sho1"], a: { x: 128, tr: 281, hd: 270, a1: [180, 180], a2: [182, 182], l1: [180, 90], l2: [182, 92], f1: 90, f2: 90 }, b: { tr: 250, hd: 235, a1: [100, 92], a2: [160, 170] } },
-  puente: { modo: "reps", T: 6, hl: ["glu"], a: { x: 112, tr: 270, l1: [40, 150], l2: [44, 152], f1: 90, f2: 90, a1: [95, 90], a2: [97, 92] }, b: { tr: 292, l1: [76, 168], l2: [78, 170], a1: [112, 90], a2: [114, 92] } },
+  // Shoulders, head and feet stay on the floor; only the hips rise, to a straight line from shoulder to knee.
+  puente: { modo: "reps", T: 6, hl: ["glu"], a: { x: 112, tr: 270, hd: 270, p1: [34, 2], p2: [36, 2], f1: 90, f2: 90, a1: [95, 90], a2: [97, 92] }, b: { x: 109.2, tr: 248, p1: [36.8, 16.2], p2: [38.8, 16.2] } },
   cobra: { hl: ["lum"], a: { x: 82, tr: 70, hd: 60, l1: [270, 270], l2: [270, 270], f1: 270, f2: 270, a1: [262, 150], a2: [264, 152] }, b: { tr: 44, hd: 20, a1: [212, 150], a2: [214, 152] } },
 };
 export const FIGURAS = Object.keys(P);
@@ -238,6 +239,8 @@ function def(id) {
     d._ya = d._fy[0];
   } else if (!d._a) {
     d._a = { ...base, ...d.b, ...d.a, vista: d.vista };
+    // A start pose without its own head follows its trunk, not the stretch's head (a standing figure looking at the floor).
+    if (d.a.hd == null && d.b.hd != null) d._a.hd = d._a.tr;
     d._b = { ...d._a, ...d.b };
     d._ya = ground(d, d._a);
     d._yb = ground(d, d._b);

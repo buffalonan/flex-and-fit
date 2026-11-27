@@ -75,9 +75,9 @@ test("a flexibility routine shows each stretch animated, with its dose and cues"
   await abrirApp(page);
   await page.click('#hoyCard [data-abrir="F1"]');
   await expect(page.locator("#detTitle")).toHaveText("Fase 1 · Despertar");
-  await expect(page.locator("#detLista .ej")).toHaveCount(9);
-  await expect(page.locator("#detLista .ej svg.fig[data-fig]")).toHaveCount(9);
-  await expect(page.locator("#detLista .ej").nth(3).locator(".dosis")).toHaveText("2 × 20–30 s /lado");
+  await expect(page.locator("#detLista .ej")).toHaveCount(17);
+  await expect(page.locator("#detLista .ej svg.fig[data-fig]")).toHaveCount(17);
+  await expect(page.locator("#detLista .ej").nth(5).locator(".dosis")).toHaveText("1 × 60 s /lado");
   expect(await fill(page, '#detMan [data-m="isquios"] >> nth=0')).toMatch(/var\(--flex[123]\)/);
   await expect(page.locator("#detMan")).toContainText("min");
   await expect(page.locator("#detAvance")).toContainText("Pasa a la siguiente fase");
@@ -116,34 +116,33 @@ test("the stretching player times each stretch, changes side, pauses, and logs t
   await expect(page.locator("#repSig")).toContainText("Después: Gato-camello · 2 × 8 lentas");
   await expect(page.locator("#repTiempo")).toHaveText("0:10");
 
-  // 10 s to get ready, then the 1-minute breathing, then the next exercise.
+  // 10 s to get ready, then the 2-minute breathing, then the next exercise.
   await page.clock.fastForward(11000);
-  await expect(page.locator("#repTiempo")).toHaveText("0:59");
+  await expect(page.locator("#repTiempo")).toHaveText("1:59");
   await page.click("#repPausa");
   await page.clock.fastForward(30000);
-  await expect(page.locator("#repTiempo")).toHaveText("0:59");
+  await expect(page.locator("#repTiempo")).toHaveText("1:59");
   await page.click("#repPausa");
-  await page.clock.fastForward(60000);
+  await page.clock.fastForward(120000);
   await expect(page.locator("#repTitulo")).toHaveText("Gato-camello");
 
-  // Skip to the hamstrings: two sides, the left one first.
-  await page.click("#repSaltar");
-  await page.click("#repSaltar");
+  // Skip to the hamstrings (past the bridge, knees to chest and sphinx): two sides, the left one first, a minute each.
+  for (let i = 0; i < 4; i++) await page.click("#repSaltar");
   await expect(page.locator("#repTitulo")).toHaveText("Isquios con toalla");
   await page.clock.fastForward(11000);
   await expect(page.locator("#repLado .on")).toHaveText("Lado izquierdo");
-  await page.clock.fastForward(30000);
+  await page.clock.fastForward(60000);
   await expect(page.locator("#repSerie")).toHaveText("Cambia de lado");
   await page.clock.fastForward(10000);
   await expect(page.locator("#repLado .on")).toHaveText("Lado derecho");
 
-  for (let i = 0; i < 12 && (await page.locator("#reproductor").isVisible()); i++) await page.click("#repSaltar");
+  for (let i = 0; i < 30 && (await page.locator("#reproductor").isVisible()); i++) await page.click("#repSaltar");
   await expect(page.locator("#resumen")).toBeVisible();
   await expect(page.locator("#resTitulo")).toHaveText("Fase 1 · Despertar");
-  await expect(page.locator("#resStats")).toContainText("2/9");
+  await expect(page.locator("#resStats")).toContainText("2/17");
   await page.click("#resListo");
   await expect(page.locator("#lista li").first()).toContainText("Flexibilidad · F1");
-  await expect(page.locator("#lista li").first()).toContainText("2/9 ejercicios");
+  await expect(page.locator("#lista li").first()).toContainText("2/17 ejercicios");
   // The first session also starts the plan.
   await page.getByRole("button", { name: "Perfil" }).click();
   await expect(page.locator("#planInicio")).toHaveValue("2026-11-25");
@@ -337,11 +336,11 @@ test("the monthly test is saved and charted, and the calendar marks the days tra
 test("each exercise can be looked at before starting: animation, dose and cues", async ({ page }) => {
   await abrirApp(page);
   await page.click('#hoyCard [data-abrir="F1"]');
-  await page.locator("#detLista .ej").nth(3).click();
+  await page.locator("#detLista .ej").nth(5).click();
   const f = page.locator("#ficha");
   await expect(f).toBeVisible();
-  await expect(page.locator("#fichaCuenta")).toHaveText("Ejercicio 4 de 9");
-  await expect(page.locator("#fichaDosis")).toHaveText("2 × 20–30 s /lado");
+  await expect(page.locator("#fichaCuenta")).toHaveText("Ejercicio 6 de 17");
+  await expect(page.locator("#fichaDosis")).toHaveText("1 × 60 s /lado");
   await expect(f).toContainText("Boca arriba, toalla o cinturón");
   await expect(f.locator("svg.fig.grande")).toHaveCount(1);
   // The big figure moves too.
@@ -351,7 +350,7 @@ test("each exercise can be looked at before starting: animation, dose and cues",
   const before = await trunk();
   await expect.poll(async () => { await page.clock.runFor(1000); return trunk(); }).not.toBe(before);
   await page.click("#fichaSig");
-  await expect(page.locator("#fichaCuenta")).toHaveText("Ejercicio 5 de 9");
+  await expect(page.locator("#fichaCuenta")).toHaveText("Ejercicio 7 de 17");
   await page.click("#fichaSalir");
   await expect(f).toBeHidden();
   await expect(page.locator("#detalle")).toBeVisible();
@@ -524,6 +523,48 @@ test("a cable held with a rope reaches both hands in the 2D figure (face pull, t
   expect(r.triceps_polea).toBeLessThan(0.2);
 });
 
+test("the glute bridge lifts only the hips: shoulders, head and feet stay on the floor", async ({ page }) => {
+  await abrirApp(page);
+  const r = await page.evaluate(async () => {
+    const { estado } = await import("./figura.js");
+    const out = [];
+    for (const p of [0, 0.25, 0.5, 0.75, 1]) {
+      const { j } = estado("puente", p);
+      out.push({ S: j.S, head: j.head, H: j.H, K: j.K1, A: j.A1 });
+    }
+    return out;
+  });
+  const [a, , , , b] = r;
+  for (const f of r) {
+    expect(Math.abs(f.S[1] - a.S[1])).toBeLessThan(0.5); // shoulders don't rise
+    expect(Math.abs(f.head[1] - a.head[1])).toBeLessThan(0.5);
+    expect(Math.abs(f.A[0] - a.A[0]) + Math.abs(f.A[1] - a.A[1])).toBeLessThan(0.5); // feet don't slide
+    expect(f.H[1]).toBeLessThanOrEqual(a.H[1] + 0.01);
+  }
+  expect(a.H[1] - b.H[1]).toBeGreaterThan(10); // hips rise
+  // At the top, shoulder, hip and knee are in a line.
+  const u = [b.S[0] - b.H[0], b.S[1] - b.H[1]], v = [b.K[0] - b.H[0], b.K[1] - b.H[1]];
+  const ang = (Math.acos((u[0] * v[0] + u[1] * v[1]) / Math.hypot(...u) / Math.hypot(...v)) * 180) / Math.PI;
+  expect(ang).toBeGreaterThan(170);
+});
+
+test("a start pose without its own head angle looks where its trunk points (standing forward fold starts head up)", async ({ page }) => {
+  await abrirApp(page);
+  const r = await page.evaluate(async () => {
+    const { estado, FIGURAS } = await import("./figura.js");
+    const out = {};
+    for (const id of FIGURAS) {
+      const { j } = estado(id, 0);
+      // Standing or sitting upright: the head is above the shoulders.
+      if (Math.abs(j.tr) < 20 && !estado(id, 0).d.vista) out[id] = j.head[1] < j.S[1];
+    }
+    return out;
+  });
+  expect(r.pinza_pie).toBe(true);
+  expect(r.pinza_sentado).toBe(true);
+  expect(Object.entries(r).filter(([, ok]) => !ok)).toEqual([]);
+});
+
 test("the plan's 30-second holds are one continuous minute, on each side", async ({ page }) => {
   await abrirApp(page);
   const r = await page.evaluate(async () => {
@@ -533,4 +574,18 @@ test("the plan's 30-second holds are one continuous minute, on each side", async
   });
   expect(r.quedan).toEqual([]);
   expect(r.fig4).toEqual([["izq", 60], ["der", 60]]);
+});
+
+test("every phase's routine lasts at least half an hour with the 10-second pauses, and says how long", async ({ page }) => {
+  await abrirApp(page);
+  const r = await page.evaluate(async () => {
+    const { RUTINAS_FLEX, pasos, PREP_SEG } = await import("./datos.js");
+    return RUTINAS_FLEX.map((w) => ({ id: w.id, min: w.min, seg: w.items.flatMap((it, i) => pasos(it, i)).reduce((a, p) => a + p.seg + PREP_SEG, 0) }));
+  });
+  for (const w of r) {
+    if (w.id !== "suave") expect(w.seg, w.id).toBeGreaterThanOrEqual(30 * 60);
+    expect(w.min, w.id).toBe(`${Math.round(w.seg / 60)} min`);
+  }
+  await page.click('#hoyCard [data-abrir="F1"]');
+  await expect(page.locator("#detSub")).toContainText(r[0].min);
 });
