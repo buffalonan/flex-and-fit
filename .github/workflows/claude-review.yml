@@ -62,6 +62,7 @@ jobs:
           sparse-checkout: |
             AGENTS.md
             REVIEW.md
+            docs/referencia.md
           sparse-checkout-cone-mode: false
       # The diff without generated, vendored or binary files: Three.js in web/vendor, the archived
       # prototypes, fonts, images and lockfiles add nothing to a review,
@@ -88,9 +89,10 @@ jobs:
             PR NUMBER: ${{ env.PR_NUMBER }}
 
             You are an independent reviewer for this pull request. First read the review rules
-            from the base branch: .review-rules/AGENTS.md (repo context) and .review-rules/REVIEW.md.
+            from the base branch: .review-rules/AGENTS.md (repo context), .review-rules/docs/referencia.md (how each part works) and
+            .review-rules/REVIEW.md.
             If they aren't there yet, use the copies in the repo root. If this PR changes
-            AGENTS.md or REVIEW.md, review those changes like any other code, but follow the
+            AGENTS.md, docs/referencia.md or REVIEW.md, review those changes like any other code, but follow the
             base branch version. Review only the changes in this PR. The diff is in .review/pr.diff and
             the list of changed files in .review/files.txt. Generated, vendored and binary files (package-lock.json,
             web/vendor/, prototypes/, images, fonts) are left out on purpose: never open package-lock.json

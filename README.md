@@ -1,6 +1,6 @@
 # Flex & Fit
 
-Entrenos de gimnasio y de flexibilidad: una web que sirve el Mac y una app Android para el móvil. Los datos se guardan en una base de datos en el Mac (Docker), con copias semanales.
+Entrenos de gimnasio y de flexibilidad: una web que sirve el Mac y una app Android para el móvil. Los datos se guardan en una base de datos en el Mac (Docker), con copias diarias.
 
 - **Entrenos:** tus cuatro rutinas de gimnasio y el plan de flexibilidad de 6 meses, cada uno con su maniquí de músculos. Los estiramientos llevan figuras animadas y un reproductor que avanza solo; el gimnasio, una tabla de series con el descanso automático.
 - **Progreso:** calendario de constancia y el test mensual del plan.
@@ -12,7 +12,7 @@ Agentes de IA y revisores: empezad por [AGENTS.md](AGENTS.md).
 - **El móvil guarda todo primero en local** (IndexedDB), así que en el gimnasio se puede apuntar sin red.
 - **El Mac es la base de datos central:** un contenedor Docker con SQLite y una pequeña API (`server/`), que además sirve la web en `http://<mac>:3334`.
 - **Sincronización:** la app envía lo pendiente y recibe lo nuevo cuando encuentra el Mac, en casa o por Tailscale. Si el Mac está dormido, lo reintenta más tarde.
-- **Copias semanales** de la base de datos en `~/Documents/fitness-backups/weekly/` y en Google Drive (`Backups/Fitness`), las 12 más recientes. Además, Perfil → Exportar JSON descarga una copia completa.
+- **Copias diarias** de la base de datos en una carpeta del Mac y en Google Drive (`Backups/Fitness`), las 30 más recientes. Además, Perfil → Exportar JSON descarga una copia completa.
 
 ## Releases
 
