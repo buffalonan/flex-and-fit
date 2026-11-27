@@ -728,4 +728,11 @@ export default {
   "Las sesiones que borras en este dispositivo se guardan aquí 30 días.": "Sessions you delete on this device are kept here for 30 days.",
   "Recuperar": "Restore",
   "Recuperada: está otra vez en Historial.": "Restored: it's back in History.",
+  /* ---------- Exercise videos ---------- */
+  "▶ Vídeo": "▶ Video",
+  "Ver la figura": "Show the figure",
+  "Vídeo de {x}": "Video of {x}",
+  "Vídeo: {canal}": "Video: {canal}",
+  "Abrir en YouTube": "Open on YouTube",
+  "Sin conexión: el vídeo necesita internet. Mientras, tienes la figura.": "Offline: the video needs internet. Meanwhile, you have the figure.",
 };

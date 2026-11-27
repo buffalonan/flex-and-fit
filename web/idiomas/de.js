@@ -728,4 +728,11 @@ export default {
   "Las sesiones que borras en este dispositivo se guardan aquí 30 días.": "Einheiten, die du auf diesem Gerät löschst, bleiben hier 30 Tage.",
   "Recuperar": "Wiederherstellen",
   "Recuperada: está otra vez en Historial.": "Wiederhergestellt: sie ist wieder im Verlauf.",
+  /* ---------- Exercise videos ---------- */
+  "▶ Vídeo": "▶ Video",
+  "Ver la figura": "Figur zeigen",
+  "Vídeo de {x}": "Video: {x}",
+  "Vídeo: {canal}": "Video: {canal}",
+  "Abrir en YouTube": "Auf YouTube öffnen",
+  "Sin conexión: el vídeo necesita internet. Mientras, tienes la figura.": "Offline: Das Video braucht Internet. Bis dahin hast du die Figur.",
 };

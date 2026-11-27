@@ -728,4 +728,11 @@ export default {
   "Las sesiones que borras en este dispositivo se guardan aquí 30 días.": "Les sessions que esborres en aquest dispositiu es guarden aquí 30 dies.",
   "Recuperar": "Recuperar",
   "Recuperada: está otra vez en Historial.": "Recuperada: torna a ser a l'Historial.",
+  /* ---------- Exercise videos ---------- */
+  "▶ Vídeo": "▶ Vídeo",
+  "Ver la figura": "Veure la figura",
+  "Vídeo de {x}": "Vídeo de {x}",
+  "Vídeo: {canal}": "Vídeo: {canal}",
+  "Abrir en YouTube": "Obrir a YouTube",
+  "Sin conexión: el vídeo necesita internet. Mientras, tienes la figura.": "Sense connexió: el vídeo necessita internet. Mentrestant, tens la figura.",
 };
