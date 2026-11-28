@@ -40,7 +40,9 @@ test("update.sh check: a good copy is checked once, with the newest file, read-o
   copy("flexfit-2026-11-28.db");
   run(0, "OK: la copia se puede restaurar");
   assert.equal(read(".copia-comprobada"), "flexfit-2026-11-28.db\n");
-  assert.match(read("docker.log"), new RegExp(`-v ${copias}:/copias:ro .*check-backup.js /copias/flexfit-2026-11-28.db`));
+  const llamada = read("docker.log");
+  assert.ok(llamada.includes(`-v ${copias}:/copias:ro`), llamada);
+  assert.ok(llamada.includes("server/check-backup.js /copias/flexfit-2026-11-28.db"), llamada);
   run(0);
   assert.equal(read("docker.log").trim().split("\n").length, 1); // not again until a new copy
   assert.equal(read("aviso.log"), "");
@@ -59,7 +61,7 @@ test("update.sh check: when Docker fails, nothing is marked or notified and it r
   copy("flexfit-2026-11-28.db");
   for (const code of [125, 126, 127]) {
     const out = run(code, "Cannot connect to the Docker daemon");
-    assert.match(out, new RegExp(`No se pudo comprobar flexfit-2026-11-28.db \\(código ${code}\\)`));
+    assert.ok(out.includes(`No se pudo comprobar flexfit-2026-11-28.db (código ${code})`), out);
   }
   assert.equal(read(".copia-comprobada"), "");
   assert.equal(read("aviso.log"), "");
