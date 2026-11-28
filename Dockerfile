@@ -11,7 +11,7 @@ FROM node:26-alpine
 WORKDIR /app
 ARG APP_VERSION=dev
 ENV NODE_ENV=production PORT=3334 DATA_DIR=/data WEB_DIR=/app/web APP_VERSION=$APP_VERSION
-COPY server/db.js server/backup.js server/server.js ./server/
+COPY server/db.js server/backup.js server/server.js server/check-backup.js ./server/
 COPY --from=web /site ./web
 RUN mkdir -p /data /backups && chown node:node /data /backups
 USER node
